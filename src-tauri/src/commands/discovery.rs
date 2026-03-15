@@ -92,6 +92,30 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             native_environment,
             context.home_dir.join(".factory"),
         ),
+        KnownPath::new(
+            "openclaw",
+            "session",
+            native_environment,
+            context.home_dir.join(".openclaw"),
+        ),
+        KnownPath::new(
+            "openclaw",
+            "session",
+            native_environment,
+            context.home_dir.join(".clawdbot"),
+        ),
+        KnownPath::new(
+            "openclaw",
+            "session",
+            native_environment,
+            context.home_dir.join(".moltbot"),
+        ),
+        KnownPath::new(
+            "openclaw",
+            "session",
+            native_environment,
+            context.home_dir.join(".moldbot"),
+        ),
     ];
 
     if let Some(wsl_home) = &context.wsl_home_dir {
@@ -130,6 +154,30 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             "session",
             "wsl",
             PathBuf::from(wsl_home).join(".factory"),
+        ));
+        roots.push(KnownPath::new(
+            "openclaw",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".openclaw"),
+        ));
+        roots.push(KnownPath::new(
+            "openclaw",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".clawdbot"),
+        ));
+        roots.push(KnownPath::new(
+            "openclaw",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".moltbot"),
+        ));
+        roots.push(KnownPath::new(
+            "openclaw",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".moldbot"),
         ));
     }
 

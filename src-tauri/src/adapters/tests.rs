@@ -6,6 +6,7 @@ use super::{
     copilot_cli::CopilotCliAdapter,
     factory_droid::FactoryDroidAdapter,
     gemini_cli::GeminiCliAdapter,
+    openclaw::OpenClawAdapter,
     opencode::OpenCodeAdapter,
     traits::SessionAdapter,
 };
@@ -184,4 +185,31 @@ fn droid_adapter_discovers_and_parses_fixture() {
     assert_eq!(stream_session.message_count, 2);
     assert_eq!(stream_session.tool_count, 1);
     assert_eq!(stream_session.raw_format, "factory-droid-stream-json");
+}
+
+#[test]
+fn openclaw_adapter_discovers_and_parses_fixture() {
+    let adapter = OpenClawAdapter;
+    let root = fixtures_root().join("openclaw");
+
+    let discovered = adapter
+        .discover_session_files(&root)
+        .expect("openclaw fixtures discover");
+
+    assert_eq!(discovered.len(), 1);
+
+    let session = adapter
+        .parse_session(&discovered[0])
+        .expect("openclaw fixture parses");
+
+    assert_eq!(session.assistant, "openclaw");
+    assert_eq!(session.session_id, "openclaw-ses-1");
+    assert_eq!(
+        session.project_path.as_deref(),
+        Some(r"C:\Projects\openclaw-demo")
+    );
+    assert_eq!(session.message_count, 2);
+    assert_eq!(session.tool_count, 1);
+    assert_eq!(session.raw_format, "openclaw-jsonl");
+    assert!(!session.content_hash.is_empty());
 }

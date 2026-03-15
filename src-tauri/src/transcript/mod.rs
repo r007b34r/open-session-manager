@@ -8,6 +8,7 @@ use crate::{
         copilot_cli::copilot_tool_requests,
         factory_droid::{DroidDialect, detect_droid_dialect, normalize_droid_kind},
         gemini_cli::{gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
+        openclaw::{openclaw_kind, openclaw_role, openclaw_text, openclaw_tool_calls},
         traits::collect_files,
     },
     domain::session::SessionRecord,
@@ -42,6 +43,7 @@ pub fn build_transcript_digest(session: &SessionRecord) -> TranscriptDigest {
         "gemini-cli" => build_gemini_transcript_digest(Path::new(&session.source_path)),
         "github-copilot-cli" => build_copilot_transcript_digest(Path::new(&session.source_path)),
         "factory-droid" => build_factory_droid_transcript_digest(Path::new(&session.source_path)),
+        "openclaw" => build_openclaw_transcript_digest(Path::new(&session.source_path)),
         _ => TranscriptDigest::default(),
     }
 }
@@ -489,6 +491,63 @@ fn build_factory_droid_stream_digest(source: &Path) -> TranscriptDigest {
                     digest.highlights.push(TranscriptHighlight {
                         role: "Assistant".to_string(),
                         content: content.to_string(),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_openclaw_transcript_digest(source: &Path) -> TranscriptDigest {
+    let Ok(lines) = read_jsonl(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for line in lines {
+        if openclaw_kind(&line) != Some("message") {
+            continue;
+        }
+
+        let Some(message) = line.get("message") else {
+            continue;
+        };
+
+        match openclaw_role(message) {
+            Some("user") => {
+                if let Some(content) = openclaw_text(message) {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "User".to_string(),
+                        content,
+                    });
+                }
+            }
+            Some("assistant") => {
+                if let Some(content) = openclaw_text(message) {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Assistant".to_string(),
+                        content,
+                    });
+                }
+
+                for tool_call in openclaw_tool_calls(message) {
+                    if let Some(name) = tool_call.get("name").and_then(Value::as_str) {
+                        digest.highlights.push(TranscriptHighlight {
+                            role: "Tool".to_string(),
+                            content: format!("Tool call: {name}"),
+                        });
+                    }
+                }
+            }
+            Some("toolresult") => {
+                if let Some(content) = openclaw_text(message) {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Tool".to_string(),
+                        content,
                     });
                 }
             }

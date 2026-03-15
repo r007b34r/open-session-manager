@@ -1,0 +1,4 @@
+{"type":"session","id":"openclaw-ses-1","version":3,"timestamp":"2026-03-15T11:00:00.000Z","cwd":"C:\\Projects\\openclaw-demo"}
+{"type":"message","id":"oc-user-1","timestamp":"2026-03-15T11:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"Review OpenClaw transcripts and flag cleanup candidates."}]}}
+{"type":"message","id":"oc-assistant-1","parentId":"oc-user-1","timestamp":"2026-03-15T11:00:08.000Z","message":{"role":"assistant","content":[{"type":"text","text":"I found one archived session worth exporting first."},{"type":"toolCall","id":"oc-tool-1","name":"read_file","arguments":{"path":"README.md"}}]}}
+{"type":"message","id":"oc-tool-result-1","parentId":"oc-assistant-1","timestamp":"2026-03-15T11:00:09.000Z","message":{"role":"toolResult","toolCallId":"oc-tool-1","toolName":"read_file","content":[{"type":"text","text":"README.md loaded"}]}}

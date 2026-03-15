@@ -11,6 +11,7 @@ use crate::{
         codex::CodexAdapter,
         factory_droid::{DroidDialect, FactoryDroidAdapter, detect_droid_dialect, normalize_droid_kind},
         gemini_cli::{GeminiCliAdapter, gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
+        openclaw::{OpenClawAdapter, openclaw_kind, openclaw_role, openclaw_text},
         opencode::OpenCodeAdapter,
         traits::{AdapterError, SessionAdapter, collect_files},
     },
@@ -213,6 +214,12 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             "session",
             "windows",
             fixtures_root.join("factory"),
+        ),
+        KnownPath::new(
+            "openclaw",
+            "session",
+            "windows",
+            fixtures_root.join("openclaw"),
         ),
     ];
 
@@ -679,6 +686,7 @@ fn extract_session_narrative(session: &SessionRecord) -> SnapshotResult<SessionN
         "gemini-cli" => extract_gemini_narrative(Path::new(&session.source_path)),
         "github-copilot-cli" => extract_copilot_narrative(Path::new(&session.source_path)),
         "factory-droid" => extract_factory_droid_narrative(Path::new(&session.source_path)),
+        "openclaw" => extract_openclaw_narrative(Path::new(&session.source_path)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
     }
 }
@@ -1061,6 +1069,45 @@ fn extract_factory_droid_stream_narrative(source: &Path) -> SnapshotResult<Sessi
     Ok(narrative)
 }
 
+fn extract_openclaw_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let lines = read_jsonl(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for line in lines {
+        if openclaw_kind(&line) != Some("message") {
+            continue;
+        }
+
+        let Some(message) = line.get("message") else {
+            continue;
+        };
+
+        match openclaw_role(message) {
+            Some("user") if narrative.first_user_goal.is_none() => {
+                narrative.first_user_goal = openclaw_text(message);
+            }
+            Some("assistant") => {
+                if let Some(content) = openclaw_text(message) {
+                    if looks_like_error_message(&content) {
+                        narrative.error_count += 1;
+                    }
+                    narrative.last_assistant_message = Some(content);
+                }
+            }
+            Some("toolresult") => {
+                if let Some(content) = openclaw_text(message)
+                    && looks_like_error_message(&content)
+                {
+                    narrative.error_count += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(narrative)
+}
+
 fn opencode_created_at(message: &Value) -> i64 {
     message
         .get("time")
@@ -1116,6 +1163,7 @@ fn session_adapter(assistant: &str) -> SnapshotResult<Box<dyn SessionAdapter>> {
         "gemini-cli" => Ok(Box::new(GeminiCliAdapter)),
         "github-copilot-cli" => Ok(Box::new(CopilotCliAdapter)),
         "factory-droid" => Ok(Box::new(FactoryDroidAdapter)),
+        "openclaw" => Ok(Box::new(OpenClawAdapter)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
     }
 }
@@ -1290,6 +1338,11 @@ mod tests {
             .iter()
             .find(|session| session.session_id == "droid-stream-1")
             .expect("droid stream-json fixture session exists");
+        let openclaw_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "openclaw-ses-1")
+            .expect("openclaw fixture session exists");
 
         assert_eq!(claude_session.transcript_highlights[0].role, "User");
         assert!(
@@ -1311,6 +1364,11 @@ mod tests {
         }));
         assert!(droid_stream.transcript_highlights.iter().any(|highlight| {
             highlight.content.contains("No dirty files were detected")
+        }));
+        assert!(openclaw_session.transcript_highlights.iter().any(|highlight| {
+            highlight
+                .content
+                .contains("Review OpenClaw transcripts and flag cleanup candidates")
         }));
     }
 
