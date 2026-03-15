@@ -18,9 +18,7 @@ Its breadth of connector coverage is strategically useful, but the license postu
 
 - Broad search CLI
 - Stack Signals:
-- wide connector matrix
-- search and export CLI
-- HTML output
+- None
 
 ## Verified Paths
 
@@ -28,14 +26,11 @@ Its breadth of connector coverage is strategically useful, but the license postu
 
 ## Inspection Targets
 
-- connector normalization strategy
-- search ranking
-- export workflow
+- None
 
 ## Integration Targets
 
-- source coverage strategy
-- adapter backlog prioritization
+- None
 
 ## Adopted Capabilities
 

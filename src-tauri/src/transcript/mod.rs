@@ -12,6 +12,7 @@ use crate::{
         traits::collect_files,
     },
     domain::session::SessionRecord,
+    session_text::normalize_session_text,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -64,7 +65,9 @@ fn build_codex_transcript_digest(source: &Path) -> TranscriptDigest {
             continue;
         }
 
-        let Some(content) = extract_text_array(payload.get("content")) else {
+        let Some(content) = extract_text_array(payload.get("content"))
+            .and_then(|value| normalize_session_text(&value))
+        else {
             continue;
         };
 
@@ -98,13 +101,12 @@ fn build_claude_transcript_digest(source: &Path) -> TranscriptDigest {
                 if let Some(content) = line
                     .get("message")
                     .and_then(|message| message.get("content"))
-                    .and_then(Value::as_str)
-                    .map(str::trim)
-                    .filter(|content| !content.is_empty())
+                    .and_then(extract_claude_message_text)
+                    .and_then(|value| normalize_session_text(&value))
                 {
                     digest.highlights.push(TranscriptHighlight {
                         role: "User".to_string(),
-                        content: content.to_string(),
+                        content,
                     });
                 }
 
@@ -122,19 +124,14 @@ fn build_claude_transcript_digest(source: &Path) -> TranscriptDigest {
                         digest.todos = todos;
                     }
 
-                    let content = parts
-                        .iter()
-                        .filter_map(|part| part.get("text").and_then(Value::as_str))
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                        .trim()
-                        .to_string();
+                    let content = extract_claude_message_text(&Value::Array(parts.to_vec()))
+                        .and_then(|value| normalize_session_text(&value));
 
-                    if !content.is_empty() {
-                    digest.highlights.push(TranscriptHighlight {
-                        role: "Assistant".to_string(),
-                        content,
-                    });
+                    if let Some(content) = content {
+                        digest.highlights.push(TranscriptHighlight {
+                            role: "Assistant".to_string(),
+                            content,
+                        });
                     }
                 }
             }
@@ -673,4 +670,26 @@ fn extract_text_array(value: Option<&Value>) -> Option<String> {
         })
         .map(|text| text.trim().to_string())
         .filter(|text| !text.is_empty())
+}
+
+fn extract_claude_message_text(content: &Value) -> Option<String> {
+    match content {
+        Value::String(value) => Some(value.to_string()),
+        Value::Array(parts) => {
+            let joined = parts
+                .iter()
+                .filter_map(|part| {
+                    match part.get("type").and_then(Value::as_str) {
+                        Some("text" | "input_text" | "output_text") => {
+                            part.get("text").and_then(Value::as_str)
+                        }
+                        _ => None,
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            (!joined.trim().is_empty()).then_some(joined)
+        }
+        _ => None,
+    }
 }

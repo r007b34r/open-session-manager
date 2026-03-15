@@ -86,7 +86,12 @@ export function SessionTable({
                         type="button"
                       >
                         <span className="session-link">{session.title}</span>
-                        <span className="session-meta">{session.environment}</span>
+                        <span className="session-meta-stack">
+                          <span className="session-meta">{session.environment}</span>
+                          <span className="session-meta session-meta-id">
+                            {shortenSessionId(session.sessionId)}
+                          </span>
+                        </span>
                       </button>
                     </td>
                     <td>{session.assistant}</td>
@@ -109,4 +114,12 @@ export function SessionTable({
       </div>
     </section>
   );
+}
+
+function shortenSessionId(value: string) {
+  if (value.length <= 14) {
+    return value;
+  }
+
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
 }

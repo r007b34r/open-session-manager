@@ -18,9 +18,7 @@ Useful for exposing local session knowledge into MCP-compatible automation witho
 
 - TypeScript MCP server
 - Stack Signals:
-- MCP exposure of local sessions
-- tool-agnostic retrieval
-- headless automation
+- None
 
 ## Verified Paths
 
@@ -28,15 +26,11 @@ Useful for exposing local session knowledge into MCP-compatible automation witho
 
 ## Inspection Targets
 
-- MCP server contract
-- session listing API
-- adapter boundaries
+- None
 
 ## Integration Targets
 
-- external automation API
-- headless audit interface
-- session retrieval boundary
+- None
 
 ## Adopted Capabilities
 

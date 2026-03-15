@@ -18,9 +18,7 @@ Directly relevant to Windows and WSL multi-assistant orchestration, which is cen
 
 - Electron multi-assistant workspace
 - Stack Signals:
-- Electron desktop shell
-- Windows and WSL bridging
-- history center
+- None
 
 ## Verified Paths
 
@@ -28,15 +26,11 @@ Directly relevant to Windows and WSL multi-assistant orchestration, which is cen
 
 ## Inspection Targets
 
-- Windows and WSL path normalization
-- assistant launcher orchestration
-- history center workflows
+- None
 
 ## Integration Targets
 
-- Windows path resolver
-- project-level grouping
-- desktop shell patterns
+- None
 
 ## Adopted Capabilities
 

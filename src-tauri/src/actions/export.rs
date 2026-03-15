@@ -69,6 +69,7 @@ fn build_markdown(session: &SessionRecord, insight: &SessionInsight) -> String {
         derive_cleanup_recommendation(insight, &risk_flags);
     let tags_line = join_or_unknown(&tags);
     let risk_flags_line = join_or_unknown(&risk_flags);
+    let handoff_section = render_session_handoff(&transcript_digest, &insight.summary);
     let todo_section = render_todo_section(&transcript_digest.todos);
     let transcript_section = render_transcript_highlights(&transcript_digest.highlights);
 
@@ -98,6 +99,7 @@ last_activity_at: {last_activity}\n\
 - Tags: {tags_line}\n\
 - Risk flags: {risk_flags_line}\n\
 - Confidence: {confidence:.2}\n\n\
+{handoff_section}\
 {todo_section}\
 {transcript_section}\
 ## Source\n\
@@ -119,6 +121,7 @@ last_activity_at: {last_activity}\n\
         tags_line = tags_line,
         risk_flags_line = risk_flags_line,
         confidence = insight.confidence,
+        handoff_section = handoff_section,
         todo_section = todo_section,
         transcript_section = transcript_section,
         source_path = session.source_path,
@@ -212,6 +215,37 @@ fn render_todo_section(todos: &[TranscriptTodo]) -> String {
     format!("## Todo Snapshot\n{items}\n\n")
 }
 
+fn render_session_handoff(digest: &crate::transcript::TranscriptDigest, summary: &str) -> String {
+    let next_focus = digest
+        .todos
+        .iter()
+        .find(|todo| !todo.completed)
+        .map(|todo| todo.content.as_str())
+        .unwrap_or(summary);
+    let resume_cue = digest
+        .highlights
+        .iter()
+        .rev()
+        .find(|highlight| highlight.role == "Assistant")
+        .or_else(|| digest.highlights.last())
+        .map(|highlight| highlight.content.as_str())
+        .unwrap_or(summary);
+    let open_tasks = digest.todos.iter().filter(|todo| !todo.completed).count();
+    let completed_tasks = digest.todos.iter().filter(|todo| todo.completed).count();
+
+    format!(
+        "## Session Handoff\n\
+- Next focus: {}\n\
+- Open tasks: {}\n\
+- Completed tasks: {}\n\
+- Resume cue: {}\n\n",
+        compact_markdown_line(next_focus),
+        open_tasks,
+        completed_tasks,
+        compact_markdown_line(resume_cue),
+    )
+}
+
 fn render_transcript_highlights(highlights: &[TranscriptHighlight]) -> String {
     if highlights.is_empty() {
         return String::new();
@@ -224,4 +258,8 @@ fn render_transcript_highlights(highlights: &[TranscriptHighlight]) -> String {
         .join("\n");
 
     format!("## Transcript Highlights\n{body}\n")
+}
+
+fn compact_markdown_line(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ")
 }

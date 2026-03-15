@@ -1,6 +1,27 @@
 {
-  "catalogLastReviewedAt": "2026-03-15",
+  "catalogLastReviewedAt": "2026-03-16",
   "entries": [
+    {
+      "repo": "autohandai/commander",
+      "slug": "autohandai-commander",
+      "absorptionMode": "reference-only",
+      "license": "LicenseRef-NoLicense",
+      "mirrorDirectory": "third_party/upstreams/mirrors/autohandai-commander"
+    },
+    {
+      "repo": "ChristopherA/claude_code_tools",
+      "slug": "christophera-claude_code_tools",
+      "absorptionMode": "candidate-absorb",
+      "license": "BSD-2-Clause-Patent",
+      "mirrorDirectory": "third_party/upstreams/mirrors/christophera-claude_code_tools"
+    },
+    {
+      "repo": "coder/agentapi",
+      "slug": "coder-agentapi",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/coder-agentapi"
+    },
     {
       "repo": "d-kimuson/claude-code-viewer",
       "slug": "d-kimuson-claude-code-viewer",
@@ -30,6 +51,20 @@
       "mirrorDirectory": "third_party/upstreams/mirrors/dimension-ai-technologies-entropic"
     },
     {
+      "repo": "endorhq/rover",
+      "slug": "endorhq-rover",
+      "absorptionMode": "candidate-absorb",
+      "license": "Apache-2.0",
+      "mirrorDirectory": "third_party/upstreams/mirrors/endorhq-rover"
+    },
+    {
+      "repo": "farion1231/cc-switch",
+      "slug": "farion1231-cc-switch",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/farion1231-cc-switch"
+    },
+    {
       "repo": "jazzyalex/agent-sessions",
       "slug": "jazzyalex-agent-sessions",
       "absorptionMode": "candidate-absorb",
@@ -37,11 +72,88 @@
       "mirrorDirectory": "third_party/upstreams/mirrors/jazzyalex-agent-sessions"
     },
     {
+      "repo": "junhoyeo/tokscale",
+      "slug": "junhoyeo-tokscale",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/junhoyeo-tokscale"
+    },
+    {
+      "repo": "kbwo/ccmanager",
+      "slug": "kbwo-ccmanager",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/kbwo-ccmanager"
+    },
+    {
+      "repo": "kevinelliott/agentpipe",
+      "slug": "kevinelliott-agentpipe",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/kevinelliott-agentpipe"
+    },
+    {
       "repo": "lulu-sk/CodexFlow",
       "slug": "lulu-sk-codexflow",
       "absorptionMode": "candidate-absorb",
       "license": "Apache-2.0",
       "mirrorDirectory": "third_party/upstreams/mirrors/lulu-sk-codexflow"
+    },
+    {
+      "repo": "milisp/codexia",
+      "slug": "milisp-codexia",
+      "absorptionMode": "reference-only",
+      "license": "AGPL-3.0-only",
+      "mirrorDirectory": "third_party/upstreams/mirrors/milisp-codexia"
+    },
+    {
+      "repo": "pchalasani/claude-code-tools",
+      "slug": "pchalasani-claude-code-tools",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/pchalasani-claude-code-tools"
+    },
+    {
+      "repo": "siteboon/claudecodeui",
+      "slug": "siteboon-claudecodeui",
+      "absorptionMode": "reference-only",
+      "license": "GPL-3.0-only",
+      "mirrorDirectory": "third_party/upstreams/mirrors/siteboon-claudecodeui"
+    },
+    {
+      "repo": "smtg-ai/claude-squad",
+      "slug": "smtg-ai-claude-squad",
+      "absorptionMode": "reference-only",
+      "license": "AGPL-3.0-only",
+      "mirrorDirectory": "third_party/upstreams/mirrors/smtg-ai-claude-squad"
+    },
+    {
+      "repo": "ssdeanx/Gemini-CLI-Web",
+      "slug": "ssdeanx-gemini-cli-web",
+      "absorptionMode": "reference-only",
+      "license": "LicenseRef-Conflicting",
+      "mirrorDirectory": "third_party/upstreams/mirrors/ssdeanx-gemini-cli-web"
+    },
+    {
+      "repo": "sugyan/claude-code-webui",
+      "slug": "sugyan-claude-code-webui",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/sugyan-claude-code-webui"
+    },
+    {
+      "repo": "udecode/dotai",
+      "slug": "udecode-dotai",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/udecode-dotai"
+    },
+    {
+      "repo": "vultuk/claude-code-web",
+      "slug": "vultuk-claude-code-web",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/vultuk-claude-code-web"
     },
     {
       "repo": "yoavf/ai-sessions-mcp",

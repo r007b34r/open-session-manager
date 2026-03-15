@@ -158,7 +158,7 @@ pub(crate) fn openclaw_text(value: &Value) -> Option<String> {
         .filter(|text| !text.is_empty())
 }
 
-pub(crate) fn openclaw_tool_calls<'a>(value: &'a Value) -> Vec<&'a Value> {
+pub(crate) fn openclaw_tool_calls(value: &Value) -> Vec<&Value> {
     value
         .get("content")
         .and_then(Value::as_array)

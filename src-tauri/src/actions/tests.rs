@@ -562,6 +562,11 @@ fn exports_markdown_with_upstream_style_digest() {
     assert!(exported.contains("## Todo Snapshot"));
     assert!(exported.contains("- [x] 导出高价值摘要"));
     assert!(exported.contains("- [ ] 确认 relay 风险"));
+    assert!(exported.contains("## Session Handoff"));
+    assert!(exported.contains("- Next focus: 确认 relay 风险"));
+    assert!(exported.contains("- Open tasks: 1"));
+    assert!(exported.contains("- Completed tasks: 1"));
+    assert!(exported.contains("- Resume cue: 已完成风险初筛，建议先导出再隔离。"));
     assert!(exported.contains("## Transcript Highlights"));
     assert!(exported.contains("### User"));
     assert!(exported.contains("梳理 relay 配置并决定是否清理"));
@@ -642,6 +647,87 @@ fn exports_markdown_with_claude_todowrite_digest() {
     assert!(exported.contains("## Todo Snapshot"));
     assert!(exported.contains("- [x] 确认 relay override"));
     assert!(exported.contains("- [ ] 清理过期 shell hook"));
+    assert!(exported.contains("## Session Handoff"));
+    assert!(exported.contains("- Next focus: 清理过期 shell hook"));
+    assert!(exported.contains("- Open tasks: 1"));
+    assert!(exported.contains("- Completed tasks: 1"));
+    assert!(exported.contains("- Resume cue: 已记录待办并继续审计。"));
+}
+
+#[test]
+fn exports_markdown_without_todos_still_builds_session_handoff() {
+    let sandbox = temp_root();
+    let source_path = sandbox.join("sessions").join("codex-ses-handoff.jsonl");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(
+        &source_path,
+        concat!(
+            "{\"timestamp\":\"2026-03-15T06:00:00Z\",\"type\":\"session_meta\",\"payload\":",
+            "{\"id\":\"codex-handoff-1\",\"cwd\":\"C:\\\\Projects\\\\demo\"}}\n",
+            "{\"timestamp\":\"2026-03-15T06:00:01Z\",\"type\":\"response_item\",\"payload\":",
+            "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",",
+            "\"text\":\"Investigate why the cleanup queue keeps including archived sessions.\"}]}}\n",
+            "{\"timestamp\":\"2026-03-15T06:00:04Z\",\"type\":\"response_item\",\"payload\":",
+            "{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",",
+            "\"text\":\"The stale filters are reading the wrong root and need a scoped fix.\"}]}}\n"
+        ),
+    )
+    .expect("write codex session");
+
+    let export_root = sandbox.join("exports");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-handoff-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some("C:/Projects/demo".to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T06:00:00Z".to_string()),
+        ended_at: Some("2026-03-15T06:00:04Z".to_string()),
+        last_activity_at: Some("2026-03-15T06:00:04Z".to_string()),
+        message_count: 4,
+        tool_count: 0,
+        status: "in_progress".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "handoff123".to_string(),
+    };
+
+    let insight = SessionInsight {
+        session_id: session.session_id.clone(),
+        title: "Audit stale cleanup queue".to_string(),
+        topic_labels_json: r#"["cleanup","queue"]"#.to_string(),
+        summary: "Scope the stale-session filter to the active discovery root before deleting anything.".to_string(),
+        progress_state: "in_progress".to_string(),
+        progress_percent: Some(45),
+        value_score: 76,
+        stale_score: 10,
+        garbage_score: 14,
+        risk_flags_json: r#"["review_before_cleanup"]"#.to_string(),
+        confidence: 0.88,
+    };
+
+    let export_result = export_session_markdown(&ExportRequest {
+        session: &session,
+        insight: &insight,
+        output_root: &export_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("export markdown");
+
+    let exported = fs::read_to_string(&export_result.output_path).expect("read exported markdown");
+    assert!(exported.contains("## Session Handoff"));
+    assert!(exported.contains(
+        "- Next focus: Scope the stale-session filter to the active discovery root before deleting anything."
+    ));
+    assert!(exported.contains("- Open tasks: 0"));
+    assert!(exported.contains("- Completed tasks: 0"));
+    assert!(exported.contains(
+        "- Resume cue: The stale filters are reading the wrong root and need a scoped fix."
+    ));
 }
 
 fn temp_root() -> PathBuf {

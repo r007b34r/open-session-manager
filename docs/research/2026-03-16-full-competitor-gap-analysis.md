@@ -29,10 +29,16 @@
 - `coder/agentapi`
 - `endorhq/rover`
 - `kevinelliott/agentpipe`
+- `autohandai/commander`
+- `pchalasani/claude-code-tools`
+- `vultuk/claude-code-web`
+- `ssdeanx/Gemini-CLI-Web`
+- `sugyan/claude-code-webui`
 
 ### 近邻能力仓库
 
 - `udecode/dotai`
+- `ChristopherA/claude_code_tools`
 
 `dotai` 不是会话治理台本身，但它在技能、工作流、调试/TDD 插件化方面提供了值得吸收的“方法能力”。
 
@@ -42,7 +48,7 @@
 
 ### 已经真实具备
 
-- `Codex / Claude Code / OpenCode` 会话发现与解析
+- `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` 会话发现与解析
 - 会话洞察：标题、摘要、进度、价值分、风险标记
 - transcript digest：基础 highlights 与 Claude todo 提取
 - Markdown 导出
@@ -54,10 +60,12 @@
 - 跟随系统语言
 - 主题切换
 - 导出目录设置
+- `Codex` 脚手架标题污染修复
+- `Claude Code` file-history-only 会话误收修复
 
 ### 当前明显短板
 
-- 助手覆盖面太窄
+- 配置治理仍只覆盖 `Codex / Claude Code / OpenCode`
 - 缺全文检索 / 跨会话搜索
 - 缺恢复/继续/附着真实会话
 - 缺活跃会话监控
@@ -93,13 +101,13 @@
 
 对应 OSM 缺口：
 
-- `Gemini CLI / Copilot CLI / Droid / OpenClaw` 缺失
 - 缺统一搜索
 - 缺 active session cockpit
 - 缺 session resume
 - 缺 schema drift 监控
 - 缺版本跟踪 / fixture 漂移治理
 - 缺 OpenCode SQLite 新存储兼容
+- `Gemini / Copilot / Droid / OpenClaw` 配置治理仍未接入
 
 ### 3.2 `kbwo/ccmanager`
 
@@ -505,6 +513,132 @@
 - 缺结构化 debug / TDD / review 流程助手
 - 缺会话知识抽取为技能/规则的闭环
 
+### 3.18 `autohandai/commander`
+
+这是新的本地多代理桌面工作台参考样本。
+
+已确认能力：
+
+- `Claude / Codex / Gemini` 多代理桌面聊天面板
+- Git worktree 隔离工作区
+- repo clone / open / recent project 启动器
+- provider settings 持久化
+- diff viewer / commit DAG / branch/worktree selector
+- prompt 管理和执行模式切换
+
+对应 OSM 缺口：
+
+- 缺本地多代理协同面板
+- 缺 project launcher
+- 缺 worktree selector
+- 缺 Git 历史与 diff 工作台
+- 缺 provider settings 持久化治理
+
+### 3.19 `pchalasani/claude-code-tools`
+
+它不是完整治理台，但在插件、hooks、repair 和 search 工具链上非常强。
+
+已确认能力：
+
+- Claude Code plugin marketplace 集成
+- hooks / skills / agents 扩展包
+- search binary
+- session repair
+- safety hooks
+- alt provider integrations
+
+对应 OSM 缺口：
+
+- 缺 hooks / skills 安装治理
+- 缺 repair/fix-session 工作流
+- 缺更结构化的安全 hooks
+- 缺插件化扩展机制
+
+### 3.20 `vultuk/claude-code-web`
+
+这是“远程浏览器壳层 + 多会话持久化”的新补充样本。
+
+已确认能力：
+
+- 浏览器远程访问
+- WebSocket 实时流
+- token 鉴权
+- 多会话持久化
+- split view
+- REST API
+- 跨设备继续同一会话
+
+对应 OSM 缺口：
+
+- 缺远程访问
+- 缺实时事件流
+- 缺多会话浏览器持久化
+- 缺 split view
+- 缺 API 服务化外壳
+
+### 3.21 `ChristopherA/claude_code_tools`
+
+它不是完整 GUI，但在“会话收尾、恢复、worktree 技能脚本”这条线上很值得吸收。
+
+已确认能力：
+
+- session closure / session resume 技能
+- 结构化 resume brief
+- session cleanup 检查表
+- git worktree create/list/remove/troubleshoot 脚本
+- context usage statusline
+- session start hooks
+
+对应 OSM 缺口：
+
+- 缺面向“删前提炼”的 handoff brief
+- 缺 resume artifact 规范
+- 缺 cleanup checklist 机制
+- 缺 context budget 可见性
+- 缺脚本化 worktree 生命周期工具
+
+### 3.22 `ssdeanx/Gemini-CLI-Web`
+
+这是 Gemini 方向最宽的远程工作台样本之一，但许可证口径冲突，当前只能 reference-only。
+
+已确认能力：
+
+- Gemini 远程 Web UI
+- JWT 鉴权
+- WebSocket 实时聊天
+- file explorer / git explorer / shell
+- spec design 工作流
+- OpenAPI 文档
+- 移动端 / PWA 适配
+
+对应 OSM 缺口：
+
+- 缺 Gemini 远程工作台
+- 缺带鉴权的远程访问壳层
+- 缺 OpenAPI 文档层
+- 缺 spec workflow
+- 缺移动端与 PWA 形态
+
+### 3.23 `sugyan/claude-code-webui`
+
+它比大而全的平台更轻，但把“浏览器壳 + plan mode + history loader + 单文件发布”做得很干净。
+
+已确认能力：
+
+- 轻量远程浏览器壳
+- plan mode / permission mode 切换
+- conversation history loader
+- NDJSON/流式后端
+- 单二进制打包
+- 暗色 / 亮色和移动端适配
+
+对应 OSM 缺口：
+
+- 缺 plan approval 交互
+- 缺轻量远程壳层
+- 缺对话历史 API
+- 缺单文件远程服务化外壳
+
 ## 4. OSM 尚未实现的全部功能清单
 
 下面按能力域归档，不再按单仓库重复罗列。
@@ -513,10 +647,6 @@
 
 OSM 目前没有或没有完整支持：
 
-- `Gemini CLI`
-- `GitHub Copilot CLI`
-- `Factory Droid`
-- `OpenClaw`
 - `Cursor CLI`
 - `Cline CLI`
 - `Kimi CLI`
@@ -559,6 +689,7 @@ OSM 目前没有或没有完整支持：
 - session process control
 - one-click resume
 - 自动 rate-limit continue
+- session handoff / resume brief
 
 ### 4.4 活跃会话与实时监控缺口
 
@@ -613,6 +744,7 @@ OSM 目前没有或没有完整支持：
 - skills marketplace
 - prompt/rule cross-app sync
 - 会话知识提炼成技能或规则
+- cleanup checklist / session-end hooks
 
 ### 4.9 分析与可视化缺口
 
@@ -634,6 +766,7 @@ OSM 目前没有或没有完整支持：
 - CLI for list/search/get/view/expand
 - Prometheus metrics
 - health/doctor checks
+- 远程壳层鉴权
 
 ### 4.11 质量与运维缺口
 
@@ -664,6 +797,8 @@ OSM 目前没有或没有完整支持：
 
 - Claude transcript viewer 风格细节
 - richer markdown export
+- `Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` clean-room 会话适配
+- session handoff 风格的 Markdown 导出
 - 基础 dashboard 和审计流程
 
 但距离“碾压所有竞品”还差得很远。
@@ -672,7 +807,7 @@ OSM 目前没有或没有完整支持：
 
 最关键缺口不是再调一层配色，而是：
 
-1. 支持的助手太少
+1. 助手覆盖面离头部竞品还有明显距离
 2. 没有搜索
 3. 不能恢复/控制会话
 4. 没有 worktree / 并行工作流
@@ -689,49 +824,48 @@ OSM 目前没有或没有完整支持：
 - `ccmanager / claude-squad / rover / CodexFlow` 的 worktree 与并行代理编排
 - `cc-switch` 的 provider/MCP/skills/config 治理
 - `tokscale` 的 token/cost analytics
-- `agentapi / ai-sessions-mcp / CloudCLI UI / Codexia` 的对外接口与远程能力
+- `agentapi / ai-sessions-mcp / sugyan/claude-code-webui / Codexia / Gemini-CLI-Web` 的对外接口与远程能力
 - `claude-code-viewer / claude-code-log` 的深度 transcript viewer 与导出质量
+- `ChristopherA/claude_code_tools` 的 session handoff 与 worktree 脚本思路
 - `Entropic` 的治理台、修复与诊断逻辑
 
 ## 6. OSM 进化路线
 
-### Phase A：连接器与 transcript 基础面补齐
+### Phase A：搜索、恢复与交接
 
 必须尽快补齐：
-
-- `Gemini CLI`
-- `GitHub Copilot CLI`
-- `Factory Droid`
-- `OpenClaw`
-
-这是最基础的“资格线”。
-
-### Phase B：搜索与恢复
-
-必须补：
 
 - 全文检索
 - snippet/result view
 - 恢复/继续/附着会话
-- CLI/JSON 机器接口
+- session handoff / resume brief
 
-### Phase C：工作流与治理平台
+### Phase B：配置与工作流治理
 
 必须补：
 
+- `Gemini / Copilot / Factory / OpenClaw` 配置治理
 - worktree orchestration
-- active session monitor
-- provider/config/MCP/skills 治理
+- cleanup checklist / hooks
 - Git 视图
 
-### Phase D：分析与平台化
+### Phase C：平台化与远程壳层
+
+必须补：
+
+- REST/MCP/OpenAPI
+- remote/mobile
+- active session monitor
+- plan approval / permission mode
+
+### Phase D：分析与诊断
 
 必须补：
 
 - token/cost analytics
-- REST/MCP/OpenAPI
-- remote/mobile
 - diagnostics/repair
+- doctor / health checks
+- screenshot automation
 
 ## 7. 本轮代码集成优先级
 
@@ -739,22 +873,19 @@ OSM 目前没有或没有完整支持：
 
 ### P0 本轮必须落地
 
-- `Gemini CLI` 会话支持
-- `GitHub Copilot CLI` 会话支持
-- `Factory Droid` 会话支持
-- 相应 dashboard narrative 和 transcript digest
-- fixtures + tests + snapshot coverage
+- session handoff / resume brief
+- 全文检索入口
+- `Gemini / Copilot / Factory / OpenClaw` 配置治理
+- 相应 fixtures + tests + snapshot coverage
 
 ### P1 本轮若时间允许继续落地
 
-- `OpenClaw` 会话支持
-- `Gemini / OpenClaw` 配置治理
-- 基础全文检索入口
+- worktree orchestration
 - MCP/HTTP 只读接口
+- 轻量远程壳层
 
 ### P2 后续继续推进
 
-- worktree orchestration
 - token/cost analytics
 - provider/MCP/skills 整合面板
 - active cockpit

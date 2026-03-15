@@ -1,4 +1,8 @@
-use std::path::PathBuf;
+use std::{
+    fs,
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use super::{
     claude_code::ClaudeCodeAdapter,
@@ -11,11 +15,28 @@ use super::{
     traits::SessionAdapter,
 };
 
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+
 fn fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../tests/fixtures")
         .canonicalize()
         .expect("fixtures root resolves")
+}
+
+fn temp_root() -> PathBuf {
+    let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "open-session-manager-adapter-tests-{}-{suffix}",
+        std::process::id(),
+    ));
+
+    if root.exists() {
+        fs::remove_dir_all(&root).expect("reset temp root");
+    }
+
+    fs::create_dir_all(&root).expect("create temp root");
+    root
 }
 
 #[test]
@@ -65,6 +86,49 @@ fn claude_adapter_discovers_and_parses_fixture() {
     assert_eq!(session.message_count, 2);
     assert_eq!(session.raw_format, "claude-code-jsonl");
     assert!(!session.content_hash.is_empty());
+}
+
+#[test]
+fn claude_adapter_discovery_skips_file_history_only_jsonl() {
+    let adapter = ClaudeCodeAdapter;
+    let root = temp_root();
+
+    fs::write(
+        root.join("claude-ses-real.jsonl"),
+        concat!(
+            "{\"type\":\"progress\",\"sessionId\":\"claude-ses-real\",",
+            "\"cwd\":\"C:/Projects/claude-real\",\"timestamp\":\"2026-03-16T12:00:00Z\"}\n",
+            "{\"type\":\"user\",\"sessionId\":\"claude-ses-real\",",
+            "\"cwd\":\"C:/Projects/claude-real\",",
+            "\"timestamp\":\"2026-03-16T12:00:01Z\",",
+            "\"message\":{\"content\":\"Investigate the real cleanup candidates.\"}}\n",
+            "{\"type\":\"assistant\",\"sessionId\":\"claude-ses-real\",",
+            "\"cwd\":\"C:/Projects/claude-real\",",
+            "\"timestamp\":\"2026-03-16T12:00:03Z\",",
+            "\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Mapped the stale sessions and exports.\"}]}}\n"
+        ),
+    )
+    .expect("write valid claude session");
+
+    fs::write(
+        root.join("file-history-only.jsonl"),
+        concat!(
+            "{\"type\":\"file-history-snapshot\",\"messageId\":\"msg-1\",",
+            "\"snapshot\":{\"messageId\":\"msg-1\",\"timestamp\":\"2026-03-16T12:00:00Z\"},",
+            "\"isSnapshotUpdate\":false}\n",
+            "{\"type\":\"file-history-snapshot\",\"messageId\":\"msg-2\",",
+            "\"snapshot\":{\"messageId\":\"msg-2\",\"timestamp\":\"2026-03-16T12:05:00Z\"},",
+            "\"isSnapshotUpdate\":false}\n"
+        ),
+    )
+    .expect("write file history snapshot");
+
+    let discovered = adapter
+        .discover_session_files(&root)
+        .expect("claude discovery should succeed");
+
+    assert_eq!(discovered.len(), 1);
+    assert!(discovered[0].ends_with("claude-ses-real.jsonl"));
 }
 
 #[test]

@@ -18,9 +18,7 @@ Strong fit for deep transcript rendering, schema validation, and lossless detail
 
 - Single-agent web viewer
 - Stack Signals:
-- lossless transcript rendering
-- schema validation
-- deep session detail UI
+- None
 
 ## Verified Paths
 
@@ -31,15 +29,11 @@ Strong fit for deep transcript rendering, schema validation, and lossless detail
 
 ## Inspection Targets
 
-- schema validation layer
-- session detail rendering
-- MCP and config viewer patterns
+- None
 
 ## Integration Targets
 
-- transcript schema guards
-- session detail UX
-- lossless render checks
+- None
 
 ## Adopted Capabilities
 

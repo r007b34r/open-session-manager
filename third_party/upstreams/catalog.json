@@ -1,100 +1,120 @@
 {
   "version": 1,
-  "lastReviewedAt": "2026-03-15",
+  "lastReviewedAt": "2026-03-16",
   "entries": [
     {
-      "repo": "jazzyalex/agent-sessions",
-      "name": "agent-sessions",
-      "homepage": "https://github.com/jazzyalex/agent-sessions",
+      "repo": "autohandai/commander",
+      "name": "Commander",
+      "homepage": "https://github.com/autohandai/commander",
       "license": {
-        "spdx": "MIT",
-        "notes": "Repository page and README describe the project as MIT-licensed."
+        "spdx": "LicenseRef-NoLicense",
+        "notes": "Repository mirror does not include a standalone license file or explicit license grant."
       },
       "absorption": {
-        "mode": "candidate-absorb",
-        "rationale": "Strong alignment with OSM's local-first indexing and session analytics direction.",
-        "blockedBy": []
+        "mode": "reference-only",
+        "rationale": "Useful product reference for local multi-agent orchestration, Git worktrees, and desktop execution controls.",
+        "blockedBy": [
+          "no clear open-source license grant in mirrored repository"
+        ]
       },
       "reviewStatus": "screened",
-      "reviewedAt": "2026-03-15",
-      "summary": "Desktop-first local session explorer with deep indexing, search, and analytics positioning.",
-      "projectShape": "Desktop session explorer",
-      "stackSignals": [
-        "React desktop shell",
-        "local-first indexing",
-        "session analytics"
+      "reviewedAt": "2026-03-16",
+      "summary": "Native Tauri multi-agent desktop workspace with Git worktree orchestration, project launcher, and provider settings.",
+      "projectShape": "Tauri multi-agent workspace",
+      "releaseAcknowledgement": "Added a stronger reference point for how far OSM should push local worktree orchestration and desktop session control.",
+      "constraints": [
+        "Treat as reference-only until licensing is clarified."
       ],
-      "focusAreas": [
-        "local indexing",
-        "search UX",
-        "session analytics"
-      ],
-      "verifiedPaths": [
-        "apps/desktop"
-      ],
-      "inspectionTargets": [
-        "search pipeline",
-        "analytics rollups",
-        "transcript catalog model"
-      ],
-      "integrationTargets": [
-        "session index pipeline",
-        "governance analytics",
-        "desktop navigation heuristics"
-      ],
-      "releaseAcknowledgement": "Helped shape OSM's local-first session indexing and analytics direction.",
-      "constraints": [],
       "evidence": [
         {
           "label": "Repository",
-          "url": "https://github.com/jazzyalex/agent-sessions"
+          "url": "https://github.com/autohandai/commander"
         }
       ]
     },
     {
-      "repo": "lulu-sk/CodexFlow",
-      "name": "CodexFlow",
-      "homepage": "https://github.com/lulu-sk/CodexFlow",
+      "repo": "coder/agentapi",
+      "name": "agentapi",
+      "homepage": "https://github.com/coder/agentapi",
       "license": {
-        "spdx": "Apache-2.0",
-        "notes": "Repository page advertises Apache-2.0, making it suitable for structured reuse with attribution."
+        "spdx": "MIT",
+        "notes": "Repository includes an MIT license."
       },
       "absorption": {
         "mode": "candidate-absorb",
-        "rationale": "Directly relevant to Windows and WSL multi-assistant orchestration, which is central to OSM's target users.",
+        "rationale": "Directly relevant to OSM's missing HTTP, SSE, and attach-style control plane.",
         "blockedBy": []
       },
-      "reviewStatus": "adopted",
-      "reviewedAt": "2026-03-15",
-      "summary": "Electron-based multi-assistant workspace focused on Windows, WSL, and project-centric history.",
-      "projectShape": "Electron multi-assistant workspace",
-      "stackSignals": [
-        "Electron desktop shell",
-        "Windows and WSL bridging",
-        "history center"
-      ],
-      "focusAreas": [
-        "Windows path handling",
-        "WSL integration",
-        "project grouping"
-      ],
-      "verifiedPaths": [],
-      "inspectionTargets": [
-        "Windows and WSL path normalization",
-        "assistant launcher orchestration",
-        "history center workflows"
-      ],
-      "integrationTargets": [
-        "Windows path resolver",
-        "project-level grouping",
-        "desktop shell patterns"
-      ],
-      "releaseAcknowledgement": "Validated OSM's Windows and WSL-first direction for multi-assistant session management.",
-      "constraints": [],
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "HTTP and SSE control layer for agent processes with web chat surface and running-agent attachment.",
+      "projectShape": "Agent control API server",
+      "releaseAcknowledgement": "Confirmed that OSM should grow beyond a GUI into a programmatic agent control surface.",
       "evidence": [
         {
           "label": "Repository",
-          "url": "https://github.com/lulu-sk/CodexFlow"
+          "url": "https://github.com/coder/agentapi"
+        }
+      ]
+    },
+    {
+      "repo": "ChristopherA/claude_code_tools",
+      "name": "claude_code_tools",
+      "homepage": "https://github.com/ChristopherA/claude_code_tools",
+      "license": {
+        "spdx": "BSD-2-Clause-Patent",
+        "notes": "Repository includes a BSD-2-Clause Plus Patent license."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Very close to OSM's export-before-delete workflow because it formalizes session closure, session resume, and git worktree handoff scripts.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-16",
+      "summary": "Skill and hook pack for Claude Code with session closure/resume, git worktree automation, and context statusline tooling.",
+      "projectShape": "Workflow skill pack",
+      "stackSignals": [
+        "Claude skill and hook bundle",
+        "shell-scripted worktree automation",
+        "session handoff and resume workflow"
+      ],
+      "focusAreas": [
+        "session handoff",
+        "resume briefs",
+        "git worktree scripts"
+      ],
+      "verifiedPaths": [
+        "skills/session-resume/SKILL.md",
+        "skills/session-closure/SKILL.md",
+        "skills/git-worktree/scripts/create-worktree.sh",
+        "tools/context-monitor/scripts/status-line.sh"
+      ],
+      "inspectionTargets": [
+        "resume artifact format",
+        "session-end checklist",
+        "worktree lifecycle scripts",
+        "context budget surfacing"
+      ],
+      "integrationTargets": [
+        "Markdown session handoff export",
+        "cleanup-before-delete checklist",
+        "future worktree automation"
+      ],
+      "releaseAcknowledgement": "Pushed OSM to turn export-before-delete into an actual handoff workflow instead of a raw transcript dump.",
+      "adoptedCapabilities": [
+        "Markdown session handoff export"
+      ],
+      "upstreamSourceFiles": [
+        "skills/session-resume/SKILL.md",
+        "skills/session-closure/SKILL.md",
+        "skills/git-worktree/scripts/create-worktree.sh",
+        "tools/context-monitor/scripts/status-line.sh"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/ChristopherA/claude_code_tools"
         }
       ]
     },
@@ -115,34 +135,13 @@
       "reviewedAt": "2026-03-15",
       "summary": "Specialized viewer for Claude Code with strong transcript fidelity, schema validation, and deep detail panes.",
       "projectShape": "Single-agent web viewer",
-      "stackSignals": [
-        "lossless transcript rendering",
-        "schema validation",
-        "deep session detail UI"
-      ],
-      "focusAreas": [
-        "schema hardening",
-        "detail rendering",
-        "transcript fidelity"
-      ],
       "verifiedPaths": [
         "src/routes/projects/$projectId/session.tsx",
         "src/lib/todo-viewer/extractLatestTodos.ts",
         "src/server/core/claude-code/functions/parseJsonl.ts",
         "src/server/core/session/presentation/SessionController.ts"
       ],
-      "inspectionTargets": [
-        "schema validation layer",
-        "session detail rendering",
-        "MCP and config viewer patterns"
-      ],
-      "integrationTargets": [
-        "transcript schema guards",
-        "session detail UX",
-        "lossless render checks"
-      ],
       "releaseAcknowledgement": "Helped shape OSM's viewer-style transcript detail panels and todo evidence workflow.",
-      "constraints": [],
       "adoptedCapabilities": [
         "Viewer-style transcript detail panel",
         "Session todo evidence in detail view"
@@ -177,33 +176,12 @@
       "reviewedAt": "2026-03-15",
       "summary": "Export-focused toolchain for Claude Code sessions with Markdown, HTML, and smart summary workflows.",
       "projectShape": "CLI and export tooling",
-      "stackSignals": [
-        "Markdown export",
-        "HTML export",
-        "smart summaries"
-      ],
-      "focusAreas": [
-        "export quality",
-        "summary extraction",
-        "date filtering"
-      ],
       "verifiedPaths": [
         "claude_code_log/markdown/renderer.py",
         "claude_code_log/parser.py",
         "claude_code_log/converter.py"
       ],
-      "inspectionTargets": [
-        "markdown exporter",
-        "summary layout",
-        "usage rollups"
-      ],
-      "integrationTargets": [
-        "value-preserving export",
-        "cleanup preflight summaries",
-        "export metadata format"
-      ],
       "releaseAcknowledgement": "Helped shape OSM's Markdown export and summary-first cleanup workflow.",
-      "constraints": [],
       "adoptedCapabilities": [
         "Richer markdown export sections",
         "Transcript highlight digest",
@@ -218,6 +196,38 @@
         {
           "label": "Repository",
           "url": "https://github.com/daaain/claude-code-log"
+        }
+      ]
+    },
+    {
+      "repo": "Dicklesworthstone/coding_agent_session_search",
+      "name": "coding_agent_session_search",
+      "homepage": "https://github.com/Dicklesworthstone/coding_agent_session_search",
+      "license": {
+        "spdx": "LicenseRef-Restricted",
+        "notes": "Repository carries additional restrictions beyond a standard permissive license."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Its breadth of connector coverage is strategically useful, but the license posture blocks direct code reuse.",
+        "blockedBy": [
+          "additional license restrictions",
+          "public distribution risk"
+        ]
+      },
+      "reviewStatus": "restricted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Broad multi-agent search tooling that proves the scale of connector coverage and export patterns OSM must beat.",
+      "projectShape": "Broad search CLI",
+      "releaseAcknowledgement": "Helped validate how much connector breadth OSM needs, but its code remains reference-only.",
+      "constraints": [
+        "Do not copy code into the public OSM distribution.",
+        "Treat as reference-only until a clean-room replacement exists."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search"
         }
       ]
     },
@@ -238,33 +248,518 @@
       "reviewedAt": "2026-03-15",
       "summary": "Cross-platform desktop maintenance console that already thinks in provider-aware views and cleanup actions.",
       "projectShape": "Cross-platform desktop maintenance console",
-      "stackSignals": [
-        "Electron GUI",
-        "provider-aware session model",
-        "maintenance actions"
-      ],
-      "focusAreas": [
-        "provider registry",
-        "desktop navigation",
-        "cleanup affordances"
-      ],
-      "verifiedPaths": [],
-      "inspectionTargets": [
-        "provider switchboard",
-        "cleanup guardrails",
-        "desktop navigation"
-      ],
-      "integrationTargets": [
-        "provider registry",
-        "maintenance dashboard",
-        "bulk cleanup UX"
-      ],
       "releaseAcknowledgement": "Validated that a cross-platform governance console has real product demand beyond a single assistant.",
-      "constraints": [],
       "evidence": [
         {
           "label": "Repository",
           "url": "https://github.com/Dimension-AI-Technologies/Entropic"
+        }
+      ]
+    },
+    {
+      "repo": "endorhq/rover",
+      "name": "Rover",
+      "homepage": "https://github.com/endorhq/rover",
+      "license": {
+        "spdx": "Apache-2.0",
+        "notes": "Repository includes Apache-2.0 license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Directly relevant to isolated execution, background tasks, and inspect-merge workflows that OSM still lacks.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Container-isolated coding agent runner with background task lifecycle, inspect/diff/merge loop, and VSCode extension hooks.",
+      "projectShape": "Isolated execution platform",
+      "releaseAcknowledgement": "Raised the bar for how OSM should handle isolated background task execution and iteration workflows.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/endorhq/rover"
+        }
+      ]
+    },
+    {
+      "repo": "farion1231/cc-switch",
+      "name": "cc-switch",
+      "homepage": "https://github.com/farion1231/cc-switch",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong reference for provider, proxy, MCP, prompts, and skills governance that OSM still lacks.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Desktop switchboard for provider presets, MCP, prompts, skills, usage, proxy failover, and session management.",
+      "projectShape": "Provider governance console",
+      "releaseAcknowledgement": "Clarified the configuration and provider governance surface OSM still needs to absorb.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/farion1231/cc-switch"
+        }
+      ]
+    },
+    {
+      "repo": "jazzyalex/agent-sessions",
+      "name": "agent-sessions",
+      "homepage": "https://github.com/jazzyalex/agent-sessions",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page and README describe the project as MIT-licensed."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong alignment with OSM's local-first indexing and session analytics direction.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-16",
+      "summary": "Desktop-first local session explorer with deep indexing, search, analytics, and broad assistant parser coverage.",
+      "projectShape": "Desktop session explorer",
+      "stackSignals": [
+        "SwiftUI macOS desktop shell",
+        "local-first multi-agent indexers",
+        "analytics and live cockpit surfaces"
+      ],
+      "focusAreas": [
+        "unified search",
+        "broad assistant parser coverage",
+        "active session monitoring"
+      ],
+      "verifiedPaths": [
+        "AgentSessions/AgentSessionsApp.swift",
+        "AgentSessions/Views/UnifiedSessionsView.swift",
+        "AgentSessions/Analytics/Services/AnalyticsService.swift",
+        "AgentSessions/OpenCode/OpenCodeSqliteReader.swift"
+      ],
+      "inspectionTargets": [
+        "unified session indexer",
+        "search and transcript navigation",
+        "analytics rollups",
+        "active session cockpit"
+      ],
+      "integrationTargets": [
+        "adapter coverage expansion",
+        "session search UX",
+        "analytics dashboard roadmap",
+        "OpenCode SQLite compatibility"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's local-first session indexing direction and the multi-assistant adapter expansion.",
+      "adoptedCapabilities": [
+        "Gemini CLI session adapter",
+        "GitHub Copilot CLI session adapter",
+        "Factory Droid session adapter",
+        "OpenClaw session adapter"
+      ],
+      "upstreamSourceFiles": [
+        "AgentSessions/Views/UnifiedSessionsView.swift",
+        "AgentSessions/Services/GeminiSessionIndexer.swift",
+        "AgentSessions/Services/CopilotSessionIndexer.swift",
+        "AgentSessions/Services/DroidSessionIndexer.swift",
+        "AgentSessions/Services/OpenClawSessionIndexer.swift",
+        "AgentSessions/Analytics/Services/AnalyticsService.swift",
+        "AgentSessions/OpenCode/OpenCodeSqliteReader.swift"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/jazzyalex/agent-sessions"
+        }
+      ]
+    },
+    {
+      "repo": "junhoyeo/tokscale",
+      "name": "tokscale",
+      "homepage": "https://github.com/junhoyeo/tokscale",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Best reference currently mirrored for token, model, and cost analytics across coding agents.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Usage and cost analytics toolkit with wide connector matrix, pricing lookup, and contribution-style visualizations.",
+      "projectShape": "Usage analytics dashboard",
+      "releaseAcknowledgement": "Established the analytics baseline OSM needs for token and cost observability.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/junhoyeo/tokscale"
+        }
+      ]
+    },
+    {
+      "repo": "kbwo/ccmanager",
+      "name": "ccmanager",
+      "homepage": "https://github.com/kbwo/ccmanager",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong reference for multi-project worktree orchestration around local coding agents.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Worktree-centric manager for multiple coding agents, project queues, and session state switching.",
+      "projectShape": "Worktree orchestration console",
+      "releaseAcknowledgement": "Clarified the level of worktree and multi-project orchestration OSM still needs.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/kbwo/ccmanager"
+        }
+      ]
+    },
+    {
+      "repo": "kevinelliott/agentpipe",
+      "name": "agentpipe",
+      "homepage": "https://github.com/kevinelliott/agentpipe",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Useful reference for multi-agent rooms, metrics, doctor checks, and multi-format export.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Multi-agent coordination framework with metrics, token tracking, doctor checks, and JSON/Markdown/HTML export.",
+      "projectShape": "Multi-agent orchestration framework",
+      "releaseAcknowledgement": "Showed how OSM can grow toward multi-agent health checks, metrics, and richer export surfaces.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/kevinelliott/agentpipe"
+        }
+      ]
+    },
+    {
+      "repo": "lulu-sk/CodexFlow",
+      "name": "CodexFlow",
+      "homepage": "https://github.com/lulu-sk/CodexFlow",
+      "license": {
+        "spdx": "Apache-2.0",
+        "notes": "Repository page advertises Apache-2.0."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Directly relevant to Windows and WSL multi-assistant orchestration, which is central to OSM's target users.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Electron-based multi-assistant workspace focused on Windows, WSL, and project-centric history.",
+      "projectShape": "Electron multi-assistant workspace",
+      "releaseAcknowledgement": "Validated OSM's Windows and WSL-first direction for multi-assistant session management.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/lulu-sk/CodexFlow"
+        }
+      ]
+    },
+    {
+      "repo": "milisp/codexia",
+      "name": "Codexia",
+      "homepage": "https://github.com/milisp/codexia",
+      "license": {
+        "spdx": "AGPL-3.0-only",
+        "notes": "Repository includes GNU AGPL v3 license text."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Important product reference for headless web server, realtime event streaming, and integrated workbench UX.",
+        "blockedBy": [
+          "AGPL obligations in public distribution"
+        ]
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Agent IDE and workbench with headless server, WebSocket streaming, file previews, MCP marketplace, and remote control API.",
+      "projectShape": "Integrated agent workbench",
+      "releaseAcknowledgement": "Expanded OSM's target surface for headless serving, realtime events, and integrated workspace tooling.",
+      "constraints": [
+        "Treat as reference-only unless a clean-room implementation is maintained."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/milisp/codexia"
+        }
+      ]
+    },
+    {
+      "repo": "pchalasani/claude-code-tools",
+      "name": "claude-code-tools",
+      "homepage": "https://github.com/pchalasani/claude-code-tools",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong reference for plugins, hooks, safety workflows, session repair, and search tooling around Claude Code.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Productivity toolkit for Claude Code with plugins, hooks, safety helpers, search binary, session repair, and provider integrations.",
+      "projectShape": "Agent tooling extension suite",
+      "releaseAcknowledgement": "Gave OSM a clearer path toward skills, hooks, repair workflows, and extensible session tooling.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/pchalasani/claude-code-tools"
+        }
+      ]
+    },
+    {
+      "repo": "siteboon/claudecodeui",
+      "name": "claudecodeui",
+      "homepage": "https://github.com/siteboon/claudecodeui",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "notes": "Repository includes GPL v3 license text."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Important reference for responsive remote UI, integrated shell, file explorer, REST API, and plugin system.",
+        "blockedBy": [
+          "GPL reciprocal distribution requirements"
+        ]
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Remote-capable web UI for coding agents with session management, shell, file explorer, git explorer, REST API, and plugins.",
+      "projectShape": "Remote web workspace",
+      "releaseAcknowledgement": "Raised the bar for remote, multi-device, and plugin-friendly surfaces OSM still lacks.",
+      "constraints": [
+        "Treat as reference-only unless a clean-room implementation is maintained."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/siteboon/claudecodeui"
+        }
+      ]
+    },
+    {
+      "repo": "smtg-ai/claude-squad",
+      "name": "claude-squad",
+      "homepage": "https://github.com/smtg-ai/claude-squad",
+      "license": {
+        "spdx": "AGPL-3.0-only",
+        "notes": "Repository includes GNU AGPL v3 license text."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Useful reference for tmux/worktree multi-session orchestration, attach/detach, pause/resume, and review-before-apply flows.",
+        "blockedBy": [
+          "AGPL obligations in public distribution"
+        ]
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "tmux and worktree based multi-session orchestration toolkit with attach/detach, review-before-apply, and profile launching.",
+      "projectShape": "Terminal orchestration toolkit",
+      "releaseAcknowledgement": "Clarified how much session control and pause/resume orchestration OSM still lacks.",
+      "constraints": [
+        "Treat as reference-only unless a clean-room implementation is maintained."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/smtg-ai/claude-squad"
+        }
+      ]
+    },
+    {
+      "repo": "ssdeanx/Gemini-CLI-Web",
+      "name": "Gemini CLI Web UI",
+      "homepage": "https://github.com/ssdeanx/Gemini-CLI-Web",
+      "license": {
+        "spdx": "LicenseRef-Conflicting",
+        "notes": "README claims GPL lineage, LICENSE file is GPL-3.0, but package metadata advertises MIT; treat as license-conflicted until clarified."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Strong reference for remote Gemini workspace features, auth, WebSocket streaming, spec workflows, and integrated file/git/shell panels, but the license posture is currently contradictory.",
+        "blockedBy": [
+          "conflicting license metadata between LICENSE, README, and package metadata",
+          "public distribution risk until the upstream clarifies reuse terms"
+        ]
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Responsive Gemini CLI web workspace with auth, WebSocket chat, file and git explorers, shell panel, and spec-design tooling.",
+      "projectShape": "Remote Gemini web workspace",
+      "stackSignals": [
+        "React and Express web workspace",
+        "JWT auth with WebSocket streaming",
+        "embedded editor, git, shell, and spec tooling"
+      ],
+      "focusAreas": [
+        "remote Gemini session control",
+        "workspace UI breadth",
+        "spec and document workflows"
+      ],
+      "verifiedPaths": [
+        "server/index.js",
+        "server/sessionManager.js",
+        "documentation/API/openapi.yaml",
+        "src/components/SpecDesign/SpecDesign.jsx"
+      ],
+      "inspectionTargets": [
+        "session persistence model",
+        "remote auth and WebSocket flows",
+        "spec generation surface",
+        "integrated shell and git workspace"
+      ],
+      "integrationTargets": [
+        "remote governance backlog",
+        "future OpenAPI surface",
+        "spec workflow references"
+      ],
+      "releaseAcknowledgement": "Raised the bar for Gemini-specific remote workspace breadth, but remains reference-only until licensing is clear.",
+      "constraints": [
+        "Do not copy code into OSM while the license conflict remains unresolved."
+      ],
+      "upstreamSourceFiles": [
+        "server/index.js",
+        "server/sessionManager.js",
+        "documentation/API/openapi.yaml",
+        "src/components/ChatInterface.jsx",
+        "src/components/SpecDesign/SpecDesign.jsx",
+        "src/components/Shell.jsx"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/ssdeanx/Gemini-CLI-Web"
+        }
+      ]
+    },
+    {
+      "repo": "sugyan/claude-code-webui",
+      "name": "claude-code-webui",
+      "homepage": "https://github.com/sugyan/claude-code-webui",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Useful clean-room reference for lightweight remote browser access, permission-mode UI, session continuity, and single-binary backend packaging.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Lightweight Claude browser shell with NDJSON streaming backend, project history loading, plan-mode approval UX, and single-binary distribution.",
+      "projectShape": "Remote Claude browser shell",
+      "stackSignals": [
+        "Hono streaming backend",
+        "React permission-mode frontend",
+        "single-binary backend packaging"
+      ],
+      "focusAreas": [
+        "remote browser shell",
+        "history loading",
+        "plan approval UX"
+      ],
+      "verifiedPaths": [
+        "backend/handlers/chat.ts",
+        "backend/history/conversationLoader.ts",
+        "frontend/src/hooks/useClaudeStreaming.ts",
+        "frontend/src/components/chat/PlanPermissionInputPanel.tsx"
+      ],
+      "inspectionTargets": [
+        "streaming chat transport",
+        "history file loader",
+        "permission and plan approval UI",
+        "single-binary packaging"
+      ],
+      "integrationTargets": [
+        "future remote access shell",
+        "plan approval interaction patterns",
+        "conversation history API"
+      ],
+      "releaseAcknowledgement": "Added a concrete reference for lightweight remote access, session continuity, and browser-native approval UX.",
+      "upstreamSourceFiles": [
+        "backend/handlers/chat.ts",
+        "backend/history/conversationLoader.ts",
+        "frontend/src/hooks/useClaudeStreaming.ts",
+        "frontend/src/components/chat/PlanPermissionInputPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/sugyan/claude-code-webui"
+        }
+      ]
+    },
+    {
+      "repo": "udecode/dotai",
+      "name": "dotai",
+      "homepage": "https://github.com/udecode/dotai",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository package metadata declares MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Not a direct product competitor, but highly relevant for workflow plugins, debugging disciplines, and skill automation.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Workflow and plugin framework for AI-assisted development with structured debug, test, learn, and research helpers.",
+      "projectShape": "Workflow plugin framework",
+      "releaseAcknowledgement": "Added a methodology reference for turning session knowledge into reusable workflows and skills.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/udecode/dotai"
+        }
+      ]
+    },
+    {
+      "repo": "vultuk/claude-code-web",
+      "name": "claude-code-web",
+      "homepage": "https://github.com/vultuk/claude-code-web",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository includes MIT license text."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Useful reference for remote browser access, auth, multi-session persistence, WebSocket streaming, and split views.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-16",
+      "summary": "Web interface for Claude Code with authentication, multi-session persistence, split views, REST API, and WebSocket streaming.",
+      "projectShape": "Remote browser shell",
+      "releaseAcknowledgement": "Added a stronger benchmark for remote browser access and multi-session persistence.",
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/vultuk/claude-code-web"
         }
       ]
     },
@@ -285,85 +780,11 @@
       "reviewedAt": "2026-03-15",
       "summary": "TypeScript MCP server that exposes local AI coding sessions for retrieval and automation workflows.",
       "projectShape": "TypeScript MCP server",
-      "stackSignals": [
-        "MCP exposure of local sessions",
-        "tool-agnostic retrieval",
-        "headless automation"
-      ],
-      "focusAreas": [
-        "external automation",
-        "session retrieval",
-        "adapter boundaries"
-      ],
-      "verifiedPaths": [],
-      "inspectionTargets": [
-        "MCP server contract",
-        "session listing API",
-        "adapter boundaries"
-      ],
-      "integrationTargets": [
-        "external automation API",
-        "headless audit interface",
-        "session retrieval boundary"
-      ],
       "releaseAcknowledgement": "Helped confirm that OSM should expose a headless session retrieval surface beyond the GUI.",
-      "constraints": [],
       "evidence": [
         {
           "label": "Repository",
           "url": "https://github.com/yoavf/ai-sessions-mcp"
-        }
-      ]
-    },
-    {
-      "repo": "Dicklesworthstone/coding_agent_session_search",
-      "name": "coding_agent_session_search",
-      "homepage": "https://github.com/Dicklesworthstone/coding_agent_session_search",
-      "license": {
-        "spdx": "LicenseRef-Restricted",
-        "notes": "Repository carries additional restrictions, so OSM must treat it as reference-only until a clean-room reimplementation exists."
-      },
-      "absorption": {
-        "mode": "reference-only",
-        "rationale": "Its breadth of connector coverage is strategically useful, but the license posture blocks direct code reuse.",
-        "blockedBy": [
-          "additional license restrictions",
-          "public distribution risk"
-        ]
-      },
-      "reviewStatus": "restricted",
-      "reviewedAt": "2026-03-15",
-      "summary": "Broad multi-agent search tooling that proves the scale of connector coverage and export patterns OSM must beat.",
-      "projectShape": "Broad search CLI",
-      "stackSignals": [
-        "wide connector matrix",
-        "search and export CLI",
-        "HTML output"
-      ],
-      "focusAreas": [
-        "connector breadth",
-        "search ranking",
-        "export workflow"
-      ],
-      "verifiedPaths": [],
-      "inspectionTargets": [
-        "connector normalization strategy",
-        "search ranking",
-        "export workflow"
-      ],
-      "integrationTargets": [
-        "source coverage strategy",
-        "adapter backlog prioritization"
-      ],
-      "releaseAcknowledgement": "Helped validate how much connector breadth OSM needs, but its code remains reference-only.",
-      "constraints": [
-        "Do not copy code into the public OSM distribution.",
-        "Treat as reference-only until a clean-room replacement exists."
-      ],
-      "evidence": [
-        {
-          "label": "Repository",
-          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search"
         }
       ]
     }

@@ -18,9 +18,7 @@ Very close to OSM's export-before-delete requirement and summary-centric cleanup
 
 - CLI and export tooling
 - Stack Signals:
-- Markdown export
-- HTML export
-- smart summaries
+- None
 
 ## Verified Paths
 
@@ -30,15 +28,11 @@ Very close to OSM's export-before-delete requirement and summary-centric cleanup
 
 ## Inspection Targets
 
-- markdown exporter
-- summary layout
-- usage rollups
+- None
 
 ## Integration Targets
 
-- value-preserving export
-- cleanup preflight summaries
-- export metadata format
+- None
 
 ## Adopted Capabilities
 

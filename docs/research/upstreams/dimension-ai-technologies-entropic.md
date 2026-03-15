@@ -18,9 +18,7 @@ Cross-platform maintenance UX is directly useful for OSM's governance dashboard 
 
 - Cross-platform desktop maintenance console
 - Stack Signals:
-- Electron GUI
-- provider-aware session model
-- maintenance actions
+- None
 
 ## Verified Paths
 
@@ -28,15 +26,11 @@ Cross-platform maintenance UX is directly useful for OSM's governance dashboard 
 
 ## Inspection Targets
 
-- provider switchboard
-- cleanup guardrails
-- desktop navigation
+- None
 
 ## Integration Targets
 
-- provider registry
-- maintenance dashboard
-- bulk cleanup UX
+- None
 
 ## Adopted Capabilities
 

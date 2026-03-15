@@ -33,6 +33,7 @@ use crate::{
         title::derive_title, value::derive_value_score,
     },
     preferences::RuntimeSnapshot,
+    session_text::normalize_session_text,
     storage::sqlite::{load_audit_events, open_database},
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
 };
@@ -706,7 +707,8 @@ fn extract_codex_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
         }
 
         let role = payload.get("role").and_then(Value::as_str);
-        let message = extract_text_array(payload.get("content"));
+        let message = extract_text_array(payload.get("content"))
+            .and_then(|value| normalize_session_text(&value));
 
         match role {
             Some("user") if narrative.first_user_goal.is_none() => {
@@ -737,21 +739,15 @@ fn extract_claude_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
                 narrative.first_user_goal = line
                     .get("message")
                     .and_then(|message| message.get("content"))
-                    .and_then(Value::as_str)
-                    .map(ToOwned::to_owned);
+                    .and_then(extract_claude_message_text)
+                    .and_then(|value| normalize_session_text(&value));
             }
             Some("assistant") => {
                 if let Some(message) = line
                     .get("message")
                     .and_then(|message| message.get("content"))
-                    .and_then(Value::as_array)
-                    .and_then(|parts| {
-                        parts.iter().find_map(|part| {
-                            part.get("text")
-                                .and_then(Value::as_str)
-                                .map(ToOwned::to_owned)
-                        })
-                    })
+                    .and_then(extract_claude_message_text)
+                    .and_then(|value| normalize_session_text(&value))
                 {
                     if looks_like_error_message(&message) {
                         narrative.error_count += 1;
@@ -914,10 +910,10 @@ fn extract_copilot_narrative(source: &Path) -> SnapshotResult<SessionNarrative> 
                     narrative.error_count += 1;
                 }
 
-                if let Some(output) = output {
-                    if !success || looks_like_error_message(output) {
-                        narrative.error_count += 1;
-                    }
+                if let Some(output) = output
+                    && (!success || looks_like_error_message(output))
+                {
+                    narrative.error_count += 1;
                 }
             }
             _ => {}
@@ -1155,6 +1151,28 @@ fn extract_text_array(value: Option<&Value>) -> Option<String> {
         .filter(|text| !text.trim().is_empty())
 }
 
+fn extract_claude_message_text(content: &Value) -> Option<String> {
+    match content {
+        Value::String(value) => Some(value.to_string()),
+        Value::Array(parts) => {
+            let joined = parts
+                .iter()
+                .filter_map(|part| {
+                    match part.get("type").and_then(Value::as_str) {
+                        Some("text" | "input_text" | "output_text") => {
+                            part.get("text").and_then(Value::as_str)
+                        }
+                        _ => None,
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            (!joined.trim().is_empty()).then_some(joined)
+        }
+        _ => None,
+    }
+}
+
 fn session_adapter(assistant: &str) -> SnapshotResult<Box<dyn SessionAdapter>> {
     match assistant {
         "codex" => Ok(Box::new(CodexAdapter)),
@@ -1370,6 +1388,59 @@ mod tests {
                 .content
                 .contains("Review OpenClaw transcripts and flag cleanup candidates")
         }));
+    }
+
+    #[test]
+    fn local_snapshot_ignores_codex_scaffolding_when_deriving_title_and_highlights() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let codex_dir = home_dir.join(".codex").join("sessions").join("2026").join("03").join("16");
+
+        fs::create_dir_all(&codex_dir).expect("create codex dir");
+        fs::write(
+            codex_dir.join("rollout-2026-03-16T12-00-00-codex-real.jsonl"),
+            concat!(
+                "{\"timestamp\":\"2026-03-16T12:00:00Z\",\"type\":\"session_meta\",\"payload\":",
+                "{\"id\":\"codex-real-1\",\"cwd\":\"C:\\\\Projects\\\\osm\"}}\n",
+                "{\"timestamp\":\"2026-03-16T12:00:01Z\",\"type\":\"response_item\",\"payload\":",
+                "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",",
+                "\"text\":\"# AGENTS.md instructions for C:\\\\Users\\\\Max\\n\\n<INSTRUCTIONS>### Available skills</INSTRUCTIONS>\"}]}}\n",
+                "{\"timestamp\":\"2026-03-16T12:00:02Z\",\"type\":\"response_item\",\"payload\":",
+                "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",",
+                "\"text\":\"<environment_context> <cwd>C:\\\\Projects\\\\osm</cwd> <shell>powershell</shell> </environment_context>\"}]}}\n",
+                "{\"timestamp\":\"2026-03-16T12:00:03Z\",\"type\":\"response_item\",\"payload\":",
+                "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",",
+                "\"text\":\"Fix why the session list keeps showing the first row and won't surface the real topic.\"}]}}\n",
+                "{\"timestamp\":\"2026-03-16T12:00:05Z\",\"type\":\"response_item\",\"payload\":",
+                "{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",",
+                "\"text\":\"I traced it to scaffolding text polluting the session title and highlights.\"}]}}\n"
+            ),
+        )
+        .expect("write codex session");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        assert_eq!(snapshot.sessions.len(), 1);
+        assert!(snapshot.sessions[0].title.starts_with(
+            "Fix why the session list keeps showing the first row"
+        ));
+        assert!(!snapshot.sessions[0].title.contains("AGENTS.md instructions"));
+        assert_eq!(
+            snapshot.sessions[0].transcript_highlights[0].content,
+            "Fix why the session list keeps showing the first row and won't surface the real topic."
+        );
+        assert!(
+            !snapshot.sessions[0]
+                .transcript_highlights
+                .iter()
+                .any(|highlight| highlight.content.contains("AGENTS.md instructions"))
+        );
     }
 
     fn fixtures_root() -> PathBuf {

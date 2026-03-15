@@ -1,152 +1,112 @@
-# open Session Manager v0.2.1 Public Preview
+# open Session Manager v0.3.0 Public Preview
 
-## 本版是对 v0.2.0 的补丁修复
+这次不是 `v0.2.x` 那种补丁修修补补，而是第一次把 OSM 真正推到多助手会话治理台的轨道上。
 
-这次 `v0.2.1` 不是方向性大改，而是直接修你已经指出的两个发布级问题：
+## 本版重点
 
-- 修复默认扫描本地坏会话文件时向 `stderr` 打恢复性噪声，避免桌面启动时看到 `skipping malformed session file ...`
-- 修复 Sessions 右侧详情面板仍然 `sticky` 且卡片双列拉伸的问题，改成非粘滞、单列、非内部滚动布局
-- 修复会话列表整行点击不生效的问题，避免只能点标题按钮
-- 增加导出目录设置和导出后路径显示，用户现在能直接看到 Markdown 存在哪里
-- 增加 `跟随系统 / 浅色 / 深色` 主题切换
-- 首页补上已吸收上游能力的可见说明，不再只写在 research 文档里
+- 会话支持面从 3 个扩到 7 个：
+  - `Codex`
+  - `Claude Code`
+  - `OpenCode`
+  - `Gemini CLI`
+  - `GitHub Copilot CLI`
+  - `Factory Droid`
+  - `OpenClaw`
+- 把一批真实竞品镜像拉到本地并纳入 catalog、研究索引和开源致谢，不再只有零散笔记
+- 修掉会直接影响可用性的会话质量问题：
+  - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
+  - `Claude Code` 不再把纯 `file-history-snapshot` JSONL 当候选会话
+- Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
+- 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
+- Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
+- 新增三条本地镜像研究并纳入治理目录：
+  - `ChristopherA/claude_code_tools`
+  - `ssdeanx/Gemini-CLI-Web`
+  - `sugyan/claude-code-webui`
 
-同时保留 `v0.2.0 Public Preview` 的既有定位：Windows 11 已具备桌面调试构建、真实本地快照、导出、软删除、恢复和 E2E 验证证据；Linux / WSL 当前仍以发现、解析、审计和路径模型能力预览为主。
+## 这版真正吸收了什么
+
+已经真实落进代码的，不只是“研究过”：
+
+- `jazzyalex/agent-sessions`
+  - clean-room 吸收并重写了 `Gemini CLI`、`GitHub Copilot CLI`、`Factory Droid`、`OpenClaw` 适配器能力线
+- `daaain/claude-code-log`
+  - 延续 Markdown 导出、transcript highlights、todo snapshot 的思路
+- `d-kimuson/claude-code-viewer`
+  - 延续 viewer 风格详情面板和 todo evidence 呈现思路
+- `ChristopherA/claude_code_tools`
+  - 吸收 session closure / resume 的 brief 思路，补到 OSM 的 `Session Handoff` Markdown 导出
+
+已经纳入本地镜像、研究索引和致谢体系的还包括：
+
+- `kbwo/ccmanager`
+- `farion1231/cc-switch`
+- `junhoyeo/tokscale`
+- `coder/agentapi`
+- `endorhq/rover`
+- `kevinelliott/agentpipe`
+- `milisp/codexia`
+- `siteboon/claudecodeui`
+- `smtg-ai/claude-squad`
+- `udecode/dotai`
+- `autohandai/commander`
+- `pchalasani/claude-code-tools`
+- `vultuk/claude-code-web`
+- `sugyan/claude-code-webui`
+- `ssdeanx/Gemini-CLI-Web`
 
 ## 关于 `edition = "2024"`
 
-`Cargo.toml` 中继续使用 `edition = "2024"` 是刻意保持正确配置，不是写错年份。当前本机 `cargo` 对 edition 的可选值只有：
+`Cargo.toml` 继续使用 `edition = "2024"`，不是写错年份。
+
+原因很简单：Rust edition 是语言版本，不是当前年份。当前本机 `cargo` 支持的 edition 仍然是：
 
 - `2015`
 - `2018`
 - `2021`
 - `2024`
 
-`2026` 会被 `cargo` 直接拒绝，因此不能把仓库改成一个无效 edition。
-
-## 当前已吸收的能力
-
-本版已经完成两条真实上游吸收链路：
-
-- `daaain/claude-code-log`
-  - 已吸收：更丰富的 Markdown 导出分节、transcript highlights、Claude todo snapshot
-  - 对应到 OSM：删除前先形成更有价值的 Markdown 资产，而不是只做原始 transcript 归档
-- `d-kimuson/claude-code-viewer`
-  - 已吸收：viewer 风格 transcript detail 面板、session todo evidence 展示、Claude todo 提取思路
-  - 对应到 OSM：会话详情更接近真实工作痕迹，而不是只显示元数据列表
-
-本版同时公开了 upstream intake pipeline，把研究、许可证姿态、镜像规划和发布致谢收口成可复用工程资产：
-
-- `third_party/upstreams/catalog.json`
-- `third_party/upstreams/intake-manifest.json`
-- `docs/research/upstreams/index.md`
-- `docs/release/open-source-attribution.md`
-- `scripts/intake-upstreams.mjs`
+`2026` 不是有效值，直接改会让仓库配置失效。
 
 ## 当前已实现的能力
 
-- 支持 `Codex`、`Claude Code`、`OpenCode` 三类适配器
-- 支持 Win11、Linux、WSL 的本地路径发现与真实 snapshot 管线
-- 支持会话主题、摘要、进度、价值分、风险标记、最后活跃时间与 transcript digest
-- 支持配置审计、密钥脱敏、第三方中转与危险权限风险识别
-- 支持 Markdown 导出、软删除、恢复、持久化审计历史
-- 支持“先导出 Markdown，再允许软删除”的前后端双重守卫
-- 支持中英文切换，并按系统 / 浏览器语言自动选择默认语言
-- 支持桌面 GUI 启动，Windows release `exe` 不再额外弹出终端窗口
-- 支持更稳定的 Sessions 选中逻辑、搜索筛选回退和响应式详情布局
-- 修复恢复越界、OpenCode 假删除和 Claude `TodoWrite` 漏提取问题
-- 修复默认恢复性坏会话扫描噪声输出
-- 修复详情页粘滞拉伸布局
-
-## 本版重点更新
-
-- 增加 Tauri 桌面运行时，桌面端可直接调用 Rust 原生命令读取真实本地 snapshot
-- 增加真实 snapshot 管线与持久化审计历史读取
-- 增加中英文切换，并按系统 / 浏览器语言自动选择默认语言
-- 增加“导出 Markdown 之后才允许软删除”的前后端双重守卫
-- 增加统一验证入口，可一次性运行 Rust、Web、桌面构建和 E2E
-- 增加 upstream intake pipeline，把竞品研究、许可证姿态、镜像规划和发布致谢收口成结构化产物
-- 修复 Windows release `exe` 弹出终端窗口的问题
-- 重做 Sessions 工作区的选中逻辑、筛选回退和响应式详情布局
-- 收紧导出 / 隔离区路径生成，避免异常 `session_id` 造成路径越界
-- 将桌面快照、导出和软删除命令改成异步执行，降低 UI 卡死风险
-- 为 restore 增加受管隔离区和允许恢复根边界校验
-- 为 Markdown frontmatter 增加安全转义，避免不规范 YAML 导出
-
-## 验证结果
-
-本版发布前已经通过以下本地验证：
-
-- `cargo test --lib`
-- `cargo test --test cli_snapshot`
-- `cargo clippy --all-targets --all-features -- -D warnings`
-- `npm --prefix web run test`
-- `npm --prefix web run build`
-- `npm --prefix web run e2e`
-- `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
-- `npm --prefix web run tauri:build`
-
-## 快速开始
-
-```bash
-npm --prefix web install
-powershell -ExecutionPolicy Bypass -File scripts/verify.ps1
-npm --prefix web run tauri:dev
-```
-
-## 构建与产物
-
-```bash
-npm --prefix web run tauri:build
-```
-
-当前 Windows 调试构建产物：
-
-```text
-target/debug/open-session-manager-core.exe
-```
-
-当前 Windows release 构建产物：
-
-```text
-target/release/open-session-manager-core.exe
-```
+- 7 个终端代码助手的本地会话发现与解析
+- 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
+- transcript highlights 与 Claude todo snapshot
+- `Session Handoff` Markdown 导出
+- Markdown 导出、软删除、恢复、审计历史
+- 中英文切换与跟随系统语言
+- 浅色 / 深色 / 跟随系统主题
+- Markdown 导出目录设置与导出路径显示
+- Tauri 桌面运行时与浏览器 fallback
+- upstream intake pipeline、研究索引与开源致谢
 
 ## 当前边界
 
-以下内容不包含在 `v0.2.1 Public Preview` 承诺范围内：
+以下内容不包含在 `v0.3.0 Public Preview` 承诺范围内：
 
-- Linux 桌面实机构建与真实目录回归证据闭环
-- 完整的隔离区浏览器与恢复 UI
-- 配置修改 / 删除后写回真实文件 UI
-- MSI / AppImage / deb / 签名产物链路
-- WSL companion collector 闭环
+- 搜索、BM25、语义搜索、hybrid ranking
+- 会话恢复 / attach / pause / process control
+- worktree 编排、多项目调度、容器隔离执行
+- `Gemini / Copilot / Factory / OpenClaw` 配置审计
+- token / cost analytics
+- MCP / HTTP / headless 自动化接口
+- Linux 桌面实机回归
+- 发布安装包与签名流程
 
-## 发布后优先项
+## 验证结果
 
-以下工作按当前计划在本次发布之后继续推进：
+本版发布前已通过：
 
-- 真实 Win11 + WSL 多发行版样本回放
-- 符号链接 / 目录联接逃逸专项测试
-- 超大历史库性能压测
-- 发布包 smoke test
+- `cargo test --lib`
+- `cargo test --test cli_snapshot`
+- `npm --prefix web run test`
+- `npm --prefix web run build`
 
 ## 开源致谢
 
-以下项目对 OSM 的孵化有直接帮助：
-
-- `jazzyalex/agent-sessions`
-- `lulu-sk/CodexFlow`
-- `d-kimuson/claude-code-viewer`
-- `daaain/claude-code-log`
-- `Dimension-AI-Technologies/Entropic`
-- `yoavf/ai-sessions-mcp`
-- `Dicklesworthstone/coding_agent_session_search`
-
-当前版本已经把开源来源说明、许可证姿态和 reference-only 边界收口到：
+完整感谢名单和许可边界已收口到：
 
 - `docs/release/open-source-attribution.md`
 - `docs/research/upstreams/index.md`
 - `third_party/upstreams/catalog.json`
-
-其中 MIT / Apache-2.0 等兼容许可证项目，会随着后续真正的代码级继承继续补充更细的来源说明；带附加限制的仓库仅吸收思路，不直接复制代码。

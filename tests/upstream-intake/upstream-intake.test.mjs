@@ -26,13 +26,29 @@ test("loadUpstreamCatalog validates the committed governance catalog", async () 
   const claudeCodeLog = catalog.entries.find(
     (entry) => entry.repo === "daaain/claude-code-log"
   );
+  const claudeCodeTools = catalog.entries.find(
+    (entry) => entry.repo === "ChristopherA/claude_code_tools"
+  );
   const broadSearch = catalog.entries.find(
     (entry) => entry.repo === "Dicklesworthstone/coding_agent_session_search"
+  );
+  const geminiCliWeb = catalog.entries.find(
+    (entry) => entry.repo === "ssdeanx/Gemini-CLI-Web"
   );
 
   assert.ok(catalog.entries.length >= 6);
   assert.equal(agentSessions.absorption.mode, "candidate-absorb");
-  assert.ok(agentSessions.verifiedPaths.includes("apps/desktop"));
+  assert.ok(
+    agentSessions.verifiedPaths.includes("AgentSessions/AgentSessionsApp.swift")
+  );
+  assert.ok(
+    agentSessions.upstreamSourceFiles.includes(
+      "AgentSessions/Services/OpenClawSessionIndexer.swift"
+    )
+  );
+  assert.ok(
+    agentSessions.adoptedCapabilities.includes("OpenClaw session adapter")
+  );
   assert.ok(
     claudeCodeViewer.adoptedCapabilities.includes(
       "Viewer-style transcript detail panel"
@@ -51,11 +67,19 @@ test("loadUpstreamCatalog validates the committed governance catalog", async () 
       "claude_code_log/markdown/renderer.py"
     )
   );
+  assert.equal(claudeCodeTools.absorption.mode, "candidate-absorb");
+  assert.ok(
+    claudeCodeTools.adoptedCapabilities.includes(
+      "Markdown session handoff export"
+    )
+  );
   assert.equal(broadSearch.absorption.mode, "reference-only");
   assert.match(
     broadSearch.absorption.blockedBy.join(" "),
     /license/i
   );
+  assert.equal(geminiCliWeb.absorption.mode, "reference-only");
+  assert.match(geminiCliWeb.license.spdx, /Conflicting/);
 });
 
 test("research and attribution builders emit deterministic governance output", async () => {

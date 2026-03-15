@@ -18,9 +18,14 @@ impl SessionAdapter for ClaudeCodeAdapter {
     }
 
     fn discover_session_files(&self, root: &Path) -> AdapterResult<Vec<PathBuf>> {
-        collect_files(root, &|path| {
+        let candidates = collect_files(root, &|path| {
             path.extension().and_then(|value| value.to_str()) == Some("jsonl")
-        })
+        })?;
+
+        Ok(candidates
+            .into_iter()
+            .filter(|path| looks_like_claude_session_candidate(path).unwrap_or(true))
+            .collect())
     }
 
     fn parse_session(&self, source: &Path) -> AdapterResult<SessionRecord> {
@@ -84,4 +89,29 @@ impl SessionAdapter for ClaudeCodeAdapter {
             content_hash: hash_file(source)?,
         })
     }
+}
+
+fn looks_like_claude_session_candidate(path: &Path) -> Result<bool, std::io::Error> {
+    let reader = BufReader::new(File::open(path)?);
+    let mut only_file_history = true;
+
+    for line in reader.lines().take(32) {
+        let line = line?;
+        let Ok(parsed) = serde_json::from_str::<Value>(&line) else {
+            return Ok(true);
+        };
+
+        let entry_type = parsed.get("type").and_then(Value::as_str);
+        if parsed.get("sessionId").and_then(Value::as_str).is_some()
+            || matches!(entry_type, Some("user" | "assistant" | "system" | "progress"))
+        {
+            return Ok(true);
+        }
+
+        if entry_type != Some("file-history-snapshot") {
+            only_file_history = false;
+        }
+    }
+
+    Ok(!only_file_history)
 }

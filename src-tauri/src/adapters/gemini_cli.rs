@@ -90,7 +90,7 @@ impl SessionAdapter for GeminiCliAdapter {
     }
 }
 
-pub(crate) fn gemini_messages<'a>(parsed: &'a Value) -> Vec<&'a Value> {
+pub(crate) fn gemini_messages(parsed: &Value) -> Vec<&Value> {
     if let Some(messages) = parsed.as_array() {
         return messages.iter().collect();
     }
@@ -163,7 +163,7 @@ pub(crate) fn gemini_timestamp(message: &Value) -> Option<String> {
         .and_then(stringish)
 }
 
-pub(crate) fn gemini_tool_calls<'a>(message: &'a Value) -> Vec<&'a Value> {
+pub(crate) fn gemini_tool_calls(message: &Value) -> Vec<&Value> {
     message
         .get("toolCalls")
         .or_else(|| message.get("tool_calls"))

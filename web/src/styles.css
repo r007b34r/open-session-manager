@@ -401,6 +401,16 @@ a {
   overflow-wrap: anywhere;
 }
 
+.session-meta-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.session-meta-id {
+  font-family: "Consolas", "Cascadia Mono", monospace;
+  font-size: 0.82rem;
+}
+
 .progress-badge,
 .badge {
   display: inline-flex;

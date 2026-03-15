@@ -2,13 +2,13 @@
 
 - Canonical URL: https://github.com/jazzyalex/agent-sessions
 - License: MIT
-- Review Status: screened
-- Reviewed At: 2026-03-15
+- Review Status: adopted
+- Reviewed At: 2026-03-16
 - Absorption Mode: candidate-absorb
 
 ## Summary
 
-Desktop-first local session explorer with deep indexing, search, and analytics positioning.
+Desktop-first local session explorer with deep indexing, search, analytics, and broad assistant parser coverage.
 
 ## Why It Matters To OSM
 
@@ -18,33 +18,47 @@ Strong alignment with OSM's local-first indexing and session analytics direction
 
 - Desktop session explorer
 - Stack Signals:
-- React desktop shell
-- local-first indexing
-- session analytics
+- SwiftUI macOS desktop shell
+- local-first multi-agent indexers
+- analytics and live cockpit surfaces
 
 ## Verified Paths
 
-- apps/desktop
+- AgentSessions/AgentSessionsApp.swift
+- AgentSessions/Views/UnifiedSessionsView.swift
+- AgentSessions/Analytics/Services/AnalyticsService.swift
+- AgentSessions/OpenCode/OpenCodeSqliteReader.swift
 
 ## Inspection Targets
 
-- search pipeline
+- unified session indexer
+- search and transcript navigation
 - analytics rollups
-- transcript catalog model
+- active session cockpit
 
 ## Integration Targets
 
-- session index pipeline
-- governance analytics
-- desktop navigation heuristics
+- adapter coverage expansion
+- session search UX
+- analytics dashboard roadmap
+- OpenCode SQLite compatibility
 
 ## Adopted Capabilities
 
-- None
+- Gemini CLI session adapter
+- GitHub Copilot CLI session adapter
+- Factory Droid session adapter
+- OpenClaw session adapter
 
 ## Upstream Source Files
 
-- None
+- AgentSessions/Views/UnifiedSessionsView.swift
+- AgentSessions/Services/GeminiSessionIndexer.swift
+- AgentSessions/Services/CopilotSessionIndexer.swift
+- AgentSessions/Services/DroidSessionIndexer.swift
+- AgentSessions/Services/OpenClawSessionIndexer.swift
+- AgentSessions/Analytics/Services/AnalyticsService.swift
+- AgentSessions/OpenCode/OpenCodeSqliteReader.swift
 
 ## Constraints
 
@@ -52,7 +66,7 @@ Strong alignment with OSM's local-first indexing and session analytics direction
 
 ## Release Acknowledgement
 
-Helped shape OSM's local-first session indexing and analytics direction.
+Helped shape OSM's local-first session indexing direction and the multi-assistant adapter expansion.
 
 ## Evidence
 

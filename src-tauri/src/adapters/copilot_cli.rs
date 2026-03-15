@@ -135,7 +135,7 @@ pub(crate) fn parse_folder_trust_path(message: &str) -> Option<String> {
     }
 }
 
-pub(crate) fn copilot_tool_requests<'a>(data: &'a Value) -> Vec<&'a Value> {
+pub(crate) fn copilot_tool_requests(data: &Value) -> Vec<&Value> {
     data.get("toolRequests")
         .and_then(Value::as_array)
         .map(|items| items.iter().collect())

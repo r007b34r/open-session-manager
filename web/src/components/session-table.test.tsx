@@ -43,6 +43,7 @@ describe("SessionTable", () => {
     expect(screen.getByText(/65%/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-03-15 12:40/i)).toBeInTheDocument();
     expect(screen.getByText(/wsl: ubuntu/i)).toBeInTheDocument();
+    expect(screen.getByText(/ses-001/i)).toBeInTheDocument();
   });
 
   it("allows selecting a session row through an explicit workspace control", async () => {
