@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use super::{
-    claude_code::ClaudeCodeAdapter, codex::CodexAdapter, opencode::OpenCodeAdapter, traits::SessionAdapter,
+    claude_code::ClaudeCodeAdapter, codex::CodexAdapter, opencode::OpenCodeAdapter,
+    traits::SessionAdapter,
 };
 
 fn fixtures_root() -> PathBuf {
@@ -51,7 +52,10 @@ fn claude_adapter_discovers_and_parses_fixture() {
 
     assert_eq!(session.assistant, "claude-code");
     assert_eq!(session.session_id, "claude-ses-1");
-    assert_eq!(session.project_path.as_deref(), Some(r"C:\Projects\claude-demo"));
+    assert_eq!(
+        session.project_path.as_deref(),
+        Some(r"C:\Projects\claude-demo")
+    );
     assert_eq!(session.message_count, 2);
     assert_eq!(session.raw_format, "claude-code-jsonl");
     assert!(!session.content_hash.is_empty());

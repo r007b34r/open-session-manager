@@ -1,7 +1,5 @@
 use std::{
-    fmt,
-    fs,
-    io,
+    fmt, fs, io,
     path::{Path, PathBuf},
 };
 
@@ -48,7 +46,10 @@ impl From<serde_json::Error> for AdapterError {
     }
 }
 
-pub fn collect_files(root: &Path, predicate: &dyn Fn(&Path) -> bool) -> AdapterResult<Vec<PathBuf>> {
+pub fn collect_files(
+    root: &Path,
+    predicate: &dyn Fn(&Path) -> bool,
+) -> AdapterResult<Vec<PathBuf>> {
     let mut files = Vec::new();
     visit_dirs(root, predicate, &mut files)?;
     files.sort();

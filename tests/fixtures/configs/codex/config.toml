@@ -1,0 +1,10 @@
+model_provider = "cch"
+model = "gpt-5-codex"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[model_providers.cch]
+name = "Corporate Relay"
+base_url = "https://relay.cch.example/v1"
+api_key = "sk-cch-secret-123456789"
+wire_api = "responses"

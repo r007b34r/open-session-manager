@@ -8,7 +8,12 @@ use crate::discovery::{
 
 pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
     let mut roots = vec![
-        KnownPath::new("codex", "config", "windows", codex_user_config(&context.home_dir)),
+        KnownPath::new(
+            "codex",
+            "config",
+            "windows",
+            codex_user_config(&context.home_dir),
+        ),
         KnownPath::new(
             "claude-code",
             "config",

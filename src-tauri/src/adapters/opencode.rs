@@ -19,8 +19,12 @@ impl SessionAdapter for OpenCodeAdapter {
     fn discover_session_files(&self, root: &Path) -> AdapterResult<Vec<PathBuf>> {
         collect_files(root, &|path| {
             path.extension().and_then(|value| value.to_str()) == Some("json")
-                && path.components().any(|component| component.as_os_str() == "storage")
-                && path.components().any(|component| component.as_os_str() == "info")
+                && path
+                    .components()
+                    .any(|component| component.as_os_str() == "storage")
+                && path
+                    .components()
+                    .any(|component| component.as_os_str() == "info")
         })
     }
 
@@ -29,16 +33,23 @@ impl SessionAdapter for OpenCodeAdapter {
         let session_id = session_info
             .get("id")
             .and_then(Value::as_str)
-            .ok_or_else(|| AdapterError::InvalidSession(format!("missing session id in {}", source.display())))?
+            .ok_or_else(|| {
+                AdapterError::InvalidSession(format!("missing session id in {}", source.display()))
+            })?
             .to_string();
 
         let storage_root = source
             .parent()
             .and_then(Path::parent)
             .and_then(Path::parent)
-            .ok_or_else(|| AdapterError::InvalidSession("invalid opencode storage path".to_string()))?;
+            .ok_or_else(|| {
+                AdapterError::InvalidSession("invalid opencode storage path".to_string())
+            })?;
 
-        let message_dir = storage_root.join("session").join("message").join(&session_id);
+        let message_dir = storage_root
+            .join("session")
+            .join("message")
+            .join(&session_id);
         let part_dir = storage_root.join("session").join("part").join(&session_id);
 
         let message_files = collect_files(&message_dir, &|path| {

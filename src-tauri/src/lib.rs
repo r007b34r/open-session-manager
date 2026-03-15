@@ -1,7 +1,9 @@
 pub mod adapters;
+pub mod audit;
 pub mod commands;
-pub mod domain;
 pub mod discovery;
+pub mod domain;
+pub mod insights;
 pub mod storage;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -18,7 +18,9 @@ impl SessionAdapter for ClaudeCodeAdapter {
     }
 
     fn discover_session_files(&self, root: &Path) -> AdapterResult<Vec<PathBuf>> {
-        collect_files(root, &|path| path.extension().and_then(|value| value.to_str()) == Some("jsonl"))
+        collect_files(root, &|path| {
+            path.extension().and_then(|value| value.to_str()) == Some("jsonl")
+        })
     }
 
     fn parse_session(&self, source: &Path) -> AdapterResult<SessionRecord> {
