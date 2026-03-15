@@ -3,6 +3,7 @@ import { useDeferredValue, useState } from "react";
 import { SessionDetail } from "../components/session-detail";
 import { SessionTable } from "../components/session-table";
 import type { SessionDetailRecord } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 type SessionsRouteProps = {
   sessions: SessionDetailRecord[];
@@ -17,6 +18,7 @@ export function SessionsRoute({
   onExportMarkdown,
   onSoftDelete
 }: SessionsRouteProps) {
+  const { copy } = useI18n();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
 
@@ -43,13 +45,13 @@ export function SessionsRoute({
     <section className="route-stack">
       <section className="panel filter-panel">
         <label className="search-label" htmlFor="session-search">
-          Search sessions
+          {copy.sessions.searchLabel}
         </label>
         <input
           className="search-input"
           id="session-search"
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="topic, project, assistant, risk"
+          placeholder={copy.sessions.searchPlaceholder}
           type="search"
           value={query}
         />

@@ -1,4 +1,5 @@
 import type { SessionListItem } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 type SessionTableProps = {
   sessions: SessionListItem[];
@@ -9,28 +10,27 @@ export function SessionTable({
   sessions,
   selectedSessionId
 }: SessionTableProps) {
+  const { copy, translateProgressState } = useI18n();
+
   return (
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="section-kicker">Session Explorer</p>
-          <h2>Retention-first queue</h2>
+          <p className="section-kicker">{copy.sessionTable.kicker}</p>
+          <h2>{copy.sessionTable.title}</h2>
         </div>
-        <p className="panel-copy">
-          Review title quality, progress, and recency before exporting or
-          deleting anything.
-        </p>
+        <p className="panel-copy">{copy.sessionTable.description}</p>
       </div>
 
       <div className="table-shell">
         <table className="data-table">
           <thead>
             <tr>
-              <th scope="col">Session</th>
-              <th scope="col">Assistant</th>
-              <th scope="col">Progress</th>
-              <th scope="col">Value</th>
-              <th scope="col">Last Activity</th>
+              <th scope="col">{copy.sessionTable.columns.session}</th>
+              <th scope="col">{copy.sessionTable.columns.assistant}</th>
+              <th scope="col">{copy.sessionTable.columns.progress}</th>
+              <th scope="col">{copy.sessionTable.columns.value}</th>
+              <th scope="col">{copy.sessionTable.columns.lastActivity}</th>
             </tr>
           </thead>
           <tbody>
@@ -53,7 +53,7 @@ export function SessionTable({
                 <td>{session.assistant}</td>
                 <td>
                   <span className="progress-badge">
-                    {session.progressState}
+                    {translateProgressState(session.progressState)}
                   </span>
                   <span className="progress-percent">
                     {session.progressPercent}%

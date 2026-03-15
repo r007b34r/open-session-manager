@@ -6,6 +6,13 @@ import {
   recordSoftDelete,
   type DashboardSnapshot
 } from "./lib/api";
+import {
+  getInitialLanguage,
+  getMessages,
+  I18nProvider,
+  LANGUAGE_STORAGE_KEY,
+  type Language
+} from "./lib/i18n";
 import { AuditRoute } from "./routes/audit";
 import { ConfigsRoute } from "./routes/configs";
 import { OverviewRoute } from "./routes/index";
@@ -15,7 +22,9 @@ import { SessionsRoute } from "./routes/sessions";
 
 export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
+  const copy = getMessages(language);
 
   useEffect(() => {
     fetchDashboardSnapshot().then((data) => {
@@ -36,6 +45,16 @@ export function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch {
+      // Ignore storage failures and keep the in-memory language choice.
+    }
+
+    document.documentElement.lang = language;
+  }, [language]);
+
   const handleExportMarkdown = (sessionId: string) => {
     startTransition(() => {
       setSnapshot((current) =>
@@ -53,26 +72,26 @@ export function App() {
   };
 
   return (
-    <RootShell currentPath={normalizePath(currentPath)}>
-      <section className="route-shell">
-        {snapshot ? (
-          renderRoute(
-            snapshot,
-            normalizePath(currentPath),
-            handleExportMarkdown,
-            handleSoftDelete
-          )
-        ) : (
-          <section className="panel empty-state">
-            <p className="section-kicker">Loading</p>
-            <h2>Preparing governance snapshot</h2>
-            <p className="panel-copy">
-              Collecting sessions, config risks, and cleanup recommendations.
-            </p>
-          </section>
-        )}
-      </section>
-    </RootShell>
+    <I18nProvider language={language} setLanguage={setLanguage}>
+      <RootShell currentPath={normalizePath(currentPath)}>
+        <section className="route-shell">
+          {snapshot ? (
+            renderRoute(
+              snapshot,
+              normalizePath(currentPath),
+              handleExportMarkdown,
+              handleSoftDelete
+            )
+          ) : (
+            <section className="panel empty-state">
+              <p className="section-kicker">{copy.app.loadingKicker}</p>
+              <h2>{copy.app.loadingTitle}</h2>
+              <p className="panel-copy">{copy.app.loadingBody}</p>
+            </section>
+          )}
+        </section>
+      </RootShell>
+    </I18nProvider>
   );
 }
 

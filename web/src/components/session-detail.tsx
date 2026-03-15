@@ -1,4 +1,5 @@
 import type { SessionDetailRecord } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 type SessionDetailProps = {
   session?: SessionDetailRecord;
@@ -11,21 +12,21 @@ export function SessionDetail({
   onExportMarkdown,
   onSoftDelete
 }: SessionDetailProps) {
+  const { copy, translateProgressState, translateRiskFlag } = useI18n();
+
   if (!session) {
     return (
       <section className="panel detail-panel">
-        <p className="section-kicker">Session Detail</p>
-        <h2>Select a session</h2>
-        <p className="panel-copy">
-          Choose a row to inspect summary, evidence, and cleanup readiness.
-        </p>
+        <p className="section-kicker">{copy.sessionDetail.kicker}</p>
+        <h2>{copy.sessionDetail.emptyTitle}</h2>
+        <p className="panel-copy">{copy.sessionDetail.emptyBody}</p>
       </section>
     );
   }
 
   return (
     <section className="panel detail-panel">
-      <p className="section-kicker">Session Detail</p>
+      <p className="section-kicker">{copy.sessionDetail.kicker}</p>
       <h2>{session.title}</h2>
       <p className="detail-summary">{session.summary}</p>
 
@@ -35,42 +36,55 @@ export function SessionDetail({
           onClick={() => onExportMarkdown?.(session.sessionId)}
           type="button"
         >
-          Export Markdown
+          {copy.sessionDetail.actions.exportMarkdown}
         </button>
         <button
           className="action-button action-button-danger"
           onClick={() => onSoftDelete?.(session.sessionId)}
           type="button"
         >
-          Move to Quarantine
+          {copy.sessionDetail.actions.moveToQuarantine}
         </button>
       </div>
 
       <div className="detail-grid">
         <div>
-          <h3>Context</h3>
+          <h3>{copy.sessionDetail.sections.context}</h3>
           <ul className="detail-list">
-            <li>Assistant: {session.assistant}</li>
-            <li>Environment: {session.environment}</li>
-            <li>Project: {session.projectPath}</li>
-            <li>Source: {session.sourcePath}</li>
+            <li>
+              {copy.sessionDetail.fields.assistant}: {session.assistant}
+            </li>
+            <li>
+              {copy.sessionDetail.fields.environment}: {session.environment}
+            </li>
+            <li>{copy.sessionDetail.fields.project}: {session.projectPath}</li>
+            <li>{copy.sessionDetail.fields.source}: {session.sourcePath}</li>
           </ul>
         </div>
 
         <div>
-          <h3>Signals</h3>
+          <h3>{copy.sessionDetail.sections.signals}</h3>
           <ul className="detail-list">
-            <li>Progress: {session.progressState}</li>
-            <li>Completion: {session.progressPercent}%</li>
-            <li>Value score: {session.valueScore}</li>
-            <li>Last active: {session.lastActivityAt}</li>
+            <li>
+              {copy.sessionDetail.fields.progress}:{" "}
+              {translateProgressState(session.progressState)}
+            </li>
+            <li>
+              {copy.sessionDetail.fields.completion}: {session.progressPercent}%
+            </li>
+            <li>
+              {copy.sessionDetail.fields.valueScore}: {session.valueScore}
+            </li>
+            <li>
+              {copy.sessionDetail.fields.lastActive}: {session.lastActivityAt}
+            </li>
           </ul>
         </div>
       </div>
 
       <div className="detail-grid">
         <div>
-          <h3>Key Artifacts</h3>
+          <h3>{copy.sessionDetail.sections.keyArtifacts}</h3>
           <ul className="detail-list">
             {session.keyArtifacts.map((artifact) => (
               <li key={artifact}>{artifact}</li>
@@ -79,19 +93,21 @@ export function SessionDetail({
         </div>
 
         <div>
-          <h3>Risk Flags</h3>
+          <h3>{copy.sessionDetail.sections.riskFlags}</h3>
           <div className="badge-row">
             {session.riskFlags.length === 0 ? (
-              <span className="badge badge-safe">no active risk flags</span>
+              <span className="badge badge-safe">
+                {copy.sessionDetail.noRiskFlags}
+              </span>
             ) : (
               session.riskFlags.map((flag) => (
                 <span className="badge badge-risk" key={flag}>
-                  {flag}
+                  {translateRiskFlag(flag)}
                 </span>
               ))
             )}
           </div>
-          <h3>Topic Labels</h3>
+          <h3>{copy.sessionDetail.sections.topicLabels}</h3>
           <div className="badge-row">
             {session.tags.map((tag) => (
               <span className="badge badge-neutral" key={tag}>

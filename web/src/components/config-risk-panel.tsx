@@ -1,21 +1,22 @@
 import type { ConfigRiskRecord } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 type ConfigRiskPanelProps = {
   configs: ConfigRiskRecord[];
 };
 
 export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
+  const { copy, translateProxyMode, translateRiskFlag, translateScope } =
+    useI18n();
+
   return (
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="section-kicker">Config Center</p>
-          <h2>Config Risk Center</h2>
+          <p className="section-kicker">{copy.configRisk.kicker}</p>
+          <h2>{copy.configRisk.title}</h2>
         </div>
-        <p className="panel-copy">
-          Secrets stay masked by default while endpoints, providers, and risk
-          posture remain visible.
-        </p>
+        <p className="panel-copy">{copy.configRisk.description}</p>
       </div>
 
       <div className="config-grid">
@@ -23,31 +24,33 @@ export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
           <article className="config-card" key={config.artifactId}>
             <div className="config-card-topline">
               <span className="badge badge-neutral">{config.assistant}</span>
-              <span className="badge badge-risk">{config.officialOrProxy}</span>
+              <span className="badge badge-risk">
+                {translateProxyMode(config.officialOrProxy)}
+              </span>
             </div>
             <h3>{config.path}</h3>
             <dl className="config-meta">
               <div>
-                <dt>Scope</dt>
-                <dd>{config.scope}</dd>
+                <dt>{copy.configRisk.fields.scope}</dt>
+                <dd>{translateScope(config.scope)}</dd>
               </div>
               <div>
-                <dt>Provider</dt>
+                <dt>{copy.configRisk.fields.provider}</dt>
                 <dd>{config.provider}</dd>
               </div>
               <div>
-                <dt>Endpoint</dt>
+                <dt>{copy.configRisk.fields.endpoint}</dt>
                 <dd>{config.baseUrl}</dd>
               </div>
               <div>
-                <dt>Masked Key</dt>
+                <dt>{copy.configRisk.fields.maskedKey}</dt>
                 <dd>{config.maskedSecret}</dd>
               </div>
             </dl>
             <div className="badge-row">
               {config.risks.map((risk) => (
                 <span className="badge badge-risk" key={risk}>
-                  {risk}
+                  {translateRiskFlag(risk)}
                 </span>
               ))}
             </div>
