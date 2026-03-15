@@ -81,6 +81,66 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
 }
 
 #[test]
+fn snapshot_command_skips_invalid_local_sessions_without_stderr_noise() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let codex_root = home_dir.join(".codex").join("sessions");
+    let claude_root = home_dir.join(".claude").join("projects");
+
+    fs::create_dir_all(&codex_root).expect("create codex root");
+    fs::create_dir_all(&claude_root).expect("create claude root");
+
+    let codex_fixture = fixtures_root()
+        .join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
+    fs::copy(&codex_fixture, codex_root.join("rollout-2026-03-15.jsonl"))
+        .expect("copy codex fixture");
+
+    fs::write(
+        claude_root.join("broken-session.jsonl"),
+        concat!(
+            "{\"type\":\"user\",\"timestamp\":\"2026-03-15T10:00:00Z\",",
+            "\"cwd\":\"C:/Projects/broken-session\",",
+            "\"message\":{\"content\":\"collect local sessions\"}}\n"
+        ),
+    )
+    .expect("write invalid claude session");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
+        .env("HOME", &home_dir)
+        .env("USERPROFILE", &home_dir)
+        .args(["snapshot"])
+        .output()
+        .expect("snapshot command runs");
+
+    assert!(
+        output.status.success(),
+        "snapshot command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "desktop-facing snapshot should not emit recoverable parse noise: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let snapshot: Value =
+        serde_json::from_slice(&output.stdout).expect("snapshot command prints json");
+    let sessions = snapshot
+        .get("sessions")
+        .and_then(Value::as_array)
+        .expect("sessions array exists");
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(
+        sessions[0]
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "codex-ses-1"
+    );
+}
+
+#[test]
 fn snapshot_command_includes_persisted_audit_history() {
     let sandbox = temp_root();
     let source_path = sandbox.join("sessions").join("rollout-2026-03-15.jsonl");

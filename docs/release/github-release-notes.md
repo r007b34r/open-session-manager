@@ -1,14 +1,24 @@
-# open Session Manager v0.2.0 Public Preview
+# open Session Manager v0.2.1 Public Preview
 
-## 发布定位
+## 本版是对 v0.2.0 的补丁修复
 
-`open Session Manager`（`OSM`）是一个面向 Win11、Linux 和 WSL 用户的本地优先治理平台，用来统一识别终端代码助手的会话、配置和高风险密钥引用，并在真正删除之前先帮助用户判断哪些内容值得保留、迁移或提炼。
+这次 `v0.2.1` 不是方向性大改，而是直接修你已经指出的两个发布级问题：
 
-本次 `v0.2.0` 不是“跨平台安装包全部完备”的稳定版，而是首个公开预览版：
+- 修复默认扫描本地坏会话文件时向 `stderr` 打恢复性噪声，避免桌面启动时看到 `skipping malformed session file ...`
+- 修复 Sessions 右侧详情面板仍然 `sticky` 且卡片双列拉伸的问题，改成非粘滞、单列、非内部滚动布局
 
-- Windows 11 已具备桌面调试构建、真实本地快照、导出、软删除、恢复和 E2E 验证证据
-- Linux / WSL 当前以发现、解析、审计和路径模型能力预览为主
-- 对外发布的重点是把核心治理能力、公开文档、验证脚本和开源吸收边界完整公开
+同时保留 `v0.2.0 Public Preview` 的既有定位：Windows 11 已具备桌面调试构建、真实本地快照、导出、软删除、恢复和 E2E 验证证据；Linux / WSL 当前仍以发现、解析、审计和路径模型能力预览为主。
+
+## 关于 `edition = "2024"`
+
+`Cargo.toml` 中继续使用 `edition = "2024"` 是刻意保持正确配置，不是写错年份。当前本机 `cargo` 对 edition 的可选值只有：
+
+- `2015`
+- `2018`
+- `2021`
+- `2024`
+
+`2026` 会被 `cargo` 直接拒绝，因此不能把仓库改成一个无效 edition。
 
 ## 当前已吸收的能力
 
@@ -41,6 +51,8 @@
 - 支持桌面 GUI 启动，Windows release `exe` 不再额外弹出终端窗口
 - 支持更稳定的 Sessions 选中逻辑、搜索筛选回退和响应式详情布局
 - 修复恢复越界、OpenCode 假删除和 Claude `TodoWrite` 漏提取问题
+- 修复默认恢复性坏会话扫描噪声输出
+- 修复详情页粘滞拉伸布局
 
 ## 本版重点更新
 
@@ -68,6 +80,7 @@
 - `npm --prefix web run build`
 - `npm --prefix web run e2e`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+- `npm --prefix web run tauri:build`
 
 ## 快速开始
 
@@ -97,7 +110,7 @@ target/release/open-session-manager-core.exe
 
 ## 当前边界
 
-以下内容不包含在 `v0.2.0 Public Preview` 承诺范围内：
+以下内容不包含在 `v0.2.1 Public Preview` 承诺范围内：
 
 - Linux 桌面实机构建与真实目录回归证据闭环
 - 完整的隔离区浏览器与恢复 UI

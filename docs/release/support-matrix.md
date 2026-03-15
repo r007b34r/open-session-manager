@@ -1,7 +1,7 @@
 # 支持矩阵
 
 日期：2026-03-15
-发布：`v0.2.0 Public Preview`
+发布：`v0.2.1 Public Preview`
 
 ## 本次公开发布范围
 
@@ -46,7 +46,7 @@
 | `yoavf/ai-sessions-mcp` | 已研究 | 后续 MCP / headless 暴露方向 |
 | `Dicklesworthstone/coding_agent_session_search` | Reference-only | 仅吸收连接器覆盖策略与产品启发，不直接吸收代码 |
 
-## 当前不在 v0.2.0 承诺范围内
+## 当前不在 v0.2.1 承诺范围内
 
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |

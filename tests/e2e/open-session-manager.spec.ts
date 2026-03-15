@@ -51,3 +51,34 @@ test("keeps the session workspace aligned when filtering on a narrower viewport"
     page.getByRole("heading", { name: /select a session/i })
   ).toBeVisible();
 });
+
+test("keeps the session detail panel non-sticky and single-column to avoid stretched cards", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1320, height: 920 });
+  await page.goto("/#/sessions");
+
+  await page.getByRole("button", { name: /audit anthropic relay settings/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /audit anthropic relay settings/i })
+  ).toBeVisible();
+
+  const detailLayout = await page.locator(".detail-panel").evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      position: style.position,
+      overflowY: style.overflowY
+    };
+  });
+  const detailCardColumns = await page.locator(".detail-card-grid").evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return style.gridTemplateColumns
+      .split(" ")
+      .map((value) => value.trim())
+      .filter(Boolean).length;
+  });
+
+  expect(detailLayout.position).toBe("static");
+  expect(detailLayout.overflowY).toBe("visible");
+  expect(detailCardColumns).toBe(1);
+});

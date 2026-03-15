@@ -4,7 +4,7 @@
 
 `OSM` 是一个面向 Win11、Linux 和 WSL 用户的本地优先治理平台，用来统一识别终端代码助手的会话、配置、密钥引用和清理动作，并在真正删除之前先帮助用户判断哪些内容值得保留、迁移或提炼。
 
-当前公开版本定位为 `v0.2.0 Public Preview`：
+当前公开版本定位为 `v0.2.1 Public Preview`：
 
 - Windows 11 已完成桌面调试构建、功能链路和 E2E 验证
 - Linux / WSL 当前以发现、解析、审计和数据模型能力预览为主
@@ -204,7 +204,7 @@ node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures --output te
 
 ## 发布证据
 
-当前 `v0.2.0 Public Preview` 的本地验证证据包括：
+当前 `v0.2.1 Public Preview` 的本地验证证据包括：
 
 - `cargo test --lib`
 - `cargo test --test cli_snapshot`

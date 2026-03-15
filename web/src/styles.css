@@ -343,10 +343,11 @@ a {
   display: grid;
   gap: 18px;
   align-self: start;
-  position: sticky;
-  top: 20px;
-  max-height: min(calc(100vh - 40px), 960px);
-  overflow: auto;
+  align-content: start;
+  min-width: 0;
+  position: static;
+  max-height: none;
+  overflow: visible;
 }
 
 .detail-hero,
@@ -399,16 +400,9 @@ a {
 }
 
 .detail-action-row {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 8px 0 2px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 249, 240, 0.95),
-    rgba(255, 249, 240, 0.88),
-    rgba(255, 249, 240, 0)
-  );
+  position: static;
+  padding: 0;
+  background: none;
 }
 
 .action-button {
@@ -458,8 +452,9 @@ a {
 
 .detail-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
 }
 
 .detail-card {
@@ -467,6 +462,8 @@ a {
   gap: 12px;
   padding: 18px;
   min-width: 0;
+  align-content: start;
+  align-self: start;
 }
 
 .detail-card--wide {

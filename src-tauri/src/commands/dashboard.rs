@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, fmt, fs, io, path::Path};
+use std::{collections::BTreeSet, env, fmt, fs, io, path::Path};
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -273,11 +273,7 @@ fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<I
             match build_indexed_session_from_file(adapter.as_ref(), root, &session_file) {
                 Ok(indexed) => sessions.push(indexed),
                 Err(error) if is_recoverable_session_file_error(&error) => {
-                    eprintln!(
-                        "skipping malformed session file for {}: {} ({error})",
-                        root.assistant,
-                        session_file.display()
-                    );
+                    emit_recoverable_session_file_warning(root, &session_file, &error);
                 }
                 Err(error) => return Err(error),
             }
@@ -307,6 +303,22 @@ fn is_recoverable_session_file_error(error: &SnapshotError) -> bool {
             | SnapshotError::Json(_)
             | SnapshotError::Io(_)
     )
+}
+
+fn emit_recoverable_session_file_warning(
+    root: &KnownPath,
+    session_file: &Path,
+    error: &SnapshotError,
+) {
+    if env::var_os("OPEN_SESSION_MANAGER_VERBOSE_DISCOVERY").is_none() {
+        return;
+    }
+
+    eprintln!(
+        "skipping malformed session file for {}: {} ({error})",
+        root.assistant,
+        session_file.display()
+    );
 }
 
 fn build_indexed_session(
