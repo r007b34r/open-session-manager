@@ -5,7 +5,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use agent_session_governance_core::{
+use open_session_manager_core::{
     actions::{
         delete::{SoftDeleteRequest, soft_delete_session},
         export::{ExportRequest, export_session_markdown},
@@ -28,7 +28,7 @@ fn fixtures_root() -> PathBuf {
 
 #[test]
 fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
-    let output = Command::new(env!("CARGO_BIN_EXE_agent-session-governance-core"))
+    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
         .args([
             "snapshot",
             "--fixtures",
@@ -128,7 +128,7 @@ fn snapshot_command_includes_persisted_audit_history() {
         session: &session,
         insight: &insight,
         output_root: &export_root,
-        actor: "Max",
+        actor: "r007b34r",
         connection: &connection,
     })
     .expect("export markdown");
@@ -136,15 +136,16 @@ fn snapshot_command_includes_persisted_audit_history() {
     let manifest = soft_delete_session(&SoftDeleteRequest {
         session: &session,
         quarantine_root: &quarantine_root,
-        actor: "Max",
+        actor: "r007b34r",
         connection: &connection,
     })
     .expect("soft delete session");
 
-    restore_session(&manifest.manifest_path, "Max", &connection).expect("restore session");
+    restore_session(&manifest.manifest_path, "r007b34r", &connection)
+        .expect("restore session");
     drop(connection);
 
-    let output = Command::new(env!("CARGO_BIN_EXE_agent-session-governance-core"))
+    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
         .args([
             "snapshot",
             "--fixtures",
@@ -188,7 +189,7 @@ fn snapshot_command_includes_persisted_audit_history() {
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "agent-session-governance-cli-snapshot-{}-{suffix}",
+        "open-session-manager-cli-snapshot-{}-{suffix}",
         std::process::id(),
     ));
 

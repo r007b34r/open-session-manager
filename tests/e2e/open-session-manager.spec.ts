@@ -6,7 +6,7 @@ test("indexes fixtures, exports, soft-deletes, and shows risky masked config ent
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /agent session governance/i })
+    page.getByRole("heading", { name: /open session manager/i })
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /refactor wsl collector handshake/i })

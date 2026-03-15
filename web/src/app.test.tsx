@@ -15,7 +15,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /agent session governance/i })
+      await screen.findByRole("heading", { name: /open session manager/i })
     ).toBeInTheDocument();
     expect(
       await screen.findByText(/local-first control center/i)
@@ -28,7 +28,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /会话治理平台/i })
+      await screen.findByRole("heading", { name: /开放会话管理器/i })
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "总览" })).toBeInTheDocument();
   });
@@ -39,13 +39,13 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /agent session governance/i })
+      await screen.findByRole("heading", { name: /open session manager/i })
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "中文" }));
 
     expect(
-      await screen.findByRole("heading", { name: /会话治理平台/i })
+      await screen.findByRole("heading", { name: /开放会话管理器/i })
     ).toBeInTheDocument();
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("zh-CN");
   });

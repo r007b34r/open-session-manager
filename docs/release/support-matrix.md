@@ -17,7 +17,7 @@
 | 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
 | Web 总览 / 会话 / 配置 / 审计 UI | 已实现 | 桌面端与浏览器端共用同一套 React UI |
 | 中英文切换 | 已实现 | 默认按浏览器语言自动切换 |
-| 真实 snapshot CLI | 已实现 | `cargo run -p agent-session-governance-core -- snapshot` |
+| 真实 snapshot CLI | 已实现 | `cargo run -p open-session-manager-core -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
 | Tauri 桌面运行时 | 已实现 | 无参数启动进入桌面窗口，前端可直接调用 Rust 原生命令 |
 | 导出优先清理守卫 | 已实现 | 后端拒绝未导出会话的软删除，前端按钮同步禁用 |

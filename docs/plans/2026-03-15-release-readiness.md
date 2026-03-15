@@ -220,7 +220,7 @@ git commit -m "feat: harden cleanup guardrails and audit persistence"
 - Create: `.github/workflows/ci.yml`
 - Create: `docs/release/support-matrix.md`
 - Modify: `README.md`
-- Modify: `docs/plans/2026-03-15-agent-session-governance-design.md`
+- Modify: `docs/plans/2026-03-15-open-session-manager-design.md`
 
 **Step 1: Write the failing test**
 
@@ -247,6 +247,6 @@ Expected: PASS and the release assets are present.
 **Step 5: Commit**
 
 ```bash
-git add .github/workflows/ci.yml docs/release/support-matrix.md README.md docs/plans/2026-03-15-agent-session-governance-design.md
+git add .github/workflows/ci.yml docs/release/support-matrix.md README.md docs/plans/2026-03-15-open-session-manager-design.md
 git commit -m "docs: add release pipeline and support matrix"
 ```

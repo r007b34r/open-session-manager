@@ -1,8 +1,8 @@
-# Agent Session Governance 发布说明
+# open Session Manager 发布说明
 
 ## 项目简介
 
-Agent Session Governance 是一个面向 Win11、Linux 和 WSL 用户的本地优先治理平台，用来统一识别终端代码助手的会话、配置和高风险密钥引用，并在真正删除之前先帮助用户判断哪些内容值得保留、迁移或提炼。
+`open Session Manager`（`OSM`）是一个面向 Win11、Linux 和 WSL 用户的本地优先治理平台，用来统一识别终端代码助手的会话、配置和高风险密钥引用，并在真正删除之前先帮助用户判断哪些内容值得保留、迁移或提炼。
 
 当前版本已经支持：
 
@@ -43,13 +43,13 @@ npm --prefix web run tauri:build
 调试构建产物：
 
 ```text
-target/debug/agent-session-governance-core.exe
+target/debug/open-session-manager-core.exe
 ```
 
 发布构建产物：
 
 ```text
-target/release/agent-session-governance-core.exe
+target/release/open-session-manager-core.exe
 ```
 
 ## 当前限制

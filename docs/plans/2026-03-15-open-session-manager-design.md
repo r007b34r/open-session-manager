@@ -1,4 +1,4 @@
-# Agent Session Governance Design
+# open Session Manager Design
 
 日期：2026-03-15
 

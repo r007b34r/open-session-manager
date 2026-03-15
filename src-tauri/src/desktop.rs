@@ -97,7 +97,7 @@ fn build_discovery_context() -> DiscoveryContext {
         home_dir: resolve_home_dir(),
         xdg_config_home: env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
         xdg_data_home: env::var_os("XDG_DATA_HOME").map(PathBuf::from),
-        wsl_home_dir: env::var_os("AGENT_SESSION_GOVERNANCE_WSL_HOME").map(PathBuf::from),
+        wsl_home_dir: env::var_os("OPEN_SESSION_MANAGER_WSL_HOME").map(PathBuf::from),
     }
 }
 
@@ -114,17 +114,17 @@ fn build_runtime_paths() -> RuntimePaths {
 
 fn resolve_app_data_root() -> PathBuf {
     if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
-        return PathBuf::from(local_app_data).join("AgentSessionGovernance");
+        return PathBuf::from(local_app_data).join("OpenSessionManager");
     }
 
     if let Some(xdg_data_home) = env::var_os("XDG_DATA_HOME") {
-        return PathBuf::from(xdg_data_home).join("agent-session-governance");
+        return PathBuf::from(xdg_data_home).join("open-session-manager");
     }
 
     resolve_home_dir()
         .join(".local")
         .join("share")
-        .join("agent-session-governance")
+        .join("open-session-manager")
 }
 
 fn resolve_export_root(data_root: &Path) -> PathBuf {
@@ -133,7 +133,7 @@ fn resolve_export_root(data_root: &Path) -> PathBuf {
         return data_root.join("exports");
     }
 
-    home_dir.join("Documents").join("AgentSessionGovernance").join("exports")
+    home_dir.join("Documents").join("OpenSessionManager").join("exports")
 }
 
 fn resolve_home_dir() -> PathBuf {

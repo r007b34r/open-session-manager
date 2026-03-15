@@ -1,5 +1,5 @@
 [package]
-name = "agent-session-governance-core"
+name = "open-session-manager-core"
 version = "0.1.0"
 edition = "2024"
 build = "build.rs"
@@ -14,13 +14,13 @@ tauri = { version = "2.10.3", features = [] }
 toml = "0.9"
 
 [lib]
-name = "agent_session_governance_core"
+name = "open_session_manager_core"
 path = "src/lib.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.5.6", features = [] }
 
 [package.metadata.tauri-winres]
-FileDescription = "Agent Session Governance"
-OriginalFilename = "agent-session-governance.exe"
-ProductName = "Agent Session Governance"
+FileDescription = "open Session Manager"
+OriginalFilename = "open-session-manager-core.exe"
+ProductName = "open Session Manager"

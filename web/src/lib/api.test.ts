@@ -110,7 +110,7 @@ describe("desktop actions", () => {
           eventId: "evt-native-export",
           type: "export_markdown",
           target: "ses-001",
-          actor: "Max",
+          actor: "r007b34r",
           createdAt: "2026-03-15 15:30",
           result: "success",
           detail: "Exported from native runtime."
@@ -143,7 +143,7 @@ describe("desktop actions", () => {
           eventId: "evt-native-delete",
           type: "soft_delete",
           target: "ses-003",
-          actor: "Max",
+          actor: "r007b34r",
           createdAt: "2026-03-15 15:31",
           result: "success",
           detail: "Deleted from native runtime."

@@ -14,7 +14,7 @@ const outputPath = path.resolve(
 );
 
 const cargo = await resolveCargoCommand();
-const cargoArgs = ["run", "-p", "agent-session-governance-core", "--", "snapshot"];
+const cargoArgs = ["run", "-p", "open-session-manager-core", "--", "snapshot"];
 
 if (fixtures) {
   cargoArgs.push("--fixtures", path.resolve(repoRoot, fixtures));

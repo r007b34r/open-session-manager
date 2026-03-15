@@ -17,7 +17,7 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            app_name: "agent-session-governance",
+            app_name: "open-session-manager",
             version: env!("CARGO_PKG_VERSION"),
         }
     }
@@ -35,7 +35,7 @@ mod tests {
     fn app_state_exposes_default_metadata() {
         let state = AppState::default();
 
-        assert_eq!(state.app_name, "agent-session-governance");
+        assert_eq!(state.app_name, "open-session-manager");
         assert_eq!(state.version, env!("CARGO_PKG_VERSION"));
         assert_eq!(health_check(), "ok");
     }

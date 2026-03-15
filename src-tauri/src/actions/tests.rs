@@ -67,7 +67,7 @@ fn exports_soft_deletes_restores_and_audits_session() {
         session: &session,
         insight: &insight,
         output_root: &export_root,
-        actor: "Max",
+        actor: "r007b34r",
         connection: &connection,
     })
     .expect("export markdown");
@@ -81,7 +81,7 @@ fn exports_soft_deletes_restores_and_audits_session() {
     let manifest = soft_delete_session(&SoftDeleteRequest {
         session: &session,
         quarantine_root: &quarantine_root,
-        actor: "Max",
+        actor: "r007b34r",
         connection: &connection,
     })
     .expect("soft delete session");
@@ -90,7 +90,8 @@ fn exports_soft_deletes_restores_and_audits_session() {
     assert!(manifest.quarantined_path.exists());
     assert!(manifest.manifest_path.exists());
 
-    restore_session(&manifest.manifest_path, "Max", &connection).expect("restore session");
+    restore_session(&manifest.manifest_path, "r007b34r", &connection)
+        .expect("restore session");
 
     assert!(source_path.exists());
     assert!(!manifest.quarantined_path.exists());
@@ -139,7 +140,7 @@ fn refuses_soft_delete_until_a_markdown_export_has_been_recorded() {
     let error = soft_delete_session(&SoftDeleteRequest {
         session: &session,
         quarantine_root: &quarantine_root,
-        actor: "Max",
+        actor: "r007b34r",
         connection: &connection,
     })
     .expect_err("soft delete should require an export first");
@@ -158,7 +159,7 @@ fn refuses_soft_delete_until_a_markdown_export_has_been_recorded() {
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "agent-session-governance-actions-{}-{suffix}",
+        "open-session-manager-actions-{}-{suffix}",
         std::process::id(),
     ));
 

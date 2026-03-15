@@ -1,4 +1,4 @@
-# Agent Session Governance Implementation Plan
+# open Session Manager Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -380,7 +380,7 @@ git add tests/e2e web/package.json README.md
 git commit -m "test: verify export cleanup and config risk flow"
 ```
 
-Plan complete and saved to `docs/plans/2026-03-15-agent-session-governance.md`. Two execution options:
+Plan complete and saved to `docs/plans/2026-03-15-open-session-manager.md`. Two execution options:
 
 **1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
 

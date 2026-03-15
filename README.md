@@ -1,6 +1,8 @@
-# Agent Session Governance
+# open Session Manager
 
-本项目面向 Win11 和 Linux 用户，目标是把本地终端代码助手的会话、配置、密钥引用和清理动作统一纳入一个本地优先的治理平台。
+`open Session Manager`，简称 `OSM`。
+
+本项目面向 Win11、Linux 和 WSL 用户，目标是把本地终端代码助手的会话、配置、密钥引用和清理动作统一纳入一个本地优先的治理平台。
 
 首期目标聚焦：
 
@@ -13,8 +15,8 @@
 当前仓库先完成了本地 `git` 初始化，以及调研/设计文档沉淀：
 
 - [竞品与数据源分析](docs/research/2026-03-15-agent-session-landscape.md)
-- [完整设计方案](docs/plans/2026-03-15-agent-session-governance-design.md)
-- [实施计划](docs/plans/2026-03-15-agent-session-governance.md)
+- [完整设计方案](docs/plans/2026-03-15-open-session-manager-design.md)
+- [实施计划](docs/plans/2026-03-15-open-session-manager.md)
 
 ## 当前能力
 
@@ -81,19 +83,19 @@ npm --prefix web run tauri:build
 当前 Windows 调试构建产物位于：
 
 ```text
-target/debug/agent-session-governance-core.exe
+target/debug/open-session-manager-core.exe
 ```
 
 release 构建产物位于：
 
 ```text
-target/release/agent-session-governance-core.exe
+target/release/open-session-manager-core.exe
 ```
 
 ### 核心测试
 
 ```bash
-cargo test -p agent-session-governance-core
+cargo test -p open-session-manager-core
 npm --prefix web run test
 ```
 
@@ -118,15 +120,15 @@ npm --prefix web run e2e
 
 ### Windows
 
-- 审计数据库：`%LOCALAPPDATA%/AgentSessionGovernance/audit/audit.db`
-- 隔离区：`%LOCALAPPDATA%/AgentSessionGovernance/quarantine/`
-- Markdown 导出：`%USERPROFILE%/Documents/AgentSessionGovernance/exports/`
+- 审计数据库：`%LOCALAPPDATA%/OpenSessionManager/audit/audit.db`
+- 隔离区：`%LOCALAPPDATA%/OpenSessionManager/quarantine/`
+- Markdown 导出：`%USERPROFILE%/Documents/OpenSessionManager/exports/`
 
 ### Linux
 
-- 审计数据库：`$XDG_DATA_HOME/agent-session-governance/audit/audit.db`
-- 隔离区：`$XDG_DATA_HOME/agent-session-governance/quarantine/`
-- Markdown 导出：`$HOME/Documents/AgentSessionGovernance/exports/`
+- 审计数据库：`$XDG_DATA_HOME/open-session-manager/audit/audit.db`
+- 隔离区：`$XDG_DATA_HOME/open-session-manager/quarantine/`
+- Markdown 导出：`$HOME/Documents/OpenSessionManager/exports/`
 
 ## 当前 UI 演示数据
 

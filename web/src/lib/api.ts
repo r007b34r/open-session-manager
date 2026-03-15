@@ -94,7 +94,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       valueScore: 84,
       summary:
         "Collector can enumerate distros and config roots, but transport framing still needs a stable manifest layer.",
-      projectPath: "/home/max/src/agent-session-governance",
+      projectPath: "/home/max/src/open-session-manager",
       sourcePath:
         "C:/Users/Max/.codex/sessions/2026/03/15/rollout-2026-03-15.jsonl",
       tags: ["wsl", "collector", "transport"],
@@ -137,7 +137,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       valueScore: 91,
       summary:
         "Markdown export, quarantine manifest, and restore chain were implemented and fully verified.",
-      projectPath: "/home/max/labs/session-governance",
+      projectPath: "/home/max/labs/open-session-manager",
       sourcePath:
         "/home/max/.local/share/opencode/storage/session/info/ses_demo.json",
       tags: ["export", "quarantine", "audit"],
@@ -189,7 +189,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       eventId: "evt-001",
       type: "export_markdown",
       target: "ses-003",
-      actor: "Max",
+      actor: "r007b34r",
       createdAt: "2026-03-15 13:12",
       result: "success",
       detail: "Exported Markdown briefing for cleanup-ready OpenCode session."
@@ -198,7 +198,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       eventId: "evt-002",
       type: "soft_delete",
       target: "ses-003",
-      actor: "Max",
+      actor: "r007b34r",
       createdAt: "2026-03-15 13:13",
       result: "success",
       detail: "Moved original transcript into quarantine manifest."
@@ -207,7 +207,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       eventId: "evt-003",
       type: "restore",
       target: "ses-003",
-      actor: "Max",
+      actor: "r007b34r",
       createdAt: "2026-03-15 13:14",
       result: "success",
       detail: "Restored transcript to original provider storage path."
@@ -328,7 +328,7 @@ function createAuditEvent(
     eventId: `${type}-${target}-${Date.now()}`,
     type,
     target,
-    actor: "Max",
+    actor: "r007b34r",
     createdAt: "2026-03-15 13:40",
     result: "success",
     detail

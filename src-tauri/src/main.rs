@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf, process::ExitCode};
 
-use agent_session_governance_core::{
+use open_session_manager_core::{
     commands::dashboard::{
         build_fixture_dashboard_snapshot_with_audit, build_local_dashboard_snapshot_with_audit,
     },
@@ -59,7 +59,7 @@ fn build_discovery_context() -> DiscoveryContext {
         home_dir: resolve_home_dir(),
         xdg_config_home: env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
         xdg_data_home: env::var_os("XDG_DATA_HOME").map(PathBuf::from),
-        wsl_home_dir: env::var_os("AGENT_SESSION_GOVERNANCE_WSL_HOME").map(PathBuf::from),
+        wsl_home_dir: env::var_os("OPEN_SESSION_MANAGER_WSL_HOME").map(PathBuf::from),
     }
 }
 

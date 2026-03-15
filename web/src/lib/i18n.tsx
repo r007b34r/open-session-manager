@@ -6,7 +6,7 @@ import {
   type SetStateAction
 } from "react";
 
-export const LANGUAGE_STORAGE_KEY = "agent-session-governance.language";
+export const LANGUAGE_STORAGE_KEY = "open-session-manager.language";
 
 export type Language = "en" | "zh-CN";
 
@@ -131,7 +131,7 @@ const messages: Record<Language, Messages> = {
     },
     root: {
       eyebrow: "Bootstrap",
-      title: "Agent Session Governance",
+      title: "open Session Manager",
       description:
         "Local-first control center for inspecting coding-agent sessions, configs, and cleanup actions before any destructive change is made.",
       navLabel: "Primary",
@@ -274,7 +274,7 @@ const messages: Record<Language, Messages> = {
     },
     root: {
       eyebrow: "本地优先",
-      title: "会话治理平台",
+      title: "开放会话管理器",
       description:
         "在执行任何破坏性操作之前，本地优先检查终端编程助手的会话、配置和清理动作。",
       navLabel: "主导航",
