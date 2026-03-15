@@ -1,0 +1,1 @@
+{"id":"msg_assistant","sessionID":"ses_demo","role":"assistant","time":{"created":1742011260000,"completed":1742011560000},"parentID":"msg_user","modelID":"gpt-5","providerID":"openai","mode":"build","agent":"build","path":{"cwd":"/home/max/project","root":"/home/max/project"},"cost":0.02,"tokens":{"input":120,"output":80,"reasoning":10,"cache":{"write":0,"read":0}}}
