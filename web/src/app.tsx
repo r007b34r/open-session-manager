@@ -89,6 +89,18 @@ export function App() {
     });
   };
 
+  const handleSelectSession = (sessionId: string) => {
+    const nextPath = `/sessions/${encodeURIComponent(sessionId)}`;
+
+    startTransition(() => {
+      setCurrentPath(nextPath);
+    });
+
+    if (window.location.hash !== `#${nextPath}`) {
+      window.location.hash = nextPath;
+    }
+  };
+
   return (
     <I18nProvider language={language} setLanguage={setLanguage}>
       <RootShell currentPath={normalizePath(currentPath)}>
@@ -97,6 +109,7 @@ export function App() {
             renderRoute(
               snapshot,
               normalizePath(currentPath),
+              handleSelectSession,
               handleExportMarkdown,
               handleSoftDelete
             )
@@ -116,6 +129,7 @@ export function App() {
 function renderRoute(
   snapshot: DashboardSnapshot,
   path: string,
+  onSelectSession: (sessionId: string) => void,
   onExportMarkdown: (sessionId: string) => void,
   onSoftDelete: (sessionId: string) => void
 ) {
@@ -140,6 +154,7 @@ function renderRoute(
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         onExportMarkdown={onExportMarkdown}
+        onSelectSession={onSelectSession}
         onSoftDelete={onSoftDelete}
         selectedSessionId={selectedSessionId}
         sessions={snapshot.sessions}
@@ -153,6 +168,7 @@ function renderRoute(
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         onExportMarkdown={onExportMarkdown}
+        onSelectSession={onSelectSession}
         onSoftDelete={onSoftDelete}
         selectedSessionId={snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}

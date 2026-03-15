@@ -1,0 +1,218 @@
+{
+  "version": 1,
+  "lastReviewedAt": "2026-03-15",
+  "entries": [
+    {
+      "repo": "jazzyalex/agent-sessions",
+      "name": "agent-sessions",
+      "homepage": "https://github.com/jazzyalex/agent-sessions",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "MIT and strongly aligned with local-first session indexing.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-15",
+      "summary": "Desktop-first local session explorer with strong indexing and analytics signals.",
+      "projectShape": "Desktop session explorer",
+      "stackSignals": [
+        "React desktop shell",
+        "local-first indexing",
+        "analytics"
+      ],
+      "focusAreas": [
+        "local indexing",
+        "session analytics",
+        "desktop browsing"
+      ],
+      "verifiedPaths": [
+        "apps/desktop"
+      ],
+      "inspectionTargets": [
+        "search pipeline",
+        "analytics rollups"
+      ],
+      "integrationTargets": [
+        "session index pipeline",
+        "governance analytics"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's local-first session indexing direction.",
+      "constraints": [],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/jazzyalex/agent-sessions"
+        }
+      ]
+    },
+    {
+      "repo": "d-kimuson/claude-code-viewer",
+      "name": "claude-code-viewer",
+      "homepage": "https://github.com/d-kimuson/claude-code-viewer",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "The detailed session viewer maps directly onto OSM's transcript digest workspace.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Specialized Claude Code viewer with strong transcript fidelity and todo-aware session detail panes.",
+      "projectShape": "Single-agent web viewer",
+      "stackSignals": [
+        "lossless transcript rendering",
+        "todo-aware detail panes",
+        "schema validation"
+      ],
+      "focusAreas": [
+        "detail rendering",
+        "todo extraction",
+        "transcript fidelity"
+      ],
+      "verifiedPaths": [
+        "src/routes/projects/$projectId/session.tsx",
+        "src/lib/todo-viewer/extractLatestTodos.ts",
+        "src/server/core/claude-code/functions/parseJsonl.ts"
+      ],
+      "inspectionTargets": [
+        "session detail rendering",
+        "todo extraction heuristics",
+        "schema validation layer"
+      ],
+      "integrationTargets": [
+        "session detail digest cards",
+        "todo evidence extraction",
+        "transcript schema guards"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's viewer-style transcript detail panels and todo evidence workflow.",
+      "constraints": [],
+      "adoptedCapabilities": [
+        "Viewer-style transcript detail panel",
+        "Session todo evidence in detail view"
+      ],
+      "upstreamSourceFiles": [
+        "src/routes/projects/$projectId/session.tsx",
+        "src/lib/todo-viewer/extractLatestTodos.ts",
+        "src/server/core/claude-code/functions/parseJsonl.ts"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/d-kimuson/claude-code-viewer"
+        }
+      ]
+    },
+    {
+      "repo": "daaain/claude-code-log",
+      "name": "claude-code-log",
+      "homepage": "https://github.com/daaain/claude-code-log",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "The export flow maps cleanly onto OSM's export-before-delete workflow.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Export-focused toolchain for Claude Code sessions with Markdown and transcript-aware summaries.",
+      "projectShape": "CLI export tool",
+      "stackSignals": [
+        "Markdown export",
+        "transcript parser",
+        "summary-first workflow"
+      ],
+      "focusAreas": [
+        "export layout",
+        "transcript formatting"
+      ],
+      "verifiedPaths": [
+        "claude_code_log/markdown/renderer.py",
+        "claude_code_log/parser.py",
+        "claude_code_log/converter.py"
+      ],
+      "inspectionTargets": [
+        "markdown renderer",
+        "parser pipeline",
+        "todo extraction"
+      ],
+      "integrationTargets": [
+        "OSM markdown export",
+        "transcript digest layer"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's richer markdown export and transcript digest sections.",
+      "constraints": [],
+      "adoptedCapabilities": [
+        "Richer markdown export sections",
+        "Transcript highlight digest",
+        "Claude todo snapshot"
+      ],
+      "upstreamSourceFiles": [
+        "claude_code_log/markdown/renderer.py",
+        "claude_code_log/parser.py",
+        "claude_code_log/converter.py"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/daaain/claude-code-log"
+        }
+      ]
+    },
+    {
+      "repo": "Dicklesworthstone/coding_agent_session_search",
+      "name": "coding_agent_session_search",
+      "homepage": "https://github.com/Dicklesworthstone/coding_agent_session_search",
+      "license": {
+        "spdx": "LicenseRef-Restricted",
+        "notes": "Repository carries extra restrictions and is not safe for direct vendoring."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Excellent connector coverage, but license posture requires reference-only handling.",
+        "blockedBy": [
+          "additional license restrictions"
+        ]
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-15",
+      "summary": "Broad multi-agent search tooling with strong connector coverage.",
+      "projectShape": "Broad search CLI",
+      "stackSignals": [
+        "wide connector coverage",
+        "search and export workflow"
+      ],
+      "focusAreas": [
+        "connector normalization",
+        "session search"
+      ],
+      "verifiedPaths": [],
+      "inspectionTargets": [
+        "connector coverage model",
+        "search and export workflow"
+      ],
+      "integrationTargets": [
+        "source coverage strategy"
+      ],
+      "releaseAcknowledgement": "Helped validate the breadth of connector coverage needed for OSM.",
+      "constraints": [
+        "Do not copy code into the public OSM distribution."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search"
+        }
+      ]
+    }
+  ]
+}

@@ -29,6 +29,7 @@ use crate::{
         title::derive_title, value::derive_value_score,
     },
     storage::sqlite::{load_audit_events, open_database},
+    transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
 };
 
 #[derive(Debug)]
@@ -123,6 +124,8 @@ pub struct SessionDetailRecord {
     pub tags: Vec<String>,
     pub risk_flags: Vec<String>,
     pub key_artifacts: Vec<String>,
+    pub transcript_highlights: Vec<TranscriptHighlight>,
+    pub todo_items: Vec<TranscriptTodo>,
 }
 
 #[derive(Debug)]
@@ -336,6 +339,7 @@ fn build_indexed_session(
         garbage_score,
     );
     let key_artifacts = build_session_key_artifacts(&session, &narrative);
+    let transcript_digest = build_transcript_digest(&session);
     let project_path = session
         .project_path
         .clone()
@@ -362,6 +366,8 @@ fn build_indexed_session(
         tags: tags.clone(),
         risk_flags: risk_flags.clone(),
         key_artifacts,
+        transcript_highlights: transcript_digest.highlights.clone(),
+        todo_items: transcript_digest.todos.clone(),
     };
     let insight = SessionInsight {
         session_id: session.session_id.clone(),
@@ -691,6 +697,7 @@ fn extract_opencode_narrative(source: &Path) -> SnapshotResult<SessionNarrative>
         path.extension().and_then(|value| value.to_str()) == Some("json")
     })?;
     message_files.sort();
+    let mut messages = Vec::new();
     let mut narrative = SessionNarrative {
         first_user_goal: session_info
             .get("title")
@@ -701,6 +708,11 @@ fn extract_opencode_narrative(source: &Path) -> SnapshotResult<SessionNarrative>
 
     for message_file in message_files {
         let message: Value = serde_json::from_slice(&fs::read(&message_file)?)?;
+        messages.push((opencode_created_at(&message), message));
+    }
+    messages.sort_by_key(|(created_at, _)| *created_at);
+
+    for (_, message) in messages {
         let message_id = message
             .get("id")
             .and_then(Value::as_str)
@@ -730,6 +742,14 @@ fn extract_opencode_narrative(source: &Path) -> SnapshotResult<SessionNarrative>
     Ok(narrative)
 }
 
+fn opencode_created_at(message: &Value) -> i64 {
+    message
+        .get("time")
+        .and_then(|time| time.get("created"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0)
+}
+
 fn collect_opencode_part_texts(part_dir: &Path) -> SnapshotResult<Vec<String>> {
     let mut files = collect_files(part_dir, &|path| {
         path.extension().and_then(|value| value.to_str()) == Some("json")
@@ -739,10 +759,10 @@ fn collect_opencode_part_texts(part_dir: &Path) -> SnapshotResult<Vec<String>> {
     let mut texts = Vec::new();
     for file in files {
         let part: Value = serde_json::from_slice(&fs::read(file)?)?;
-        if part.get("type").and_then(Value::as_str) == Some("text") {
-            if let Some(text) = part.get("text").and_then(Value::as_str) {
-                texts.push(text.to_string());
-            }
+        if part.get("type").and_then(Value::as_str) == Some("text")
+            && let Some(text) = part.get("text").and_then(Value::as_str)
+        {
+            texts.push(text.to_string());
         }
     }
 
@@ -872,7 +892,7 @@ mod tests {
 
     use crate::discovery::DiscoveryContext;
 
-    use super::build_local_dashboard_snapshot;
+    use super::{build_fixture_dashboard_snapshot, build_local_dashboard_snapshot};
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -911,6 +931,40 @@ mod tests {
 
         assert_eq!(snapshot.sessions.len(), 1);
         assert_eq!(snapshot.sessions[0].session_id, "codex-ses-1");
+    }
+
+    #[test]
+    fn fixture_snapshot_includes_transcript_digest() {
+        let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
+            .expect("fixture snapshot builds");
+
+        let claude_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "claude-ses-1")
+            .expect("claude fixture session exists");
+        let opencode_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "ses_demo")
+            .expect("opencode fixture session exists");
+
+        assert_eq!(claude_session.transcript_highlights[0].role, "User");
+        assert!(
+            claude_session.transcript_highlights[0]
+                .content
+                .contains("扫描 Claude transcripts")
+        );
+        assert_eq!(claude_session.todo_items.len(), 2);
+        assert!(claude_session.todo_items[0].completed);
+        assert_eq!(opencode_session.transcript_highlights[1].role, "Assistant");
+    }
+
+    fn fixtures_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures")
+            .canonicalize()
+            .expect("fixtures root resolves")
     }
 
     fn temp_root() -> PathBuf {

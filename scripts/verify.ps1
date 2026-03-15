@@ -35,6 +35,8 @@ $cargo = Resolve-CargoCommand
 Push-Location $repoRoot
 
 try {
+  Invoke-Step "Upstream intake tests" { node --test tests/upstream-intake/upstream-intake.test.mjs }
+  Invoke-Step "Upstream intake dry run" { node scripts/intake-upstreams.mjs --dry-run }
   Invoke-Step "Rust tests" { & $cargo test }
   Invoke-Step "Web unit tests" { npm --prefix web run test }
   Invoke-Step "Web build" { npm --prefix web run build }

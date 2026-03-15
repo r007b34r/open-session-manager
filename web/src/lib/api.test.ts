@@ -22,11 +22,27 @@ describe("fetchDashboardSnapshot", () => {
   });
 
   it("优先读取真实快照接口", async () => {
-    const realSnapshot: DashboardSnapshot = {
+    const realSnapshot = {
       metrics: [
         { label: "indexed_sessions", value: "1", note: "fixture_note" }
       ],
       sessions: [
+        {
+          sessionId: "real-older",
+          title: "Older snapshot title",
+          assistant: "Codex",
+          progressState: "completed",
+          progressPercent: 100,
+          lastActivityAt: "2026-03-15T09:00:00Z",
+          environment: "windows",
+          valueScore: 75,
+          summary: "Older snapshot session.",
+          projectPath: "C:/Projects/demo",
+          sourcePath: "C:/Users/Max/.codex/sessions/older.jsonl",
+          tags: ["real"],
+          riskFlags: [],
+          keyArtifacts: ["artifact"]
+        },
         {
           sessionId: "real-001",
           title: "Real snapshot title",
@@ -54,7 +70,21 @@ describe("fetchDashboardSnapshot", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(fetchDashboardSnapshot()).resolves.toEqual(realSnapshot);
+    await expect(fetchDashboardSnapshot()).resolves.toEqual({
+      ...realSnapshot,
+      sessions: [
+        {
+          ...realSnapshot.sessions[1],
+          transcriptHighlights: [],
+          todoItems: []
+        },
+        {
+          ...realSnapshot.sessions[0],
+          transcriptHighlights: [],
+          todoItems: []
+        }
+      ]
+    } satisfies DashboardSnapshot);
     expect(fetchMock).toHaveBeenCalledWith("/dashboard-snapshot.json", {
       cache: "no-store"
     });

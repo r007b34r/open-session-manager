@@ -7,6 +7,7 @@ pub mod discovery;
 pub mod domain;
 pub mod insights;
 pub mod storage;
+pub mod transcript;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppState {

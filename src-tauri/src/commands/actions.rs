@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
 
@@ -43,8 +43,16 @@ pub fn delete_session(
 
 pub fn restore_deleted_session(
     manifest_path: &Path,
+    quarantine_root: &Path,
+    allowed_restore_roots: &[PathBuf],
     actor: &str,
     connection: &Connection,
 ) -> crate::actions::ActionResult<crate::actions::QuarantineManifest> {
-    restore_session(manifest_path, actor, connection)
+    restore_session(
+        manifest_path,
+        quarantine_root,
+        allowed_restore_roots,
+        actor,
+        connection,
+    )
 }

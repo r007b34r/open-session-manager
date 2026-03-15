@@ -397,24 +397,24 @@ fn opencode_risk_flags(
 fn endpoint_risk_flags(provider: Option<&str>, base_url: Option<&str>) -> Vec<RiskFlag> {
     let mut flags = Vec::new();
 
-    if let Some(provider) = provider {
-        if !is_official_provider(provider) {
-            flags.push(RiskFlag::new(
-                "third_party_provider",
-                "medium",
-                format!("Provider `{provider}` is a third-party relay or gateway."),
-            ));
-        }
+    if let Some(provider) = provider
+        && !is_official_provider(provider)
+    {
+        flags.push(RiskFlag::new(
+            "third_party_provider",
+            "medium",
+            format!("Provider `{provider}` is a third-party relay or gateway."),
+        ));
     }
 
-    if let Some(base_url) = base_url {
-        if !is_official_base_url(provider, base_url) {
-            flags.push(RiskFlag::new(
-                "third_party_base_url",
-                "high",
-                format!("Base URL `{base_url}` is not an official endpoint."),
-            ));
-        }
+    if let Some(base_url) = base_url
+        && !is_official_base_url(provider, base_url)
+    {
+        flags.push(RiskFlag::new(
+            "third_party_base_url",
+            "high",
+            format!("Base URL `{base_url}` is not an official endpoint."),
+        ));
     }
 
     flags

@@ -1,0 +1,371 @@
+{
+  "version": 1,
+  "lastReviewedAt": "2026-03-15",
+  "entries": [
+    {
+      "repo": "jazzyalex/agent-sessions",
+      "name": "agent-sessions",
+      "homepage": "https://github.com/jazzyalex/agent-sessions",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page and README describe the project as MIT-licensed."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong alignment with OSM's local-first indexing and session analytics direction.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-15",
+      "summary": "Desktop-first local session explorer with deep indexing, search, and analytics positioning.",
+      "projectShape": "Desktop session explorer",
+      "stackSignals": [
+        "React desktop shell",
+        "local-first indexing",
+        "session analytics"
+      ],
+      "focusAreas": [
+        "local indexing",
+        "search UX",
+        "session analytics"
+      ],
+      "verifiedPaths": [
+        "apps/desktop"
+      ],
+      "inspectionTargets": [
+        "search pipeline",
+        "analytics rollups",
+        "transcript catalog model"
+      ],
+      "integrationTargets": [
+        "session index pipeline",
+        "governance analytics",
+        "desktop navigation heuristics"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's local-first session indexing and analytics direction.",
+      "constraints": [],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/jazzyalex/agent-sessions"
+        }
+      ]
+    },
+    {
+      "repo": "lulu-sk/CodexFlow",
+      "name": "CodexFlow",
+      "homepage": "https://github.com/lulu-sk/CodexFlow",
+      "license": {
+        "spdx": "Apache-2.0",
+        "notes": "Repository page advertises Apache-2.0, making it suitable for structured reuse with attribution."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Directly relevant to Windows and WSL multi-assistant orchestration, which is central to OSM's target users.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Electron-based multi-assistant workspace focused on Windows, WSL, and project-centric history.",
+      "projectShape": "Electron multi-assistant workspace",
+      "stackSignals": [
+        "Electron desktop shell",
+        "Windows and WSL bridging",
+        "history center"
+      ],
+      "focusAreas": [
+        "Windows path handling",
+        "WSL integration",
+        "project grouping"
+      ],
+      "verifiedPaths": [],
+      "inspectionTargets": [
+        "Windows and WSL path normalization",
+        "assistant launcher orchestration",
+        "history center workflows"
+      ],
+      "integrationTargets": [
+        "Windows path resolver",
+        "project-level grouping",
+        "desktop shell patterns"
+      ],
+      "releaseAcknowledgement": "Validated OSM's Windows and WSL-first direction for multi-assistant session management.",
+      "constraints": [],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/lulu-sk/CodexFlow"
+        }
+      ]
+    },
+    {
+      "repo": "d-kimuson/claude-code-viewer",
+      "name": "claude-code-viewer",
+      "homepage": "https://github.com/d-kimuson/claude-code-viewer",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Strong fit for deep transcript rendering, schema validation, and lossless detail inspection.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Specialized viewer for Claude Code with strong transcript fidelity, schema validation, and deep detail panes.",
+      "projectShape": "Single-agent web viewer",
+      "stackSignals": [
+        "lossless transcript rendering",
+        "schema validation",
+        "deep session detail UI"
+      ],
+      "focusAreas": [
+        "schema hardening",
+        "detail rendering",
+        "transcript fidelity"
+      ],
+      "verifiedPaths": [
+        "src/routes/projects/$projectId/session.tsx",
+        "src/lib/todo-viewer/extractLatestTodos.ts",
+        "src/server/core/claude-code/functions/parseJsonl.ts",
+        "src/server/core/session/presentation/SessionController.ts"
+      ],
+      "inspectionTargets": [
+        "schema validation layer",
+        "session detail rendering",
+        "MCP and config viewer patterns"
+      ],
+      "integrationTargets": [
+        "transcript schema guards",
+        "session detail UX",
+        "lossless render checks"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's viewer-style transcript detail panels and todo evidence workflow.",
+      "constraints": [],
+      "adoptedCapabilities": [
+        "Viewer-style transcript detail panel",
+        "Session todo evidence in detail view"
+      ],
+      "upstreamSourceFiles": [
+        "src/routes/projects/$projectId/session.tsx",
+        "src/lib/todo-viewer/extractLatestTodos.ts",
+        "src/server/core/claude-code/functions/parseJsonl.ts",
+        "src/server/core/session/presentation/SessionController.ts"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/d-kimuson/claude-code-viewer"
+        }
+      ]
+    },
+    {
+      "repo": "daaain/claude-code-log",
+      "name": "claude-code-log",
+      "homepage": "https://github.com/daaain/claude-code-log",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Very close to OSM's export-before-delete requirement and summary-centric cleanup flow.",
+        "blockedBy": []
+      },
+      "reviewStatus": "adopted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Export-focused toolchain for Claude Code sessions with Markdown, HTML, and smart summary workflows.",
+      "projectShape": "CLI and export tooling",
+      "stackSignals": [
+        "Markdown export",
+        "HTML export",
+        "smart summaries"
+      ],
+      "focusAreas": [
+        "export quality",
+        "summary extraction",
+        "date filtering"
+      ],
+      "verifiedPaths": [
+        "claude_code_log/markdown/renderer.py",
+        "claude_code_log/parser.py",
+        "claude_code_log/converter.py"
+      ],
+      "inspectionTargets": [
+        "markdown exporter",
+        "summary layout",
+        "usage rollups"
+      ],
+      "integrationTargets": [
+        "value-preserving export",
+        "cleanup preflight summaries",
+        "export metadata format"
+      ],
+      "releaseAcknowledgement": "Helped shape OSM's Markdown export and summary-first cleanup workflow.",
+      "constraints": [],
+      "adoptedCapabilities": [
+        "Richer markdown export sections",
+        "Transcript highlight digest",
+        "Claude todo snapshot"
+      ],
+      "upstreamSourceFiles": [
+        "claude_code_log/markdown/renderer.py",
+        "claude_code_log/parser.py",
+        "claude_code_log/converter.py"
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/daaain/claude-code-log"
+        }
+      ]
+    },
+    {
+      "repo": "Dimension-AI-Technologies/Entropic",
+      "name": "Entropic",
+      "homepage": "https://github.com/Dimension-AI-Technologies/Entropic",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Cross-platform maintenance UX is directly useful for OSM's governance dashboard and cleanup flows.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-15",
+      "summary": "Cross-platform desktop maintenance console that already thinks in provider-aware views and cleanup actions.",
+      "projectShape": "Cross-platform desktop maintenance console",
+      "stackSignals": [
+        "Electron GUI",
+        "provider-aware session model",
+        "maintenance actions"
+      ],
+      "focusAreas": [
+        "provider registry",
+        "desktop navigation",
+        "cleanup affordances"
+      ],
+      "verifiedPaths": [],
+      "inspectionTargets": [
+        "provider switchboard",
+        "cleanup guardrails",
+        "desktop navigation"
+      ],
+      "integrationTargets": [
+        "provider registry",
+        "maintenance dashboard",
+        "bulk cleanup UX"
+      ],
+      "releaseAcknowledgement": "Validated that a cross-platform governance console has real product demand beyond a single assistant.",
+      "constraints": [],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/Dimension-AI-Technologies/Entropic"
+        }
+      ]
+    },
+    {
+      "repo": "yoavf/ai-sessions-mcp",
+      "name": "ai-sessions-mcp",
+      "homepage": "https://github.com/yoavf/ai-sessions-mcp",
+      "license": {
+        "spdx": "MIT",
+        "notes": "Repository page states MIT."
+      },
+      "absorption": {
+        "mode": "candidate-absorb",
+        "rationale": "Useful for exposing local session knowledge into MCP-compatible automation without coupling to the UI shell.",
+        "blockedBy": []
+      },
+      "reviewStatus": "screened",
+      "reviewedAt": "2026-03-15",
+      "summary": "TypeScript MCP server that exposes local AI coding sessions for retrieval and automation workflows.",
+      "projectShape": "TypeScript MCP server",
+      "stackSignals": [
+        "MCP exposure of local sessions",
+        "tool-agnostic retrieval",
+        "headless automation"
+      ],
+      "focusAreas": [
+        "external automation",
+        "session retrieval",
+        "adapter boundaries"
+      ],
+      "verifiedPaths": [],
+      "inspectionTargets": [
+        "MCP server contract",
+        "session listing API",
+        "adapter boundaries"
+      ],
+      "integrationTargets": [
+        "external automation API",
+        "headless audit interface",
+        "session retrieval boundary"
+      ],
+      "releaseAcknowledgement": "Helped confirm that OSM should expose a headless session retrieval surface beyond the GUI.",
+      "constraints": [],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/yoavf/ai-sessions-mcp"
+        }
+      ]
+    },
+    {
+      "repo": "Dicklesworthstone/coding_agent_session_search",
+      "name": "coding_agent_session_search",
+      "homepage": "https://github.com/Dicklesworthstone/coding_agent_session_search",
+      "license": {
+        "spdx": "LicenseRef-Restricted",
+        "notes": "Repository carries additional restrictions, so OSM must treat it as reference-only until a clean-room reimplementation exists."
+      },
+      "absorption": {
+        "mode": "reference-only",
+        "rationale": "Its breadth of connector coverage is strategically useful, but the license posture blocks direct code reuse.",
+        "blockedBy": [
+          "additional license restrictions",
+          "public distribution risk"
+        ]
+      },
+      "reviewStatus": "restricted",
+      "reviewedAt": "2026-03-15",
+      "summary": "Broad multi-agent search tooling that proves the scale of connector coverage and export patterns OSM must beat.",
+      "projectShape": "Broad search CLI",
+      "stackSignals": [
+        "wide connector matrix",
+        "search and export CLI",
+        "HTML output"
+      ],
+      "focusAreas": [
+        "connector breadth",
+        "search ranking",
+        "export workflow"
+      ],
+      "verifiedPaths": [],
+      "inspectionTargets": [
+        "connector normalization strategy",
+        "search ranking",
+        "export workflow"
+      ],
+      "integrationTargets": [
+        "source coverage strategy",
+        "adapter backlog prioritization"
+      ],
+      "releaseAcknowledgement": "Helped validate how much connector breadth OSM needs, but its code remains reference-only.",
+      "constraints": [
+        "Do not copy code into the public OSM distribution.",
+        "Treat as reference-only until a clean-room replacement exists."
+      ],
+      "evidence": [
+        {
+          "label": "Repository",
+          "url": "https://github.com/Dicklesworthstone/coding_agent_session_search"
+        }
+      ]
+    }
+  ]
+}

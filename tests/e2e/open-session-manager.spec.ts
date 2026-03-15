@@ -9,7 +9,7 @@ test("indexes fixtures, exports, soft-deletes, and shows risky masked config ent
     page.getByRole("heading", { name: /open session manager/i })
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /refactor wsl collector handshake/i })
+    page.getByRole("button", { name: /refactor wsl collector handshake/i })
   ).toBeVisible();
 
   await page.getByRole("button", { name: /export markdown/i }).click();
@@ -32,4 +32,22 @@ test("indexes fixtures, exports, soft-deletes, and shows risky masked config ent
     .click();
   await expect(page.getByText("***6789")).toBeVisible();
   await expect(page.getByText("https://relay.cch.example/v1")).toBeVisible();
+});
+
+test("keeps the session workspace aligned when filtering on a narrower viewport", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 980, height: 900 });
+  await page.goto("/#/sessions");
+
+  await page.getByRole("button", { name: /audit anthropic relay settings/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /audit anthropic relay settings/i })
+  ).toBeVisible();
+
+  await page.getByRole("searchbox", { name: /search sessions/i }).fill("definitely-no-match");
+
+  await expect(
+    page.getByRole("heading", { name: /select a session/i })
+  ).toBeVisible();
 });

@@ -43,6 +43,8 @@ type Messages = {
     kicker: string;
     title: string;
     description: string;
+    emptyTitle: string;
+    emptyBody: string;
     columns: {
       session: string;
       assistant: string;
@@ -63,6 +65,8 @@ type Messages = {
     sections: {
       context: string;
       signals: string;
+      transcriptHighlights: string;
+      todoSnapshot: string;
       keyArtifacts: string;
       riskFlags: string;
       topicLabels: string;
@@ -78,6 +82,8 @@ type Messages = {
       lastActive: string;
     };
     noRiskFlags: string;
+    noTranscriptHighlights: string;
+    noTodoItems: string;
   };
   configRisk: {
     kicker: string;
@@ -156,6 +162,9 @@ const messages: Record<Language, Messages> = {
       title: "Retention-first queue",
       description:
         "Review title quality, progress, and recency before exporting or deleting anything.",
+      emptyTitle: "No sessions match this filter",
+      emptyBody:
+        "Adjust the search terms or clear the filter to recover the workspace queue.",
       columns: {
         session: "Session",
         assistant: "Assistant",
@@ -178,6 +187,8 @@ const messages: Record<Language, Messages> = {
       sections: {
         context: "Context",
         signals: "Signals",
+        transcriptHighlights: "Transcript Highlights",
+        todoSnapshot: "Todo Snapshot",
         keyArtifacts: "Key Artifacts",
         riskFlags: "Risk Flags",
         topicLabels: "Topic Labels"
@@ -192,7 +203,9 @@ const messages: Record<Language, Messages> = {
         valueScore: "Value score",
         lastActive: "Last active"
       },
-      noRiskFlags: "no active risk flags"
+      noRiskFlags: "no active risk flags",
+      noTranscriptHighlights: "No transcript highlights were extracted for this session.",
+      noTodoItems: "No todo evidence was captured for this session."
     },
     configRisk: {
       kicker: "Config Center",
@@ -298,6 +311,8 @@ const messages: Record<Language, Messages> = {
       kicker: "会话浏览",
       title: "保留优先队列",
       description: "先判断标题质量、进度和最近活跃度，再决定导出或删除。",
+      emptyTitle: "当前筛选条件下没有会话",
+      emptyBody: "调整搜索词，或清空筛选条件后再继续处理会话。",
       columns: {
         session: "会话",
         assistant: "助手",
@@ -318,6 +333,8 @@ const messages: Record<Language, Messages> = {
       sections: {
         context: "上下文",
         signals: "信号",
+        transcriptHighlights: "会话高亮",
+        todoSnapshot: "待办快照",
         keyArtifacts: "关键产物",
         riskFlags: "风险标记",
         topicLabels: "主题标签"
@@ -332,7 +349,9 @@ const messages: Record<Language, Messages> = {
         valueScore: "价值分",
         lastActive: "最后活跃"
       },
-      noRiskFlags: "当前没有风险标记"
+      noRiskFlags: "当前没有风险标记",
+      noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",
+      noTodoItems: "当前没有捕获到待办证据。"
     },
     configRisk: {
       kicker: "配置中心",

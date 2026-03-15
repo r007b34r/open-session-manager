@@ -141,8 +141,14 @@ fn snapshot_command_includes_persisted_audit_history() {
     })
     .expect("soft delete session");
 
-    restore_session(&manifest.manifest_path, "r007b34r", &connection)
-        .expect("restore session");
+    restore_session(
+        &manifest.manifest_path,
+        &quarantine_root,
+        &[sandbox.join("sessions")],
+        "r007b34r",
+        &connection,
+    )
+    .expect("restore session");
     drop(connection);
 
     let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))

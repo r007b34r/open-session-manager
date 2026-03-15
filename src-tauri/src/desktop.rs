@@ -34,51 +34,67 @@ pub fn run() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
+pub async fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
     let paths = build_runtime_paths();
 
-    build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-        .map_err(|error| error.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub fn export_session_markdown(session_id: String) -> Result<DashboardSnapshot, String> {
+pub async fn export_session_markdown(session_id: String) -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
     let paths = build_runtime_paths();
-    let indexed = resolve_indexed_session(&context, &session_id)?;
-    let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
 
-    export_session(
-        &indexed.session,
-        &indexed.insight,
-        &paths.export_root,
-        &resolve_actor(),
-        &connection,
-    )
-    .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
 
-    build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-        .map_err(|error| error.to_string())
+        export_session(
+            &indexed.session,
+            &indexed.insight,
+            &paths.export_root,
+            &actor,
+            &connection,
+        )
+        .map_err(|error| error.to_string())?;
+
+        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub fn soft_delete_session(session_id: String) -> Result<DashboardSnapshot, String> {
+pub async fn soft_delete_session(session_id: String) -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
     let paths = build_runtime_paths();
-    let indexed = resolve_indexed_session(&context, &session_id)?;
-    let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
 
-    delete_session(
-        &indexed.session,
-        &paths.quarantine_root,
-        &resolve_actor(),
-        &connection,
-    )
-    .map_err(|error| error.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
 
-    build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-        .map_err(|error| error.to_string())
+        delete_session(
+            &indexed.session,
+            &paths.quarantine_root,
+            &actor,
+            &connection,
+        )
+        .map_err(|error| error.to_string())?;
+
+        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 fn resolve_indexed_session(
@@ -147,4 +163,25 @@ fn resolve_actor() -> String {
     env::var("USERNAME")
         .or_else(|_| env::var("USER"))
         .unwrap_or_else(|_| "local-user".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::future::Future;
+
+    use super::{export_session_markdown, load_dashboard_snapshot, soft_delete_session};
+
+    #[test]
+    fn desktop_commands_are_async_futures() {
+        fn assert_future<T: Future>(_: &T) {}
+
+        let load = load_dashboard_snapshot();
+        assert_future(&load);
+
+        let export = export_session_markdown("session-id".to_string());
+        assert_future(&export);
+
+        let delete = soft_delete_session("session-id".to_string());
+        assert_future(&delete);
+    }
 }

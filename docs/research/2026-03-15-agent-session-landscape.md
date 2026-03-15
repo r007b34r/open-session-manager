@@ -265,3 +265,67 @@
 - `ccmanager`: <https://github.com/kbwo/ccmanager>
 - `Entropic`: <https://github.com/Dimension-AI-Technologies/Entropic>
 - `claude-code-log`: <https://github.com/daaain/claude-code-log>
+
+## 7. 2026-03-15 补充：直接吸收与许可证姿态
+
+为了把 OSM 做成真正可发布、可持续扩展的产品，竞品不能只“参考功能”，还要分清哪些可以直接继承，哪些只能借鉴思路。
+
+这一层现在已经结构化落地到：
+
+- `third_party/upstreams/catalog.json`
+- `third_party/upstreams/intake-manifest.json`
+- `docs/research/upstreams/index.md`
+- `docs/release/open-source-attribution.md`
+- `scripts/intake-upstreams.mjs`
+
+### 可以优先评估直接吸收的项目
+
+- `jazzyalex/agent-sessions`
+  - 许可证：MIT
+  - 可吸收点：本地索引、analytics、session 检索模型
+
+- `lulu-sk/CodexFlow`
+  - 许可证：Apache-2.0
+  - 可吸收点：Win11/WSL 路径整合、项目维度管理
+
+- `d-kimuson/claude-code-viewer`
+  - 许可证：MIT
+  - 可吸收点：深度 transcript 查看、schema 校验、lossless 渲染
+
+- `daaain/claude-code-log`
+  - 许可证：MIT
+  - 可吸收点：Markdown/HTML 导出与摘要结构
+
+- `Dimension-AI-Technologies/Entropic`
+  - 许可证：MIT
+  - 可吸收点：多 provider GUI 分层、维护面板组织
+
+- `yoavf/ai-sessions-mcp`
+  - 许可证：MIT
+  - 可吸收点：把本地 session 数据暴露为可检索接口的思路
+
+### 需要谨慎处理的项目
+
+- `Dicklesworthstone/coding_agent_session_search`
+  - 特征：覆盖范围极广，统一 connector 经验很强
+  - 风险：仓库带附加使用限制，不能默认当作普通 MIT/Apache 代码直接并入公开发行版
+  - 建议：吸收 connector 思路与数据源覆盖策略，不直接复制其代码
+
+### 对 OSM 的直接影响
+
+- 发布页必须有开源致谢区块
+- 直接集成代码时必须在仓库文档和 release notes 中写清来源与许可证
+- OSM 自己必须坚持“治理平台”主轴，而不是沦为某个单助手 viewer 的拼装壳
+
+## 8. 2026-03-15 补充：已落地的 intake pipeline
+
+本轮已经把“竞品调研”和“代码吸收前置治理”落成可执行流程：
+
+- `third_party/upstreams/catalog.json`
+  - 记录仓库 URL、许可证、吸收姿态、限制条件、候选模块与发布致谢文案
+- `scripts/intake-upstreams.mjs`
+  - 从 catalog 生成研究索引、单仓库研究卡片、发布致谢和镜像规划
+- `third_party/upstreams/intake-manifest.json`
+  - 给每个上游仓库分配稳定镜像目录，后续可以在本地做 `git clone` / `git fetch`
+
+这样 OSM 后续继续吸收上游能力时，就不再靠人工散记，而是能持续沉淀成结构化清单和发布级证据链。

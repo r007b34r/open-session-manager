@@ -9,6 +9,7 @@ type SessionsRouteProps = {
   sessions: SessionDetailRecord[];
   exportedSessionIds: ReadonlySet<string>;
   selectedSessionId?: string;
+  onSelectSession?: (sessionId: string) => void;
   onExportMarkdown?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
@@ -17,12 +18,14 @@ export function SessionsRoute({
   sessions,
   exportedSessionIds,
   selectedSessionId,
+  onSelectSession,
   onExportMarkdown,
   onSoftDelete
 }: SessionsRouteProps) {
   const { copy } = useI18n();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = deferredQuery.trim().toLowerCase();
 
   const filteredSessions = sessions.filter((session) => {
     const haystack = [
@@ -35,18 +38,19 @@ export function SessionsRoute({
       session.sourcePath,
       session.tags.join(" "),
       session.riskFlags.join(" "),
-      session.keyArtifacts.join(" ")
+      session.keyArtifacts.join(" "),
+      session.transcriptHighlights.map((item) => item.content).join(" "),
+      session.todoItems.map((item) => item.content).join(" ")
     ]
       .join(" ")
       .toLowerCase();
 
-    return haystack.includes(deferredQuery.trim().toLowerCase());
+    return haystack.includes(normalizedQuery);
   });
 
   const selectedSession =
     filteredSessions.find((session) => session.sessionId === selectedSessionId) ??
-    filteredSessions[0] ??
-    sessions.find((session) => session.sessionId === selectedSessionId);
+    filteredSessions[0];
 
   return (
     <section className="route-stack">
@@ -66,6 +70,7 @@ export function SessionsRoute({
 
       <div className="content-grid">
         <SessionTable
+          onSelectSession={onSelectSession}
           selectedSessionId={selectedSession?.sessionId}
           sessions={filteredSessions}
         />

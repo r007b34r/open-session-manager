@@ -9,6 +9,16 @@ export type SessionListItem = {
   valueScore: number;
 };
 
+export type TranscriptHighlight = {
+  role: string;
+  content: string;
+};
+
+export type TranscriptTodo = {
+  content: string;
+  completed: boolean;
+};
+
 export type SessionDetailRecord = SessionListItem & {
   summary: string;
   projectPath: string;
@@ -16,6 +26,8 @@ export type SessionDetailRecord = SessionListItem & {
   tags: string[];
   riskFlags: string[];
   keyArtifacts: string[];
+  transcriptHighlights: TranscriptHighlight[];
+  todoItems: TranscriptTodo[];
 };
 
 export type ConfigRiskRecord = {
@@ -103,6 +115,27 @@ const fallbackSnapshot: DashboardSnapshot = {
         "Defined distro handshake checkpoints",
         "Separated Windows path discovery from Linux payload collection",
         "Logged retry edge case for restore flow"
+      ],
+      transcriptHighlights: [
+        {
+          role: "User",
+          content: "Normalize the WSL collector handshake before adding more adapters."
+        },
+        {
+          role: "Assistant",
+          content:
+            "Discovery roots are stable now. The next step is locking transport framing and manifest retries."
+        }
+      ],
+      todoItems: [
+        {
+          content: "Finalize manifest framing",
+          completed: true
+        },
+        {
+          content: "Verify retry path in WSL",
+          completed: false
+        }
       ]
     },
     {
@@ -121,9 +154,31 @@ const fallbackSnapshot: DashboardSnapshot = {
       tags: ["relay", "risk", "claude"],
       riskFlags: ["dangerous_permissions", "shell_hook"],
       keyArtifacts: [
-        "Mapped ANTHROPIC_BASE_URL override",
+        "Documented ANTHROPIC_BASE_URL override path",
         "Captured hook command chain",
         "Flagged accept-edits default mode"
+      ],
+      transcriptHighlights: [
+        {
+          role: "User",
+          content:
+            "Audit the relay endpoint, shell hooks, and decide whether this Claude session should be archived."
+        },
+        {
+          role: "Assistant",
+          content:
+            "Mapped ANTHROPIC_BASE_URL override and traced the permissive shell hook chain, but remediation has not been applied yet."
+        }
+      ],
+      todoItems: [
+        {
+          content: "Review shell hook chain",
+          completed: false
+        },
+        {
+          content: "Export remediation summary before cleanup",
+          completed: true
+        }
       ]
     },
     {
@@ -146,6 +201,23 @@ const fallbackSnapshot: DashboardSnapshot = {
         "Wrote Markdown frontmatter template",
         "Added audit_events inserts for every destructive path",
         "Verified restore from manifest"
+      ],
+      transcriptHighlights: [
+        {
+          role: "User",
+          content: "Package the export and quarantine workflow for release verification."
+        },
+        {
+          role: "Assistant",
+          content:
+            "Markdown export, quarantine manifest, and restore validation are complete and ready for release checks."
+        }
+      ],
+      todoItems: [
+        {
+          content: "Confirm restore from manifest",
+          completed: true
+        }
       ]
     }
   ],
@@ -219,11 +291,11 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   const nativeSnapshot =
     await tryInvokeNativeCommand<DashboardSnapshot>("load_dashboard_snapshot");
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
-    return nativeSnapshot;
+    return normalizeDashboardSnapshot(nativeSnapshot);
   }
 
   const realSnapshot = await tryFetchRealSnapshot();
-  return realSnapshot ?? fallbackSnapshot;
+  return normalizeDashboardSnapshot(realSnapshot ?? fallbackSnapshot);
 }
 
 export function recordMarkdownExport(
@@ -285,10 +357,10 @@ export async function applyMarkdownExport(
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
-    return nativeSnapshot;
+    return normalizeDashboardSnapshot(nativeSnapshot);
   }
 
-  return recordMarkdownExport(current, sessionId);
+  return normalizeDashboardSnapshot(recordMarkdownExport(current, sessionId));
 }
 
 export async function applySoftDelete(
@@ -301,10 +373,10 @@ export async function applySoftDelete(
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
-    return nativeSnapshot;
+    return normalizeDashboardSnapshot(nativeSnapshot);
   }
 
-  return recordSoftDelete(current, sessionId);
+  return normalizeDashboardSnapshot(recordSoftDelete(current, sessionId));
 }
 
 export function hasSuccessfulMarkdownExport(
@@ -391,4 +463,79 @@ function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function normalizeDashboardSnapshot(
+  snapshot: DashboardSnapshot
+): DashboardSnapshot {
+  return {
+    ...snapshot,
+    sessions: [...snapshot.sessions]
+      .map(normalizeSessionDetailRecord)
+      .sort(compareSessionsByActivity)
+  };
+}
+
+function normalizeSessionDetailRecord(
+  session: SessionDetailRecord
+): SessionDetailRecord {
+  return {
+    ...session,
+    transcriptHighlights: Array.isArray(session.transcriptHighlights)
+      ? session.transcriptHighlights.filter(isTranscriptHighlight)
+      : [],
+    todoItems: Array.isArray(session.todoItems)
+      ? session.todoItems.filter(isTranscriptTodo)
+      : []
+  };
+}
+
+function compareSessionsByActivity(
+  left: SessionDetailRecord,
+  right: SessionDetailRecord
+) {
+  const timestampDelta =
+    parseActivityTimestamp(right.lastActivityAt) -
+    parseActivityTimestamp(left.lastActivityAt);
+
+  if (timestampDelta !== 0) {
+    return timestampDelta;
+  }
+
+  const valueDelta = right.valueScore - left.valueScore;
+  if (valueDelta !== 0) {
+    return valueDelta;
+  }
+
+  return left.title.localeCompare(right.title);
+}
+
+function parseActivityTimestamp(value: string) {
+  const direct = Date.parse(value);
+  if (!Number.isNaN(direct)) {
+    return direct;
+  }
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+
+  return 0;
+}
+
+function isTranscriptHighlight(value: unknown): value is TranscriptHighlight {
+  return (
+    isRecord(value) &&
+    typeof value.role === "string" &&
+    typeof value.content === "string"
+  );
+}
+
+function isTranscriptTodo(value: unknown): value is TranscriptTodo {
+  return (
+    isRecord(value) &&
+    typeof value.content === "string" &&
+    typeof value.completed === "boolean"
+  );
 }

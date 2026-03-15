@@ -1,0 +1,54 @@
+{
+  "catalogLastReviewedAt": "2026-03-15",
+  "entries": [
+    {
+      "repo": "d-kimuson/claude-code-viewer",
+      "slug": "d-kimuson-claude-code-viewer",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/d-kimuson-claude-code-viewer"
+    },
+    {
+      "repo": "daaain/claude-code-log",
+      "slug": "daaain-claude-code-log",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/daaain-claude-code-log"
+    },
+    {
+      "repo": "Dicklesworthstone/coding_agent_session_search",
+      "slug": "dicklesworthstone-coding_agent_session_search",
+      "absorptionMode": "reference-only",
+      "license": "LicenseRef-Restricted",
+      "mirrorDirectory": "third_party/upstreams/mirrors/dicklesworthstone-coding_agent_session_search"
+    },
+    {
+      "repo": "Dimension-AI-Technologies/Entropic",
+      "slug": "dimension-ai-technologies-entropic",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/dimension-ai-technologies-entropic"
+    },
+    {
+      "repo": "jazzyalex/agent-sessions",
+      "slug": "jazzyalex-agent-sessions",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/jazzyalex-agent-sessions"
+    },
+    {
+      "repo": "lulu-sk/CodexFlow",
+      "slug": "lulu-sk-codexflow",
+      "absorptionMode": "candidate-absorb",
+      "license": "Apache-2.0",
+      "mirrorDirectory": "third_party/upstreams/mirrors/lulu-sk-codexflow"
+    },
+    {
+      "repo": "yoavf/ai-sessions-mcp",
+      "slug": "yoavf-ai-sessions-mcp",
+      "absorptionMode": "candidate-absorb",
+      "license": "MIT",
+      "mirrorDirectory": "third_party/upstreams/mirrors/yoavf-ai-sessions-mcp"
+    }
+  ]
+}

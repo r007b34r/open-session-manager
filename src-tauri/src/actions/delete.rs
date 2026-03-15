@@ -6,8 +6,8 @@ use serde_json::json;
 use crate::domain::session::SessionRecord;
 
 use super::{
-    ActionError, ActionResult, QuarantineManifest, has_successful_markdown_export, move_path,
-    write_audit_event,
+    ActionError, ActionResult, AuditWriteRequest, QuarantineAsset, QuarantineManifest,
+    has_successful_markdown_export, move_path, safe_managed_name, write_audit_event,
 };
 
 pub struct SoftDeleteRequest<'a> {
@@ -29,10 +29,16 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
         .file_name()
         .and_then(|value| value.to_str())
         .unwrap_or("session");
-    let session_root = request.quarantine_root.join(&request.session.session_id);
+    let session_root = request
+        .quarantine_root
+        .join(safe_managed_name(&request.session.session_id));
     let quarantined_path = session_root.join("payload").join(basename);
+    let related_assets = collect_related_assets(request.session, &session_root);
 
     move_path(source_path, &quarantined_path)?;
+    for asset in &related_assets {
+        move_path(&asset.original_path, &asset.quarantined_path)?;
+    }
 
     let manifest_path = session_root.join("manifest.json");
     if let Some(parent) = manifest_path.parent() {
@@ -45,26 +51,73 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
         quarantined_path: quarantined_path.clone(),
         manifest_path: manifest_path.clone(),
         deleted_at: chrono::Utc::now().to_rfc3339(),
+        related_assets,
     };
 
     fs::write(&manifest_path, serde_json::to_string_pretty(&manifest)?)?;
 
     write_audit_event(
         request.connection,
-        "soft_delete",
-        "session",
-        &request.session.session_id,
-        request.actor,
-        Some(json!({ "source_path": request.session.source_path }).to_string()),
-        Some(
-            json!({
-                "quarantined_path": quarantined_path,
-                "manifest_path": manifest_path,
-            })
-            .to_string(),
-        ),
-        "success",
+        AuditWriteRequest {
+            event_type: "soft_delete",
+            target_type: "session",
+            target_id: &request.session.session_id,
+            actor: request.actor,
+            before_state: Some(json!({ "source_path": request.session.source_path }).to_string()),
+            after_state: Some(
+                json!({
+                    "quarantined_path": quarantined_path,
+                    "manifest_path": manifest_path,
+                })
+                .to_string(),
+            ),
+            result: "success",
+        },
     )?;
 
     Ok(manifest)
+}
+
+fn collect_related_assets(session: &SessionRecord, session_root: &Path) -> Vec<QuarantineAsset> {
+    if session.assistant != "opencode" {
+        return Vec::new();
+    }
+
+    let source_path = Path::new(&session.source_path);
+    let Some(storage_root) = source_path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+    else {
+        return Vec::new();
+    };
+
+    let safe_session_id = safe_managed_name(&session.session_id);
+    let candidates = [
+        (
+            storage_root.join("session").join("message").join(&session.session_id),
+            session_root
+                .join("payload")
+                .join("related")
+                .join("message")
+                .join(&safe_session_id),
+        ),
+        (
+            storage_root.join("session").join("part").join(&session.session_id),
+            session_root
+                .join("payload")
+                .join("related")
+                .join("part")
+                .join(&safe_session_id),
+        ),
+    ];
+
+    candidates
+        .into_iter()
+        .filter(|(original_path, _)| original_path.exists())
+        .map(|(original_path, quarantined_path)| QuarantineAsset {
+            original_path,
+            quarantined_path,
+        })
+        .collect()
 }

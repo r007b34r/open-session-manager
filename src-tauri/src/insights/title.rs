@@ -5,10 +5,10 @@ pub fn derive_title(input: &InsightInput<'_>) -> String {
         return truncate_title(&goal);
     }
 
-    if let Some(message) = input.last_assistant_message.and_then(normalize_text) {
-        if !looks_like_error_message(&message) {
-            return truncate_title(&message);
-        }
+    if let Some(message) = input.last_assistant_message.and_then(normalize_text)
+        && !looks_like_error_message(&message)
+    {
+        return truncate_title(&message);
     }
 
     "Untitled session".to_string()

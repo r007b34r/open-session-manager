@@ -77,7 +77,7 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(
-      screen.getByRole("link", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
     );
 
     expect(window.location.hash).toBe("#/sessions/ses-002");
@@ -86,6 +86,33 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("searchbox", { name: /search sessions/i })
+    ).toBeInTheDocument();
+  });
+
+  it("搜索结果为空时不会继续展示不匹配的旧详情", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions/ses-002";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /audit anthropic relay settings/i });
+    await user.clear(
+      screen.getByRole("searchbox", { name: /search sessions/i })
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: /search sessions/i }),
+      "definitely-no-match"
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", {
+          name: /audit anthropic relay settings/i
+        })
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("heading", { name: /select a session/i })
     ).toBeInTheDocument();
   });
 
@@ -102,12 +129,33 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("link", { name: /refactor wsl collector handshake/i })
+        screen.queryByRole("button", { name: /refactor wsl collector handshake/i })
       ).not.toBeInTheDocument();
     });
     expect(
-      screen.getByRole("link", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
     ).toBeInTheDocument();
+  });
+
+  it("在详情面板中展示 transcript 高亮和待办快照", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /transcript highlights/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /todo snapshot/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/review shell hook chain/i)).toBeInTheDocument();
   });
 });
 
