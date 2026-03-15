@@ -55,6 +55,7 @@ type Messages = {
     kicker: string;
     emptyTitle: string;
     emptyBody: string;
+    cleanupRequirement: string;
     actions: {
       exportMarkdown: string;
       moveToQuarantine: string;
@@ -168,6 +169,8 @@ const messages: Record<Language, Messages> = {
       emptyTitle: "Select a session",
       emptyBody:
         "Choose a row to inspect summary, evidence, and cleanup readiness.",
+      cleanupRequirement:
+        "Export Markdown first so the session can be reviewed before moving it into quarantine.",
       actions: {
         exportMarkdown: "Export Markdown",
         moveToQuarantine: "Move to Quarantine"
@@ -307,6 +310,7 @@ const messages: Record<Language, Messages> = {
       kicker: "会话详情",
       emptyTitle: "请选择一个会话",
       emptyBody: "选择左侧条目后，可查看摘要、证据和清理准备情况。",
+      cleanupRequirement: "必须先导出 Markdown，确认核心内容已保留后才能移入隔离区。",
       actions: {
         exportMarkdown: "导出为 Markdown",
         moveToQuarantine: "移入隔离区"

@@ -53,6 +53,12 @@ export type DashboardSnapshot = {
   auditEvents: AuditEventRecord[];
 };
 
+declare global {
+  interface Window {
+    __TAURI_INTERNALS__?: unknown;
+  }
+}
+
 const fallbackSnapshot: DashboardSnapshot = {
   metrics: [
     {
@@ -210,6 +216,12 @@ const fallbackSnapshot: DashboardSnapshot = {
 };
 
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
+  const nativeSnapshot =
+    await tryInvokeNativeCommand<DashboardSnapshot>("load_dashboard_snapshot");
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return nativeSnapshot;
+  }
+
   const realSnapshot = await tryFetchRealSnapshot();
   return realSnapshot ?? fallbackSnapshot;
 }
@@ -263,6 +275,50 @@ export function recordSoftDelete(
   };
 }
 
+export async function applyMarkdownExport(
+  current: DashboardSnapshot,
+  sessionId: string
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "export_session_markdown",
+    { sessionId }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return nativeSnapshot;
+  }
+
+  return recordMarkdownExport(current, sessionId);
+}
+
+export async function applySoftDelete(
+  current: DashboardSnapshot,
+  sessionId: string
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "soft_delete_session",
+    { sessionId }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return nativeSnapshot;
+  }
+
+  return recordSoftDelete(current, sessionId);
+}
+
+export function hasSuccessfulMarkdownExport(
+  auditEvents: AuditEventRecord[],
+  sessionId: string
+) {
+  return auditEvents.some(
+    (event) =>
+      event.type === "export_markdown" &&
+      event.target === sessionId &&
+      event.result === "success"
+  );
+}
+
 function createAuditEvent(
   type: string,
   target: string,
@@ -298,6 +354,26 @@ async function tryFetchRealSnapshot() {
   } catch {
     return null;
   }
+}
+
+async function tryInvokeNativeCommand<T>(
+  command: string,
+  args: Record<string, unknown> = {}
+): Promise<T | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return await invoke<T>(command, args);
+  } catch {
+    return null;
+  }
+}
+
+function isTauriRuntime() {
+  return typeof window !== "undefined" && typeof window.__TAURI_INTERNALS__ !== "undefined";
 }
 
 function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {

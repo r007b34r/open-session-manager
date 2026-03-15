@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "e2e": "cross-env NODE_PATH=./node_modules playwright test"
+    "e2e": "cross-env NODE_PATH=./node_modules playwright test",
+    "tauri:dev": "node ../scripts/run-tauri.mjs dev",
+    "tauri:build": "node ../scripts/run-tauri.mjs build"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
@@ -17,6 +20,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@tauri-apps/cli": "^2.10.1",
     "@playwright/test": "^1.55.0",
     "cross-env": "^10.0.0",
     "@types/react": "^19.1.10",

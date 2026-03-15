@@ -5,7 +5,10 @@ use serde_json::json;
 
 use crate::domain::session::SessionRecord;
 
-use super::{ActionResult, QuarantineManifest, move_path, write_audit_event};
+use super::{
+    ActionError, ActionResult, QuarantineManifest, has_successful_markdown_export, move_path,
+    write_audit_event,
+};
 
 pub struct SoftDeleteRequest<'a> {
     pub session: &'a SessionRecord,
@@ -15,6 +18,12 @@ pub struct SoftDeleteRequest<'a> {
 }
 
 pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<QuarantineManifest> {
+    if !has_successful_markdown_export(request.connection, &request.session.session_id)? {
+        return Err(ActionError::Precondition(
+            "soft delete requires a successful Markdown export first".to_string(),
+        ));
+    }
+
     let source_path = Path::new(&request.session.source_path);
     let basename = source_path
         .file_name()

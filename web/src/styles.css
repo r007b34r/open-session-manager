@@ -334,6 +334,15 @@ a {
   transform: translateY(-1px);
 }
 
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.action-button:disabled:hover {
+  transform: none;
+}
+
 .action-button-primary {
   background: linear-gradient(135deg, var(--moss), #3c6b5c);
   color: #f8f4ec;
@@ -342,6 +351,18 @@ a {
 .action-button-danger {
   background: linear-gradient(135deg, var(--danger), #b3492d);
   color: #fff5f1;
+}
+
+.action-button-danger:disabled {
+  background: linear-gradient(135deg, #a48d86, #bea8a0);
+  color: rgba(255, 245, 241, 0.94);
+}
+
+.action-hint {
+  margin: -8px 0 0;
+  color: var(--danger);
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .detail-grid {

@@ -1,4 +1,9 @@
-use std::{fs, path::PathBuf, process::Command};
+use std::{
+    fs,
+    path::PathBuf,
+    process::Command,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use agent_session_governance_core::{
     actions::{
@@ -11,6 +16,8 @@ use agent_session_governance_core::{
 };
 use rusqlite::Connection;
 use serde_json::Value;
+
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
 fn fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -179,9 +186,10 @@ fn snapshot_command_includes_persisted_audit_history() {
 }
 
 fn temp_root() -> PathBuf {
+    let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "agent-session-governance-cli-snapshot-{}",
-        std::process::id()
+        "agent-session-governance-cli-snapshot-{}-{suffix}",
+        std::process::id(),
     ));
 
     if root.exists() {

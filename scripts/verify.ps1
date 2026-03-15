@@ -38,6 +38,7 @@ try {
   Invoke-Step "Rust tests" { & $cargo test }
   Invoke-Step "Web unit tests" { npm --prefix web run test }
   Invoke-Step "Web build" { npm --prefix web run build }
+  Invoke-Step "Desktop debug build" { node scripts/run-tauri.mjs build --debug }
   Invoke-Step "Web end-to-end tests" { npm --prefix web run e2e }
 } finally {
   Pop-Location

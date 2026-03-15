@@ -7,6 +7,7 @@ import { useI18n } from "../lib/i18n";
 
 type SessionsRouteProps = {
   sessions: SessionDetailRecord[];
+  exportedSessionIds: ReadonlySet<string>;
   selectedSessionId?: string;
   onExportMarkdown?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
@@ -14,6 +15,7 @@ type SessionsRouteProps = {
 
 export function SessionsRoute({
   sessions,
+  exportedSessionIds,
   selectedSessionId,
   onExportMarkdown,
   onSoftDelete
@@ -63,6 +65,9 @@ export function SessionsRoute({
           sessions={filteredSessions}
         />
         <SessionDetail
+          canSoftDelete={
+            selectedSession ? exportedSessionIds.has(selectedSession.sessionId) : false
+          }
           onExportMarkdown={onExportMarkdown}
           onSoftDelete={onSoftDelete}
           session={selectedSession}

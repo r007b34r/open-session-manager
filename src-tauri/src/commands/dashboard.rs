@@ -20,8 +20,10 @@ use crate::{
         discovery::discover_known_session_roots,
     },
     discovery::{DiscoveryContext, KnownPath},
-    domain::audit::AuditEvent,
-    domain::session::SessionRecord,
+    domain::{
+        audit::AuditEvent,
+        session::{SessionInsight, SessionRecord},
+    },
     insights::{
         InsightInput, garbage::derive_garbage_score, progress::derive_progress_state,
         title::derive_title, value::derive_value_score,
@@ -123,6 +125,13 @@ pub struct SessionDetailRecord {
     pub key_artifacts: Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct IndexedSession {
+    pub session: SessionRecord,
+    pub insight: SessionInsight,
+    pub detail: SessionDetailRecord,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigRiskRecord {
@@ -216,6 +225,12 @@ pub fn build_local_dashboard_snapshot_with_audit(
     )
 }
 
+pub fn build_local_indexed_sessions(
+    context: &DiscoveryContext,
+) -> SnapshotResult<Vec<IndexedSession>> {
+    build_indexed_sessions(discover_known_session_roots(context))
+}
+
 fn build_snapshot(
     session_roots: Vec<KnownPath>,
     config_targets: Vec<ConfigAuditTarget>,
@@ -234,9 +249,16 @@ fn build_snapshot(
 }
 
 fn build_session_records(session_roots: &[KnownPath]) -> SnapshotResult<Vec<SessionDetailRecord>> {
+    Ok(build_indexed_sessions(session_roots.to_vec())?
+        .into_iter()
+        .map(|indexed| indexed.detail)
+        .collect())
+}
+
+fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<IndexedSession>> {
     let mut sessions = Vec::new();
 
-    for root in session_roots {
+    for root in &session_roots {
         if !root.path.exists() {
             continue;
         }
@@ -248,17 +270,17 @@ fn build_session_records(session_roots: &[KnownPath]) -> SnapshotResult<Vec<Sess
             let mut session = adapter.parse_session(&session_file)?;
             session.environment = root.environment.clone();
             let narrative = extract_session_narrative(&session)?;
-            sessions.push(build_session_detail(session, narrative));
+            sessions.push(build_indexed_session(session, narrative)?);
         }
     }
 
     Ok(sessions)
 }
 
-fn build_session_detail(
+fn build_indexed_session(
     session: SessionRecord,
     narrative: SessionNarrative,
-) -> SessionDetailRecord {
+) -> SnapshotResult<IndexedSession> {
     let input = InsightInput {
         first_user_goal: narrative.first_user_goal.as_deref(),
         last_assistant_message: narrative.last_assistant_message.as_deref(),
@@ -290,23 +312,47 @@ fn build_session_detail(
         .clone()
         .unwrap_or_else(|| "unknown".to_string());
     let source_path = session.source_path.clone();
-
-    SessionDetailRecord {
-        session_id: session.session_id,
+    let last_activity_at = session
+        .last_activity_at
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+    let confidence = derive_confidence(&narrative);
+    let progress_state = progress_state.to_string();
+    let detail = SessionDetailRecord {
+        session_id: session.session_id.clone(),
         title: title.clone(),
-        assistant: session.assistant,
-        progress_state: progress_state.to_string(),
+        assistant: session.assistant.clone(),
+        progress_state: progress_state.clone(),
         progress_percent: progress_percent.unwrap_or(0),
-        last_activity_at: session.last_activity_at.unwrap_or_else(|| "unknown".to_string()),
-        environment: session.environment,
+        last_activity_at,
+        environment: session.environment.clone(),
         value_score,
         summary,
         project_path,
         source_path,
-        tags,
-        risk_flags,
+        tags: tags.clone(),
+        risk_flags: risk_flags.clone(),
         key_artifacts,
-    }
+    };
+    let insight = SessionInsight {
+        session_id: session.session_id.clone(),
+        title,
+        topic_labels_json: serde_json::to_string(&tags)?,
+        summary: detail.summary.clone(),
+        progress_state,
+        progress_percent,
+        value_score,
+        stale_score,
+        garbage_score,
+        risk_flags_json: serde_json::to_string(&risk_flags)?,
+        confidence,
+    };
+
+    Ok(IndexedSession {
+        session,
+        insight,
+        detail,
+    })
 }
 
 fn build_tags(session: &SessionRecord, title: &str) -> Vec<String> {
@@ -773,5 +819,16 @@ fn format_bytes(bytes: u64) -> String {
         value if value >= MIB => format!("{:.1} MB", value / MIB),
         value if value >= KIB => format!("{:.1} KB", value / KIB),
         value => format!("{value:.0} B"),
+    }
+}
+
+fn derive_confidence(narrative: &SessionNarrative) -> f32 {
+    match (
+        narrative.first_user_goal.is_some(),
+        narrative.last_assistant_message.is_some(),
+    ) {
+        (true, true) => 0.92,
+        (true, false) | (false, true) => 0.78,
+        (false, false) => 0.6,
     }
 }

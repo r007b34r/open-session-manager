@@ -1,9 +1,10 @@
 import { startTransition, useEffect, useState } from "react";
 
 import {
+  applyMarkdownExport,
+  applySoftDelete,
   fetchDashboardSnapshot,
-  recordMarkdownExport,
-  recordSoftDelete,
+  hasSuccessfulMarkdownExport,
   type DashboardSnapshot
 } from "./lib/api";
 import {
@@ -27,11 +28,21 @@ export function App() {
   const copy = getMessages(language);
 
   useEffect(() => {
-    fetchDashboardSnapshot().then((data) => {
+    let cancelled = false;
+
+    void fetchDashboardSnapshot().then((data) => {
+      if (cancelled) {
+        return;
+      }
+
       startTransition(() => {
         setSnapshot(data);
       });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -56,18 +67,26 @@ export function App() {
   }, [language]);
 
   const handleExportMarkdown = (sessionId: string) => {
-    startTransition(() => {
-      setSnapshot((current) =>
-        current ? recordMarkdownExport(current, sessionId) : current
-      );
+    if (!snapshot) {
+      return;
+    }
+
+    void applyMarkdownExport(snapshot, sessionId).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
     });
   };
 
   const handleSoftDelete = (sessionId: string) => {
-    startTransition(() => {
-      setSnapshot((current) =>
-        current ? recordSoftDelete(current, sessionId) : current
-      );
+    if (!snapshot) {
+      return;
+    }
+
+    void applySoftDelete(snapshot, sessionId).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
     });
   };
 
@@ -101,6 +120,12 @@ function renderRoute(
   onExportMarkdown: (sessionId: string) => void,
   onSoftDelete: (sessionId: string) => void
 ) {
+  const exportedSessionIds = new Set(
+    snapshot.auditEvents
+      .filter((event) => event.type === "export_markdown" && event.result === "success")
+      .map((event) => event.target)
+  );
+
   if (path === "/configs") {
     return <ConfigsRoute configs={snapshot.configs} />;
   }
@@ -117,6 +142,10 @@ function renderRoute(
 
     return (
       <SessionDetailRoute
+        canSoftDelete={hasSuccessfulMarkdownExport(
+          snapshot.auditEvents,
+          (selectedSession ?? snapshot.sessions[0])?.sessionId ?? ""
+        )}
         onExportMarkdown={onExportMarkdown}
         onSoftDelete={onSoftDelete}
         session={selectedSession ?? snapshot.sessions[0]}
@@ -127,6 +156,7 @@ function renderRoute(
   if (path === "/sessions") {
     return (
       <SessionsRoute
+        exportedSessionIds={exportedSessionIds}
         onExportMarkdown={onExportMarkdown}
         onSoftDelete={onSoftDelete}
         sessions={snapshot.sessions}
@@ -138,6 +168,7 @@ function renderRoute(
     <>
       <OverviewRoute snapshot={snapshot} />
       <SessionsRoute
+        exportedSessionIds={exportedSessionIds}
         onExportMarkdown={onExportMarkdown}
         onSoftDelete={onSoftDelete}
         selectedSessionId={snapshot.sessions[0]?.sessionId}

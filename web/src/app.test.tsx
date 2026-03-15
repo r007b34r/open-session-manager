@@ -49,6 +49,25 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("zh-CN");
   });
+
+  it("要求先导出 Markdown 才允许移入隔离区", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    const moveButton = await screen.findByRole("button", {
+      name: /move to quarantine/i
+    });
+    expect(moveButton).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("button", { name: /export markdown/i })
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /move to quarantine/i })
+    ).toBeEnabled();
+  });
 });
 
 function mockNavigatorLanguage(language: string, languages: string[]) {

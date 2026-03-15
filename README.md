@@ -19,9 +19,10 @@
 ## 当前能力
 
 - Rust 核心已经具备安装/路径发现、Codex/Claude Code/OpenCode 会话解析、洞察评分、配置与凭据审计
-- Web 控制台已经具备总览页、Session Explorer、Session Detail、Config Center、Audit Center 的初版界面
-- 已支持 Markdown 导出、软删除、恢复与审计日志链路
+- Web / Tauri 桌面控制台已经具备总览页、Session Explorer、Session Detail、Config Center、Audit Center 的初版界面
+- 已支持 Markdown 导出、软删除、恢复与审计日志链路，且“先导出 Markdown，再移入隔离区”现在是前后端双重约束
 - 默认以脱敏方式展示密钥和敏感配置
+- 已支持真实本地 snapshot、持久化审计数据库、桌面调试构建与浏览器 fallback 开发流
 
 ## 本地运行
 
@@ -35,6 +36,22 @@
 ```bash
 npm --prefix web install
 npm --prefix web run dev
+```
+
+### 桌面开发 / 构建
+
+仓库内已经提供了统一桌面入口脚本，会自动在仓库根目录下调用 Tauri，并补齐本机 `cargo` 路径。
+
+```bash
+npm --prefix web run tauri:dev
+npm --prefix web run tauri:build -- --debug
+```
+
+也可以直接使用根目录脚本：
+
+```bash
+node scripts/run-tauri.mjs dev
+node scripts/run-tauri.mjs build --debug
 ```
 
 ### 核心测试
@@ -61,9 +78,13 @@ npm --prefix web run e2e
 
 ## 当前 UI 演示数据
 
-当前前端使用 `web/src/lib/api.ts` 中的 typed fixture snapshot 驱动，用来先验证交互流、布局和风险呈现。下一阶段会把这层替换为 Tauri 命令与真实本地索引数据。
+当前前端和桌面端已经统一成三层数据来源顺序：
 
-当前前端已经改为“优先读取真实 snapshot，失败时回退到 fixture”。如果要把 Rust 核心导出的真实本地快照灌给前端，可执行：
+1. Tauri 原生命令
+2. `web/public/dashboard-snapshot.json`
+3. `web/src/lib/api.ts` 内置 typed fixture
+
+如果要把 Rust 核心导出的真实本地快照灌给浏览器开发环境，可执行：
 
 ```bash
 node scripts/export-dashboard-snapshot.mjs
@@ -81,10 +102,22 @@ node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures
 node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures --output temp/dashboard-snapshot.json
 ```
 
-## 桌面桥接骨架
+## 桌面运行时
 
-仓库现在已经补了第一版 Tauri 配置骨架：
+仓库当前已经接上可运行的 Tauri 桌面层：
 
 - `src-tauri/tauri.conf.json`
+- `src-tauri/src/desktop.rs`
+- `scripts/run-tauri.mjs`
 
-当前这层只负责把前端构建路径、开发地址和窗口参数固化下来，还没有把 Rust 主入口切换成完整 Tauri runtime。这样做的目的是先保住现有 Rust + Web 验证链，同时为下一阶段的桌面运行时集成留出稳定落点。
+当前桌面运行时能力：
+
+- 无参数启动二进制时进入 Tauri 窗口
+- 前端优先通过 Tauri 命令读取真实本地 snapshot
+- 导出 Markdown 与软删除动作可直接调用 Rust 原生命令，并返回最新 snapshot
+- 调试构建已在当前 Windows 11 环境验证通过
+
+仍未完成的发布项见：
+
+- [支持矩阵](docs/release/support-matrix.md)
+- [发布就绪实施计划](docs/plans/2026-03-15-release-readiness.md)

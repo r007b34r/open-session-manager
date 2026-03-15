@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use rusqlite::Connection;
 
@@ -8,10 +12,13 @@ use crate::{
 };
 
 use super::{
+    ActionError,
     delete::{SoftDeleteRequest, soft_delete_session},
     export::{ExportRequest, export_session_markdown},
     restore::restore_session,
 };
+
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
 #[test]
 fn exports_soft_deletes_restores_and_audits_session() {
@@ -101,10 +108,58 @@ fn exports_soft_deletes_restores_and_audits_session() {
     fs::remove_dir_all(&sandbox).expect("cleanup sandbox");
 }
 
+#[test]
+fn refuses_soft_delete_until_a_markdown_export_has_been_recorded() {
+    let sandbox = temp_root();
+    let source_path = sandbox.join("sessions").join("rollout-2026-03-15.jsonl");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+
+    let quarantine_root = sandbox.join("quarantine");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "ses-needs-export".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(r"C:\Projects\demo".to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: Some("2026-03-15T05:15:00Z".to_string()),
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "completed".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "abc123".to_string(),
+    };
+
+    let error = soft_delete_session(&SoftDeleteRequest {
+        session: &session,
+        quarantine_root: &quarantine_root,
+        actor: "Max",
+        connection: &connection,
+    })
+    .expect_err("soft delete should require an export first");
+
+    match error {
+        ActionError::Precondition(message) => {
+            assert!(message.contains("export"));
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+
+    assert!(source_path.exists());
+    assert!(!quarantine_root.exists());
+}
+
 fn temp_root() -> PathBuf {
+    let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
-        "agent-session-governance-actions-{}",
-        std::process::id()
+        "agent-session-governance-actions-{}-{suffix}",
+        std::process::id(),
     ));
 
     if root.exists() {

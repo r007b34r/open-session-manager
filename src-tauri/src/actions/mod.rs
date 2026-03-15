@@ -21,6 +21,7 @@ pub enum ActionError {
     Io(io::Error),
     Sql(rusqlite::Error),
     Json(serde_json::Error),
+    Precondition(String),
 }
 
 impl fmt::Display for ActionError {
@@ -29,6 +30,7 @@ impl fmt::Display for ActionError {
             Self::Io(error) => write!(f, "io error: {error}"),
             Self::Sql(error) => write!(f, "sqlite error: {error}"),
             Self::Json(error) => write!(f, "json error: {error}"),
+            Self::Precondition(message) => write!(f, "precondition failed: {message}"),
         }
     }
 }
@@ -115,6 +117,26 @@ pub fn write_audit_event(
     )?;
 
     Ok(event)
+}
+
+pub fn has_successful_markdown_export(
+    connection: &Connection,
+    session_id: &str,
+) -> ActionResult<bool> {
+    let exists = connection.query_row(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM audit_events
+            WHERE event_type = 'export_markdown'
+              AND target_type = 'session'
+              AND target_id = ?1
+              AND result = 'success'
+        )",
+        [session_id],
+        |row| row.get::<_, i64>(0),
+    )?;
+
+    Ok(exists != 0)
 }
 
 pub fn move_path(source: &Path, destination: &Path) -> ActionResult<()> {

@@ -18,6 +18,7 @@ web/public/dashboard-snapshot.json
 
 target/
 src-tauri/target/
+src-tauri/gen/
 
 tmp/
 temp/

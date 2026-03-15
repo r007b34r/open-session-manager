@@ -3,12 +3,14 @@ import { useI18n } from "../lib/i18n";
 
 type SessionDetailProps = {
   session?: SessionDetailRecord;
+  canSoftDelete?: boolean;
   onExportMarkdown?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
 
 export function SessionDetail({
   session,
+  canSoftDelete = false,
   onExportMarkdown,
   onSoftDelete
 }: SessionDetailProps) {
@@ -40,12 +42,18 @@ export function SessionDetail({
         </button>
         <button
           className="action-button action-button-danger"
+          disabled={!canSoftDelete}
           onClick={() => onSoftDelete?.(session.sessionId)}
           type="button"
         >
           {copy.sessionDetail.actions.moveToQuarantine}
         </button>
       </div>
+      {!canSoftDelete ? (
+        <p className="action-hint">
+          {copy.sessionDetail.cleanupRequirement}
+        </p>
+      ) : null}
 
       <div className="detail-grid">
         <div>

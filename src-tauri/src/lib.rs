@@ -2,6 +2,7 @@ pub mod actions;
 pub mod adapters;
 pub mod audit;
 pub mod commands;
+pub mod desktop;
 pub mod discovery;
 pub mod domain;
 pub mod insights;
