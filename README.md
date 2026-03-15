@@ -80,3 +80,11 @@ node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures
 ```bash
 node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures --output temp/dashboard-snapshot.json
 ```
+
+## 桌面桥接骨架
+
+仓库现在已经补了第一版 Tauri 配置骨架：
+
+- `src-tauri/tauri.conf.json`
+
+当前这层只负责把前端构建路径、开发地址和窗口参数固化下来，还没有把 Rust 主入口切换成完整 Tauri runtime。这样做的目的是先保住现有 Rust + Web 验证链，同时为下一阶段的桌面运行时集成留出稳定落点。

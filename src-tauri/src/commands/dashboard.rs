@@ -20,11 +20,13 @@ use crate::{
         discovery::discover_known_session_roots,
     },
     discovery::{DiscoveryContext, KnownPath},
+    domain::audit::AuditEvent,
     domain::session::SessionRecord,
     insights::{
         InsightInput, garbage::derive_garbage_score, progress::derive_progress_state,
         title::derive_title, value::derive_value_score,
     },
+    storage::sqlite::{load_audit_events, open_database},
 };
 
 #[derive(Debug)]
@@ -33,6 +35,7 @@ pub enum SnapshotError {
     Audit(AuditError),
     Io(io::Error),
     Json(serde_json::Error),
+    Sql(rusqlite::Error),
     UnsupportedAssistant(String),
 }
 
@@ -43,6 +46,7 @@ impl fmt::Display for SnapshotError {
             Self::Audit(error) => write!(f, "audit error: {error}"),
             Self::Io(error) => write!(f, "io error: {error}"),
             Self::Json(error) => write!(f, "json error: {error}"),
+            Self::Sql(error) => write!(f, "sqlite error: {error}"),
             Self::UnsupportedAssistant(assistant) => {
                 write!(f, "unsupported assistant: {assistant}")
             }
@@ -73,6 +77,12 @@ impl From<io::Error> for SnapshotError {
 impl From<serde_json::Error> for SnapshotError {
     fn from(value: serde_json::Error) -> Self {
         Self::Json(value)
+    }
+}
+
+impl From<rusqlite::Error> for SnapshotError {
+    fn from(value: rusqlite::Error) -> Self {
+        Self::Sql(value)
     }
 }
 
@@ -147,6 +157,13 @@ struct SessionNarrative {
 }
 
 pub fn build_fixture_dashboard_snapshot(fixtures_root: &Path) -> SnapshotResult<DashboardSnapshot> {
+    build_fixture_dashboard_snapshot_with_audit(fixtures_root, None)
+}
+
+pub fn build_fixture_dashboard_snapshot_with_audit(
+    fixtures_root: &Path,
+    audit_db_path: Option<&Path>,
+) -> SnapshotResult<DashboardSnapshot> {
     let session_roots = vec![
         KnownPath::new("codex", "session", "windows", fixtures_root.join("codex")),
         KnownPath::new(
@@ -179,30 +196,40 @@ pub fn build_fixture_dashboard_snapshot(fixtures_root: &Path) -> SnapshotResult<
         ),
     ];
 
-    build_snapshot(session_roots, config_targets)
+    build_snapshot(session_roots, config_targets, audit_db_path)
 }
 
 pub fn build_local_dashboard_snapshot(
     context: &DiscoveryContext,
 ) -> SnapshotResult<DashboardSnapshot> {
+    build_local_dashboard_snapshot_with_audit(context, None)
+}
+
+pub fn build_local_dashboard_snapshot_with_audit(
+    context: &DiscoveryContext,
+    audit_db_path: Option<&Path>,
+) -> SnapshotResult<DashboardSnapshot> {
     build_snapshot(
         discover_known_session_roots(context),
         discover_known_config_targets(context),
+        audit_db_path,
     )
 }
 
 fn build_snapshot(
     session_roots: Vec<KnownPath>,
     config_targets: Vec<ConfigAuditTarget>,
+    audit_db_path: Option<&Path>,
 ) -> SnapshotResult<DashboardSnapshot> {
     let sessions = build_session_records(&session_roots)?;
     let configs = build_config_records(&config_targets)?;
+    let audit_events = build_audit_records(audit_db_path)?;
 
     Ok(DashboardSnapshot {
         metrics: build_metrics(&sessions, &configs),
         sessions,
         configs,
-        audit_events: Vec::new(),
+        audit_events,
     })
 }
 
@@ -439,6 +466,50 @@ fn build_metrics(
             note: "potential_reclaim_from_soft_delete_queue".to_string(),
         },
     ]
+}
+
+fn build_audit_records(audit_db_path: Option<&Path>) -> SnapshotResult<Vec<AuditEventRecord>> {
+    let Some(audit_db_path) = audit_db_path else {
+        return Ok(Vec::new());
+    };
+
+    if !audit_db_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let connection = open_database(audit_db_path)?;
+    let events = load_audit_events(&connection, 100)?;
+
+    Ok(events.into_iter().map(build_audit_record).collect())
+}
+
+fn build_audit_record(event: AuditEvent) -> AuditEventRecord {
+    let detail = summarize_audit_event(&event);
+
+    AuditEventRecord {
+        event_id: event.event_id.clone(),
+        r#type: event.event_type.clone(),
+        target: event.target_id.clone(),
+        actor: event.actor,
+        created_at: event.created_at,
+        result: event.result.clone(),
+        detail,
+    }
+}
+
+fn summarize_audit_event(event: &AuditEvent) -> String {
+    match event.event_type.as_str() {
+        "export_markdown" => {
+            format!("Exported Markdown artifact for {}.", event.target_id)
+        }
+        "soft_delete" => {
+            format!("Moved {} into the quarantine queue.", event.target_id)
+        }
+        "restore" => {
+            format!("Restored {} from quarantine.", event.target_id)
+        }
+        _ => format!("Recorded {} for {}.", event.event_type, event.target_id),
+    }
 }
 
 fn extract_session_narrative(session: &SessionRecord) -> SnapshotResult<SessionNarrative> {
