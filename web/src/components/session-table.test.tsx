@@ -1,0 +1,46 @@
+import { render, screen } from "@testing-library/react";
+
+describe("SessionTable", () => {
+  it("renders title, assistant, progress, and last activity for each session", async () => {
+    const { SessionTable } = await import("./session-table");
+
+    render(
+      <SessionTable
+        sessions={[
+          {
+            sessionId: "ses-001",
+            title: "Refactor WSL collector handshake",
+            assistant: "Codex",
+            progressState: "In Progress",
+            progressPercent: 65,
+            lastActivityAt: "2026-03-15 12:40",
+            environment: "WSL: Ubuntu",
+            valueScore: 84
+          },
+          {
+            sessionId: "ses-002",
+            title: "Audit Anthropic relay settings",
+            assistant: "Claude Code",
+            progressState: "Blocked",
+            progressPercent: 15,
+            lastActivityAt: "2026-03-14 22:10",
+            environment: "Windows 11",
+            valueScore: 47
+          }
+        ]}
+        selectedSessionId="ses-001"
+      />
+    );
+
+    expect(
+      screen.getByRole("columnheader", { name: /session/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /refactor wsl collector handshake/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/codex/i)).toBeInTheDocument();
+    expect(screen.getByText(/65%/i)).toBeInTheDocument();
+    expect(screen.getByText(/2026-03-15 12:40/i)).toBeInTheDocument();
+    expect(screen.getByText(/wsl: ubuntu/i)).toBeInTheDocument();
+  });
+});

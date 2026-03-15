@@ -1,49 +1,97 @@
-const shellStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  margin: 0,
-  display: "grid",
-  placeItems: "center",
-  background:
-    "radial-gradient(circle at top, rgba(40, 106, 72, 0.18), transparent 40%), #f5f1e8",
-  color: "#1f2a1f",
-  fontFamily: "\"Segoe UI\", sans-serif",
-  padding: "2rem"
-};
+import { startTransition, useEffect, useState } from "react";
 
-const panelStyle: React.CSSProperties = {
-  width: "min(720px, 100%)",
-  background: "rgba(255, 252, 247, 0.92)",
-  border: "1px solid rgba(31, 42, 31, 0.12)",
-  borderRadius: "24px",
-  padding: "2rem",
-  boxShadow: "0 24px 80px rgba(31, 42, 31, 0.08)"
-};
-
-const eyebrowStyle: React.CSSProperties = {
-  display: "inline-block",
-  marginBottom: "1rem",
-  padding: "0.35rem 0.75rem",
-  borderRadius: "999px",
-  background: "#d8ead9",
-  fontSize: "0.85rem",
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase"
-};
+import { fetchDashboardSnapshot, type DashboardSnapshot } from "./lib/api";
+import { AuditRoute } from "./routes/audit";
+import { ConfigsRoute } from "./routes/configs";
+import { OverviewRoute } from "./routes/index";
+import { RootShell } from "./routes/__root";
+import { SessionDetailRoute } from "./routes/sessions.$id";
+import { SessionsRoute } from "./routes/sessions";
 
 export function App() {
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [currentPath, setCurrentPath] = useState(getCurrentPath);
+
+  useEffect(() => {
+    fetchDashboardSnapshot().then((data) => {
+      startTransition(() => {
+        setSnapshot(data);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      startTransition(() => {
+        setCurrentPath(getCurrentPath());
+      });
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   return (
-    <main style={shellStyle}>
-      <section style={panelStyle}>
-        <span style={eyebrowStyle}>Bootstrap</span>
-        <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", margin: 0 }}>
-          Agent Session Governance
-        </h1>
-        <p style={{ fontSize: "1.1rem", lineHeight: 1.7, maxWidth: "56ch" }}>
-          Local-first control center for inspecting coding-agent sessions,
-          configs, and cleanup actions before any destructive change is made.
-        </p>
+    <RootShell currentPath={normalizePath(currentPath)}>
+      <section className="route-shell">
+        {snapshot ? (
+          renderRoute(snapshot, normalizePath(currentPath))
+        ) : (
+          <section className="panel empty-state">
+            <p className="section-kicker">Loading</p>
+            <h2>Preparing governance snapshot</h2>
+            <p className="panel-copy">
+              Collecting sessions, config risks, and cleanup recommendations.
+            </p>
+          </section>
+        )}
       </section>
-    </main>
+    </RootShell>
   );
+}
+
+function renderRoute(snapshot: DashboardSnapshot, path: string) {
+  if (path === "/configs") {
+    return <ConfigsRoute configs={snapshot.configs} />;
+  }
+
+  if (path === "/audit") {
+    return <AuditRoute events={snapshot.auditEvents} />;
+  }
+
+  if (path.startsWith("/sessions/")) {
+    const selectedSessionId = path.replace("/sessions/", "");
+    const selectedSession = snapshot.sessions.find(
+      (session) => session.sessionId === selectedSessionId
+    );
+
+    return (
+      <SessionDetailRoute
+        session={selectedSession ?? snapshot.sessions[0]}
+      />
+    );
+  }
+
+  if (path === "/sessions") {
+    return <SessionsRoute sessions={snapshot.sessions} />;
+  }
+
+  return (
+    <>
+      <OverviewRoute snapshot={snapshot} />
+      <SessionsRoute
+        selectedSessionId={snapshot.sessions[0]?.sessionId}
+        sessions={snapshot.sessions}
+      />
+      <ConfigsRoute configs={snapshot.configs} />
+    </>
+  );
+}
+
+function getCurrentPath() {
+  return normalizePath(window.location.hash.replace(/^#/, ""));
+}
+
+function normalizePath(value: string) {
+  return value || "/";
 }
