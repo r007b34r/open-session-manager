@@ -1,0 +1,8 @@
+[package]
+name = "agent-session-governance-core"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "agent_session_governance_core"
+path = "src/lib.rs"
