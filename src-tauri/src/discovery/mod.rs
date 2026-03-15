@@ -8,6 +8,7 @@ pub mod wsl;
 pub struct DiscoveryContext {
     pub home_dir: PathBuf,
     pub xdg_config_home: Option<PathBuf>,
+    pub xdg_data_home: Option<PathBuf>,
     pub wsl_home_dir: Option<PathBuf>,
 }
 

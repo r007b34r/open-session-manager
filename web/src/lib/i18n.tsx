@@ -226,6 +226,7 @@ const messages: Record<Language, Messages> = {
           "Potential reclaim from soft-delete queue"
       },
       progressStates: {
+        new: "New",
         in_progress: "In Progress",
         blocked: "Blocked",
         completed: "Completed"
@@ -240,6 +241,10 @@ const messages: Record<Language, Messages> = {
       },
       riskFlags: {
         stale_followup_needed: "stale_followup_needed",
+        blocked_session: "blocked_session",
+        error_detected: "error_detected",
+        stale_session: "stale_session",
+        likely_garbage: "likely_garbage",
         dangerous_permissions: "dangerous_permissions",
         shell_hook: "shell_hook",
         third_party_base_url: "third_party_base_url",
@@ -358,6 +363,7 @@ const messages: Record<Language, Messages> = {
           "软删除队列可释放的潜在空间"
       },
       progressStates: {
+        new: "新建",
         in_progress: "进行中",
         blocked: "阻塞",
         completed: "已完成"
@@ -372,6 +378,10 @@ const messages: Record<Language, Messages> = {
       },
       riskFlags: {
         stale_followup_needed: "需要后续跟进",
+        blocked_session: "会话已阻塞",
+        error_detected: "检测到错误",
+        stale_session: "会话已过期",
+        likely_garbage: "疑似垃圾会话",
         dangerous_permissions: "高危权限",
         shell_hook: "Shell Hook",
         third_party_base_url: "第三方 Base URL",

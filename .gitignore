@@ -10,6 +10,7 @@ build/
 coverage/
 test-results/
 playwright-report/
+web/public/dashboard-snapshot.json
 
 .idea/
 *.code-workspace

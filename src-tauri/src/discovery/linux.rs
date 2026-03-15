@@ -9,3 +9,10 @@ pub fn opencode_user_config(home_dir: &Path, xdg_config_home: Option<&Path>) -> 
             .join("opencode.json"),
     }
 }
+
+pub fn opencode_user_data_root(home_dir: &Path, xdg_data_home: Option<&Path>) -> PathBuf {
+    match xdg_data_home {
+        Some(data_home) => data_home.join("opencode"),
+        None => home_dir.join(".local").join("share").join("opencode"),
+    }
+}

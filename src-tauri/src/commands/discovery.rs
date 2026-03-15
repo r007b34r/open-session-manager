@@ -2,28 +2,29 @@ use std::path::PathBuf;
 
 use crate::discovery::{
     DiscoveryContext, KnownPath,
-    linux::opencode_user_config,
+    linux::{opencode_user_config, opencode_user_data_root},
     windows::{claude_user_settings, codex_user_config},
 };
 
 pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
+    let native_environment = infer_environment(&context.home_dir);
     let mut roots = vec![
         KnownPath::new(
             "codex",
             "config",
-            "windows",
+            native_environment,
             codex_user_config(&context.home_dir),
         ),
         KnownPath::new(
             "claude-code",
             "config",
-            "windows",
+            native_environment,
             claude_user_settings(&context.home_dir),
         ),
         KnownPath::new(
             "opencode",
             "config",
-            "linux",
+            native_environment,
             opencode_user_config(&context.home_dir, context.xdg_config_home.as_deref()),
         ),
     ];
@@ -35,7 +36,79 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "wsl",
             PathBuf::from(wsl_home).join(".codex").join("config.toml"),
         ));
+        roots.push(KnownPath::new(
+            "claude-code",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".claude").join("settings.json"),
+        ));
+        roots.push(KnownPath::new(
+            "opencode",
+            "config",
+            "wsl",
+            opencode_user_config(wsl_home, None),
+        ));
     }
 
     roots
+}
+
+pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
+    let native_environment = infer_environment(&context.home_dir);
+    let mut roots = vec![
+        KnownPath::new(
+            "codex",
+            "session",
+            native_environment,
+            context.home_dir.join(".codex").join("sessions"),
+        ),
+        KnownPath::new(
+            "claude-code",
+            "session",
+            native_environment,
+            context.home_dir.join(".claude").join("projects"),
+        ),
+        KnownPath::new(
+            "opencode",
+            "session",
+            native_environment,
+            opencode_user_data_root(&context.home_dir, context.xdg_data_home.as_deref()),
+        ),
+    ];
+
+    if let Some(wsl_home) = &context.wsl_home_dir {
+        roots.push(KnownPath::new(
+            "codex",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".codex").join("sessions"),
+        ));
+        roots.push(KnownPath::new(
+            "claude-code",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".claude").join("projects"),
+        ));
+        roots.push(KnownPath::new(
+            "opencode",
+            "session",
+            "wsl",
+            opencode_user_data_root(wsl_home, None),
+        ));
+    }
+
+    roots
+}
+
+fn infer_environment(home_dir: &std::path::Path) -> &'static str {
+    if home_dir
+        .to_string_lossy()
+        .chars()
+        .nth(1)
+        .is_some_and(|character| character == ':')
+    {
+        "windows"
+    } else {
+        "linux"
+    }
 }

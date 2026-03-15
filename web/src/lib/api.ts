@@ -53,7 +53,7 @@ export type DashboardSnapshot = {
   auditEvents: AuditEventRecord[];
 };
 
-const snapshot: DashboardSnapshot = {
+const fallbackSnapshot: DashboardSnapshot = {
   metrics: [
     {
       label: "Indexed Sessions",
@@ -210,7 +210,8 @@ const snapshot: DashboardSnapshot = {
 };
 
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
-  return Promise.resolve(snapshot);
+  const realSnapshot = await tryFetchRealSnapshot();
+  return realSnapshot ?? fallbackSnapshot;
 }
 
 export function recordMarkdownExport(
@@ -276,4 +277,42 @@ function createAuditEvent(
     result: "success",
     detail
   };
+}
+
+async function tryFetchRealSnapshot() {
+  if (typeof fetch !== "function") {
+    return null;
+  }
+
+  try {
+    const response = await fetch("/dashboard-snapshot.json", {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json();
+    return isDashboardSnapshot(payload) ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.metrics) &&
+    Array.isArray(value.sessions) &&
+    Array.isArray(value.configs) &&
+    Array.isArray(value.auditEvents)
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

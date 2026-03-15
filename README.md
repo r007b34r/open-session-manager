@@ -44,6 +44,12 @@ cargo test -p agent-session-governance-core
 npm --prefix web run test
 ```
 
+也可以直接运行统一验证入口：
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1
+```
+
 ### 端到端验证
 
 首次运行需要安装 Playwright Chromium：
@@ -56,3 +62,21 @@ npm --prefix web run e2e
 ## 当前 UI 演示数据
 
 当前前端使用 `web/src/lib/api.ts` 中的 typed fixture snapshot 驱动，用来先验证交互流、布局和风险呈现。下一阶段会把这层替换为 Tauri 命令与真实本地索引数据。
+
+当前前端已经改为“优先读取真实 snapshot，失败时回退到 fixture”。如果要把 Rust 核心导出的真实本地快照灌给前端，可执行：
+
+```bash
+node scripts/export-dashboard-snapshot.mjs
+```
+
+如果要用 fixtures 生成可重现的演示快照，可执行：
+
+```bash
+node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures
+```
+
+默认输出路径是 `web/public/dashboard-snapshot.json`。如果只想验证导出链路、不影响默认 UI 演示数据，可以显式指定输出路径：
+
+```bash
+node scripts/export-dashboard-snapshot.mjs --fixtures tests/fixtures --output temp/dashboard-snapshot.json
+```
