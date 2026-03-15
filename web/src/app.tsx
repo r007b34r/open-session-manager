@@ -18,7 +18,6 @@ import { AuditRoute } from "./routes/audit";
 import { ConfigsRoute } from "./routes/configs";
 import { OverviewRoute } from "./routes/index";
 import { RootShell } from "./routes/__root";
-import { SessionDetailRoute } from "./routes/sessions.$id";
 import { SessionsRoute } from "./routes/sessions";
 
 export function App() {
@@ -134,31 +133,15 @@ function renderRoute(
     return <AuditRoute events={snapshot.auditEvents} />;
   }
 
-  if (path.startsWith("/sessions/")) {
-    const selectedSessionId = path.replace("/sessions/", "");
-    const selectedSession = snapshot.sessions.find(
-      (session) => session.sessionId === selectedSessionId
-    );
+  if (path === "/sessions" || path.startsWith("/sessions/")) {
+    const selectedSessionId = getSelectedSessionId(path);
 
-    return (
-      <SessionDetailRoute
-        canSoftDelete={hasSuccessfulMarkdownExport(
-          snapshot.auditEvents,
-          (selectedSession ?? snapshot.sessions[0])?.sessionId ?? ""
-        )}
-        onExportMarkdown={onExportMarkdown}
-        onSoftDelete={onSoftDelete}
-        session={selectedSession ?? snapshot.sessions[0]}
-      />
-    );
-  }
-
-  if (path === "/sessions") {
     return (
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         onExportMarkdown={onExportMarkdown}
         onSoftDelete={onSoftDelete}
+        selectedSessionId={selectedSessionId}
         sessions={snapshot.sessions}
       />
     );
@@ -185,4 +168,21 @@ function getCurrentPath() {
 
 function normalizePath(value: string) {
   return value || "/";
+}
+
+function getSelectedSessionId(path: string) {
+  if (!path.startsWith("/sessions/")) {
+    return undefined;
+  }
+
+  const encodedSessionId = path.slice("/sessions/".length);
+  if (!encodedSessionId) {
+    return undefined;
+  }
+
+  try {
+    return decodeURIComponent(encodedSessionId);
+  } catch {
+    return encodedSessionId;
+  }
 }

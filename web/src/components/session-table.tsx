@@ -44,7 +44,7 @@ export function SessionTable({
                 <td>
                   <a
                     className="session-link"
-                    href={`#/sessions/${session.sessionId}`}
+                    href={`#/sessions/${encodeURIComponent(session.sessionId)}`}
                   >
                     {session.title}
                   </a>

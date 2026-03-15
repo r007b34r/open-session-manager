@@ -26,11 +26,16 @@ export function SessionsRoute({
 
   const filteredSessions = sessions.filter((session) => {
     const haystack = [
+      session.sessionId,
       session.title,
       session.assistant,
       session.environment,
       session.summary,
-      session.tags.join(" ")
+      session.projectPath,
+      session.sourcePath,
+      session.tags.join(" "),
+      session.riskFlags.join(" "),
+      session.keyArtifacts.join(" ")
     ]
       .join(" ")
       .toLowerCase();
@@ -40,8 +45,8 @@ export function SessionsRoute({
 
   const selectedSession =
     filteredSessions.find((session) => session.sessionId === selectedSessionId) ??
-    sessions.find((session) => session.sessionId === selectedSessionId) ??
-    filteredSessions[0];
+    filteredSessions[0] ??
+    sessions.find((session) => session.sessionId === selectedSessionId);
 
   return (
     <section className="route-stack">

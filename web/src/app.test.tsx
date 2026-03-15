@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
@@ -67,6 +67,47 @@ describe("App", () => {
     expect(
       await screen.findByRole("button", { name: /move to quarantine/i })
     ).toBeEnabled();
+  });
+
+  it("在 Sessions 页里切换会话时保留列表并展示目标详情", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(
+      screen.getByRole("link", { name: /audit anthropic relay settings/i })
+    );
+
+    expect(window.location.hash).toBe("#/sessions/ses-002");
+    expect(
+      await screen.findByRole("heading", { name: /audit anthropic relay settings/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("searchbox", { name: /search sessions/i })
+    ).toBeInTheDocument();
+  });
+
+  it("支持按项目路径关键词搜索会话", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByRole("searchbox", { name: /search sessions/i });
+    await user.type(
+      screen.getByRole("searchbox", { name: /search sessions/i }),
+      "ops"
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("link", { name: /refactor wsl collector handshake/i })
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("link", { name: /audit anthropic relay settings/i })
+    ).toBeInTheDocument();
   });
 });
 

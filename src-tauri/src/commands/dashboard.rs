@@ -267,14 +267,43 @@ fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<I
         let discovered = adapter.discover_session_files(&root.path)?;
 
         for session_file in discovered {
-            let mut session = adapter.parse_session(&session_file)?;
-            session.environment = root.environment.clone();
-            let narrative = extract_session_narrative(&session)?;
-            sessions.push(build_indexed_session(session, narrative)?);
+            match build_indexed_session_from_file(adapter.as_ref(), root, &session_file) {
+                Ok(indexed) => sessions.push(indexed),
+                Err(error) if is_recoverable_session_file_error(&error) => {
+                    eprintln!(
+                        "skipping malformed session file for {}: {} ({error})",
+                        root.assistant,
+                        session_file.display()
+                    );
+                }
+                Err(error) => return Err(error),
+            }
         }
     }
 
     Ok(sessions)
+}
+
+fn build_indexed_session_from_file(
+    adapter: &dyn SessionAdapter,
+    root: &KnownPath,
+    session_file: &Path,
+) -> SnapshotResult<IndexedSession> {
+    let mut session = adapter.parse_session(session_file)?;
+    session.environment = root.environment.clone();
+    let narrative = extract_session_narrative(&session)?;
+    build_indexed_session(session, narrative)
+}
+
+fn is_recoverable_session_file_error(error: &SnapshotError) -> bool {
+    matches!(
+        error,
+        SnapshotError::Adapter(AdapterError::InvalidSession(_))
+            | SnapshotError::Adapter(AdapterError::Json(_))
+            | SnapshotError::Adapter(AdapterError::Io(_))
+            | SnapshotError::Json(_)
+            | SnapshotError::Io(_)
+    )
 }
 
 fn build_indexed_session(
@@ -830,5 +859,72 @@ fn derive_confidence(narrative: &SessionNarrative) -> f32 {
         (true, true) => 0.92,
         (true, false) | (false, true) => 0.78,
         (false, false) => 0.6,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs,
+        path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    use crate::discovery::DiscoveryContext;
+
+    use super::build_local_dashboard_snapshot;
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+
+    #[test]
+    fn local_snapshot_skips_invalid_session_files_and_keeps_valid_sessions() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let codex_root = home_dir.join(".codex").join("sessions");
+        let claude_root = home_dir.join(".claude").join("projects");
+
+        fs::create_dir_all(&codex_root).expect("create codex root");
+        fs::create_dir_all(&claude_root).expect("create claude root");
+
+        let codex_fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures/codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
+        fs::copy(&codex_fixture, codex_root.join("rollout-2026-03-15.jsonl"))
+            .expect("copy codex fixture");
+
+        fs::write(
+            claude_root.join("broken-session.jsonl"),
+            concat!(
+                "{\"type\":\"user\",\"timestamp\":\"2026-03-15T10:00:00Z\",",
+                "\"cwd\":\"C:/Projects/broken-session\",",
+                "\"message\":{\"content\":\"collect local sessions\"}}\n"
+            ),
+        )
+        .expect("write invalid claude session");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should skip malformed session files");
+
+        assert_eq!(snapshot.sessions.len(), 1);
+        assert_eq!(snapshot.sessions[0].session_id, "codex-ses-1");
+    }
+
+    fn temp_root() -> PathBuf {
+        let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "open-session-manager-dashboard-tests-{}-{suffix}",
+            std::process::id(),
+        ));
+
+        if root.exists() {
+            fs::remove_dir_all(&root).expect("reset temp root");
+        }
+
+        fs::create_dir_all(&root).expect("create temp root");
+        root
     }
 }
