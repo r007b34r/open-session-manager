@@ -27,6 +27,7 @@ type Messages = {
     description: string;
     navLabel: string;
     languageLabel: string;
+    themeLabel: string;
     nav: {
       overview: string;
       sessions: string;
@@ -34,6 +35,16 @@ type Messages = {
       audit: string;
     };
     languageNames: Record<Language, string>;
+    themeNames: Record<"system" | "light" | "dark", string>;
+  };
+  overview: {
+    adoptionKicker: string;
+    adoptionTitle: string;
+    adoptionDescription: string;
+    adoptedTitle: string;
+    adoptedBadge: string;
+    researchTitle: string;
+    researchBadge: string;
   };
   sessions: {
     searchLabel: string;
@@ -58,6 +69,7 @@ type Messages = {
     emptyTitle: string;
     emptyBody: string;
     cleanupRequirement: string;
+    exportPathLabel: string;
     actions: {
       exportMarkdown: string;
       moveToQuarantine: string;
@@ -94,6 +106,24 @@ type Messages = {
       provider: string;
       endpoint: string;
       maskedKey: string;
+    };
+  };
+  runtimePanel: {
+    kicker: string;
+    title: string;
+    description: string;
+    exportRootLabel: string;
+    defaultExportRootHint: string;
+    customExportRootHint: string;
+    actions: {
+      saveExportRoot: string;
+      resetExportRoot: string;
+    };
+    fields: {
+      exportRoot: string;
+      auditDb: string;
+      quarantineRoot: string;
+      preferencesFile: string;
     };
   };
   audit: {
@@ -139,9 +169,10 @@ const messages: Record<Language, Messages> = {
       eyebrow: "Bootstrap",
       title: "open Session Manager",
       description:
-        "Local-first control center for inspecting coding-agent sessions, configs, and cleanup actions before any destructive change is made.",
+        "Inspect local coding-agent sessions, configs, and cleanup actions before you archive or delete anything.",
       navLabel: "Primary",
       languageLabel: "Language",
+      themeLabel: "Theme",
       nav: {
         overview: "Overview",
         sessions: "Sessions",
@@ -151,7 +182,22 @@ const messages: Record<Language, Messages> = {
       languageNames: {
         en: "English",
         "zh-CN": "中文"
+      },
+      themeNames: {
+        system: "System",
+        light: "Light",
+        dark: "Dark"
       }
+    },
+    overview: {
+      adoptionKicker: "Upstream Intake",
+      adoptionTitle: "What OSM already absorbed",
+      adoptionDescription:
+        "These references are visible in the product now, not only in research notes.",
+      adoptedTitle: "Adopted",
+      adoptedBadge: "Landed in product",
+      researchTitle: "Researched next",
+      researchBadge: "Tracked for follow-up"
     },
     sessions: {
       searchLabel: "Search sessions",
@@ -180,6 +226,7 @@ const messages: Record<Language, Messages> = {
         "Choose a row to inspect summary, evidence, and cleanup readiness.",
       cleanupRequirement:
         "Export Markdown first so the session can be reviewed before moving it into quarantine.",
+      exportPathLabel: "Markdown saved to",
       actions: {
         exportMarkdown: "Export Markdown",
         moveToQuarantine: "Move to Quarantine"
@@ -217,6 +264,25 @@ const messages: Record<Language, Messages> = {
         provider: "Provider",
         endpoint: "Endpoint",
         maskedKey: "Masked Key"
+      }
+    },
+    runtimePanel: {
+      kicker: "Storage Paths",
+      title: "Export and retention settings",
+      description:
+        "Set the Markdown export folder, then verify where audits and quarantine data are stored.",
+      exportRootLabel: "Markdown export folder",
+      defaultExportRootHint: "Using the default export folder.",
+      customExportRootHint: "Using a custom export folder override.",
+      actions: {
+        saveExportRoot: "Save Export Folder",
+        resetExportRoot: "Use Default Folder"
+      },
+      fields: {
+        exportRoot: "Current export folder",
+        auditDb: "Audit database",
+        quarantineRoot: "Quarantine root",
+        preferencesFile: "Preferences file"
       }
     },
     audit: {
@@ -289,9 +355,10 @@ const messages: Record<Language, Messages> = {
       eyebrow: "本地优先",
       title: "开放会话管理器",
       description:
-        "在执行任何破坏性操作之前，本地优先检查终端编程助手的会话、配置和清理动作。",
+        "在归档、迁移或删除之前，先把本地终端编程助手会话和配置看清楚。",
       navLabel: "主导航",
       languageLabel: "语言",
+      themeLabel: "主题",
       nav: {
         overview: "总览",
         sessions: "会话",
@@ -301,7 +368,21 @@ const messages: Record<Language, Messages> = {
       languageNames: {
         en: "English",
         "zh-CN": "中文"
+      },
+      themeNames: {
+        system: "跟随系统",
+        light: "浅色",
+        dark: "深色"
       }
+    },
+    overview: {
+      adoptionKicker: "上游吸收",
+      adoptionTitle: "已经落到产品里的能力",
+      adoptionDescription: "这些能力已经在界面和导出链路里可见，不只是文档记录。",
+      adoptedTitle: "已吸收",
+      adoptedBadge: "已落地",
+      researchTitle: "下一批研究对象",
+      researchBadge: "已建档"
     },
     sessions: {
       searchLabel: "搜索会话",
@@ -326,6 +407,7 @@ const messages: Record<Language, Messages> = {
       emptyTitle: "请选择一个会话",
       emptyBody: "选择左侧条目后，可查看摘要、证据和清理准备情况。",
       cleanupRequirement: "必须先导出 Markdown，确认核心内容已保留后才能移入隔离区。",
+      exportPathLabel: "Markdown 已保存到",
       actions: {
         exportMarkdown: "导出为 Markdown",
         moveToQuarantine: "移入隔离区"
@@ -362,6 +444,24 @@ const messages: Record<Language, Messages> = {
         provider: "提供商",
         endpoint: "端点",
         maskedKey: "脱敏密钥"
+      }
+    },
+    runtimePanel: {
+      kicker: "存储路径",
+      title: "导出与保留设置",
+      description: "可以直接修改 Markdown 导出目录，并确认审计库和隔离区当前落在哪里。",
+      exportRootLabel: "Markdown 导出目录",
+      defaultExportRootHint: "当前使用默认导出目录。",
+      customExportRootHint: "当前使用自定义导出目录。",
+      actions: {
+        saveExportRoot: "保存导出目录",
+        resetExportRoot: "恢复默认目录"
+      },
+      fields: {
+        exportRoot: "当前导出目录",
+        auditDb: "审计数据库",
+        quarantineRoot: "隔离区目录",
+        preferencesFile: "偏好设置文件"
       }
     },
     audit: {

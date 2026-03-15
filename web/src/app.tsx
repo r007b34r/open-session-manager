@@ -1,10 +1,10 @@
 import { startTransition, useEffect, useState } from "react";
 
 import {
+  applyDashboardPreferences,
   applyMarkdownExport,
   applySoftDelete,
   fetchDashboardSnapshot,
-  hasSuccessfulMarkdownExport,
   type DashboardSnapshot
 } from "./lib/api";
 import {
@@ -14,6 +14,13 @@ import {
   LANGUAGE_STORAGE_KEY,
   type Language
 } from "./lib/i18n";
+import {
+  getInitialThemePreference,
+  resolveTheme,
+  THEME_STORAGE_KEY,
+  watchSystemTheme,
+  type ThemePreference
+} from "./lib/theme";
 import { AuditRoute } from "./routes/audit";
 import { ConfigsRoute } from "./routes/configs";
 import { OverviewRoute } from "./routes/index";
@@ -23,6 +30,9 @@ import { SessionsRoute } from "./routes/sessions";
 export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() =>
+    getInitialThemePreference()
+  );
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const copy = getMessages(language);
 
@@ -65,6 +75,28 @@ export function App() {
     document.documentElement.lang = language;
   }, [language]);
 
+  useEffect(() => {
+    const applyResolvedTheme = () => {
+      const resolvedTheme = resolveTheme(themePreference);
+      document.documentElement.dataset.theme = resolvedTheme;
+      document.documentElement.style.colorScheme = resolvedTheme;
+    };
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themePreference);
+    } catch {
+      // Ignore storage failures and keep the in-memory theme choice.
+    }
+
+    applyResolvedTheme();
+
+    if (themePreference !== "system") {
+      return undefined;
+    }
+
+    return watchSystemTheme(applyResolvedTheme);
+  }, [themePreference]);
+
   const handleExportMarkdown = (sessionId: string) => {
     if (!snapshot) {
       return;
@@ -89,6 +121,32 @@ export function App() {
     });
   };
 
+  const handleSaveExportRoot = (exportRoot: string) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyDashboardPreferences(snapshot, { exportRoot }).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
+  const handleResetExportRoot = () => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyDashboardPreferences(snapshot, { exportRoot: null }).then(
+      (nextSnapshot) => {
+        startTransition(() => {
+          setSnapshot(nextSnapshot);
+        });
+      }
+    );
+  };
+
   const handleSelectSession = (sessionId: string) => {
     const nextPath = `/sessions/${encodeURIComponent(sessionId)}`;
 
@@ -103,13 +161,19 @@ export function App() {
 
   return (
     <I18nProvider language={language} setLanguage={setLanguage}>
-      <RootShell currentPath={normalizePath(currentPath)}>
+      <RootShell
+        currentPath={normalizePath(currentPath)}
+        onThemeChange={setThemePreference}
+        themePreference={themePreference}
+      >
         <section className="route-shell">
           {snapshot ? (
             renderRoute(
               snapshot,
               normalizePath(currentPath),
               handleSelectSession,
+              handleSaveExportRoot,
+              handleResetExportRoot,
               handleExportMarkdown,
               handleSoftDelete
             )
@@ -130,6 +194,8 @@ function renderRoute(
   snapshot: DashboardSnapshot,
   path: string,
   onSelectSession: (sessionId: string) => void,
+  onSaveExportRoot: (exportRoot: string) => void,
+  onResetExportRoot: () => void,
   onExportMarkdown: (sessionId: string) => void,
   onSoftDelete: (sessionId: string) => void
 ) {
@@ -138,6 +204,7 @@ function renderRoute(
       .filter((event) => event.type === "export_markdown" && event.result === "success")
       .map((event) => event.target)
   );
+  const latestMarkdownExportPaths = buildLatestMarkdownExportPaths(snapshot);
 
   if (path === "/configs") {
     return <ConfigsRoute configs={snapshot.configs} />;
@@ -153,9 +220,13 @@ function renderRoute(
     return (
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
+        latestMarkdownExportPaths={latestMarkdownExportPaths}
         onExportMarkdown={onExportMarkdown}
+        onResetExportRoot={onResetExportRoot}
+        onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
         onSoftDelete={onSoftDelete}
+        runtime={snapshot.runtime}
         selectedSessionId={selectedSessionId}
         sessions={snapshot.sessions}
       />
@@ -167,9 +238,13 @@ function renderRoute(
       <OverviewRoute snapshot={snapshot} />
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
+        latestMarkdownExportPaths={latestMarkdownExportPaths}
         onExportMarkdown={onExportMarkdown}
+        onResetExportRoot={onResetExportRoot}
+        onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
         onSoftDelete={onSoftDelete}
+        runtime={snapshot.runtime}
         selectedSessionId={snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}
       />
@@ -201,4 +276,21 @@ function getSelectedSessionId(path: string) {
   } catch {
     return encodedSessionId;
   }
+}
+
+function buildLatestMarkdownExportPaths(snapshot: DashboardSnapshot) {
+  const paths = new Map<string, string>();
+
+  for (const event of snapshot.auditEvents) {
+    if (
+      event.type === "export_markdown" &&
+      event.result === "success" &&
+      typeof event.outputPath === "string" &&
+      !paths.has(event.target)
+    ) {
+      paths.set(event.target, event.outputPath);
+    }
+  }
+
+  return paths;
 }

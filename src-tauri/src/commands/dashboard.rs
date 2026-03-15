@@ -28,6 +28,7 @@ use crate::{
         InsightInput, garbage::derive_garbage_score, progress::derive_progress_state,
         title::derive_title, value::derive_value_score,
     },
+    preferences::RuntimeSnapshot,
     storage::sqlite::{load_audit_events, open_database},
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
 };
@@ -98,6 +99,7 @@ pub struct DashboardSnapshot {
     pub sessions: Vec<SessionDetailRecord>,
     pub configs: Vec<ConfigRiskRecord>,
     pub audit_events: Vec<AuditEventRecord>,
+    pub runtime: RuntimeSnapshot,
 }
 
 #[derive(Debug, Serialize)]
@@ -159,6 +161,12 @@ pub struct AuditEventRecord {
     pub created_at: String,
     pub result: String,
     pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quarantined_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manifest_path: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -248,6 +256,7 @@ fn build_snapshot(
         sessions,
         configs,
         audit_events,
+        runtime: RuntimeSnapshot::default(),
     })
 }
 
@@ -578,6 +587,7 @@ fn build_audit_records(audit_db_path: Option<&Path>) -> SnapshotResult<Vec<Audit
 
 fn build_audit_record(event: AuditEvent) -> AuditEventRecord {
     let detail = summarize_audit_event(&event);
+    let paths = parse_audit_paths(&event.after_state);
 
     AuditEventRecord {
         event_id: event.event_id.clone(),
@@ -587,6 +597,9 @@ fn build_audit_record(event: AuditEvent) -> AuditEventRecord {
         created_at: event.created_at,
         result: event.result.clone(),
         detail,
+        output_path: paths.output_path,
+        quarantined_path: paths.quarantined_path,
+        manifest_path: paths.manifest_path,
     }
 }
 
@@ -602,6 +615,38 @@ fn summarize_audit_event(event: &AuditEvent) -> String {
             format!("Restored {} from quarantine.", event.target_id)
         }
         _ => format!("Recorded {} for {}.", event.event_type, event.target_id),
+    }
+}
+
+#[derive(Default)]
+struct AuditEventPaths {
+    output_path: Option<String>,
+    quarantined_path: Option<String>,
+    manifest_path: Option<String>,
+}
+
+fn parse_audit_paths(after_state: &Option<String>) -> AuditEventPaths {
+    let Some(after_state) = after_state else {
+        return AuditEventPaths::default();
+    };
+
+    let Ok(parsed) = serde_json::from_str::<Value>(after_state) else {
+        return AuditEventPaths::default();
+    };
+
+    AuditEventPaths {
+        output_path: parsed
+            .get("output_path")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        quarantined_path: parsed
+            .get("quarantined_path")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        manifest_path: parsed
+            .get("manifest_path")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
     }
 }
 

@@ -1,24 +1,33 @@
 import { useDeferredValue, useState } from "react";
 
+import { RuntimePanel } from "../components/runtime-panel";
 import { SessionDetail } from "../components/session-detail";
 import { SessionTable } from "../components/session-table";
-import type { SessionDetailRecord } from "../lib/api";
+import type { DashboardRuntime, SessionDetailRecord } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
 type SessionsRouteProps = {
+  runtime: DashboardRuntime;
   sessions: SessionDetailRecord[];
   exportedSessionIds: ReadonlySet<string>;
+  latestMarkdownExportPaths: ReadonlyMap<string, string>;
   selectedSessionId?: string;
   onSelectSession?: (sessionId: string) => void;
+  onSaveExportRoot?: (path: string) => void;
+  onResetExportRoot?: () => void;
   onExportMarkdown?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
 
 export function SessionsRoute({
+  runtime,
   sessions,
   exportedSessionIds,
+  latestMarkdownExportPaths,
   selectedSessionId,
   onSelectSession,
+  onSaveExportRoot,
+  onResetExportRoot,
   onExportMarkdown,
   onSoftDelete
 }: SessionsRouteProps) {
@@ -51,6 +60,9 @@ export function SessionsRoute({
   const selectedSession =
     filteredSessions.find((session) => session.sessionId === selectedSessionId) ??
     filteredSessions[0];
+  const selectedExportPath = selectedSession
+    ? latestMarkdownExportPaths.get(selectedSession.sessionId)
+    : undefined;
 
   return (
     <section className="route-stack">
@@ -68,6 +80,12 @@ export function SessionsRoute({
         />
       </section>
 
+      <RuntimePanel
+        onResetExportRoot={onResetExportRoot}
+        onSaveExportRoot={onSaveExportRoot}
+        runtime={runtime}
+      />
+
       <div className="content-grid">
         <SessionTable
           onSelectSession={onSelectSession}
@@ -78,6 +96,7 @@ export function SessionsRoute({
           canSoftDelete={
             selectedSession ? exportedSessionIds.has(selectedSession.sessionId) : false
           }
+          exportPath={selectedExportPath}
           onExportMarkdown={onExportMarkdown}
           onSoftDelete={onSoftDelete}
           session={selectedSession}

@@ -8,6 +8,7 @@ use open_session_manager_core::{
     },
     desktop,
     discovery::DiscoveryContext,
+    preferences::build_runtime_paths,
 };
 
 fn main() -> ExitCode {
@@ -42,17 +43,26 @@ fn run_snapshot_command(args: &[String]) -> Result<String, String> {
     let audit_db_path = parse_flag_value(args, "--audit-db").map(PathBuf::from);
 
     if let Some(fixtures_path) = parse_flag_value(args, "--fixtures") {
-        let snapshot = build_fixture_dashboard_snapshot_with_audit(
+        let mut snapshot = build_fixture_dashboard_snapshot_with_audit(
             &PathBuf::from(fixtures_path),
             audit_db_path.as_deref(),
         )
         .map_err(|error| error.to_string())?;
+        if let Ok(runtime) = build_runtime_paths() {
+            snapshot.runtime = runtime.snapshot();
+        }
         return serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string());
     }
 
-    let snapshot =
+    let mut snapshot =
         build_local_dashboard_snapshot_with_audit(&build_discovery_context(), audit_db_path.as_deref())
             .map_err(|error| error.to_string())?;
+    if let Ok(mut runtime) = build_runtime_paths() {
+        if let Some(custom_audit_db_path) = audit_db_path {
+            runtime.audit_db_path = custom_audit_db_path.to_path_buf();
+        }
+        snapshot.runtime = runtime.snapshot();
+    }
     serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string())
 }
 

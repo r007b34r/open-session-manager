@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
 import { LANGUAGE_STORAGE_KEY } from "./lib/i18n";
+import { THEME_STORAGE_KEY } from "./lib/theme";
 
 describe("App", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.location.hash = "";
     mockNavigatorLanguage("en-US", ["en-US"]);
+    mockMatchMedia(false);
   });
 
   it("renders the governance dashboard shell", async () => {
@@ -18,7 +20,7 @@ describe("App", () => {
       await screen.findByRole("heading", { name: /open session manager/i })
     ).toBeInTheDocument();
     expect(
-      await screen.findByText(/local-first control center/i)
+      await screen.findByText(/inspect local coding-agent sessions/i)
     ).toBeInTheDocument();
   });
 
@@ -50,6 +52,28 @@ describe("App", () => {
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("zh-CN");
   });
 
+  it("跟随系统深色偏好自动切换主题", async () => {
+    mockMatchMedia(true);
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /open session manager/i });
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("允许手动切换深色主题并保存用户选择", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /open session manager/i });
+    await user.click(screen.getByRole("button", { name: /dark/i }));
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+  });
+
   it("要求先导出 Markdown 才允许移入隔离区", async () => {
     const user = userEvent.setup();
 
@@ -69,6 +93,41 @@ describe("App", () => {
     ).toBeEnabled();
   });
 
+  it("导出后明确显示 Markdown 保存路径", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(screen.getByRole("button", { name: /export markdown/i }));
+
+    expect(
+      await screen.findByText(/session-ses-001\.md/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/documents\/opensessionmanager\/exports/i)
+    ).toBeInTheDocument();
+  });
+
+  it("允许修改 Markdown 导出目录并应用到后续导出", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    const exportRootInput = await screen.findByLabelText(/markdown export folder/i);
+    await user.clear(exportRootInput);
+    await user.type(exportRootInput, "D:/OSM/exports");
+    await user.click(screen.getByRole("button", { name: /save export folder/i }));
+    await user.click(screen.getByRole("button", { name: /export markdown/i }));
+
+    expect(
+      await screen.findByDisplayValue("D:/OSM/exports")
+    ).toBeInTheDocument();
+    expect(screen.getByText(/d:\/osm\/exports\/session-ses-001\.md/i)).toBeInTheDocument();
+  });
+
   it("在 Sessions 页里切换会话时保留列表并展示目标详情", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/sessions";
@@ -86,6 +145,21 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("searchbox", { name: /search sessions/i })
+    ).toBeInTheDocument();
+  });
+
+  it("在 Sessions 页里点击会话行的非标题区域也会切换详情", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(screen.getByText("47"));
+
+    expect(window.location.hash).toBe("#/sessions/ses-002");
+    expect(
+      await screen.findByRole("heading", { name: /audit anthropic relay settings/i })
     ).toBeInTheDocument();
   });
 
@@ -157,6 +231,20 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/review shell hook chain/i)).toBeInTheDocument();
   });
+
+  it("在首页直接展示已吸收的上游能力", async () => {
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: /open session manager/i })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/daaain\/claude-code-log/i)
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/viewer-style transcript detail/i)
+    ).toBeInTheDocument();
+  });
 });
 
 function mockNavigatorLanguage(language: string, languages: string[]) {
@@ -168,5 +256,22 @@ function mockNavigatorLanguage(language: string, languages: string[]) {
   Object.defineProperty(window.navigator, "languages", {
     configurable: true,
     value: languages
+  });
+}
+
+function mockMatchMedia(prefersDark: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: query === "(prefers-color-scheme: dark)" ? prefersDark : false,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false
+    })
   });
 }

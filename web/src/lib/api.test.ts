@@ -61,7 +61,8 @@ describe("fetchDashboardSnapshot", () => {
         }
       ],
       configs: [],
-      auditEvents: []
+      auditEvents: [],
+      runtime: buildRuntime()
     };
 
     const fetchMock = vi.fn().mockResolvedValue({
@@ -106,7 +107,8 @@ describe("fetchDashboardSnapshot", () => {
       ],
       sessions: [],
       configs: [],
-      auditEvents: []
+      auditEvents: [],
+      runtime: buildRuntime()
     };
     const fetchMock = vi.fn();
 
@@ -122,6 +124,18 @@ describe("fetchDashboardSnapshot", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+function buildRuntime() {
+  return {
+    auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
+    exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+    defaultExportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+    exportRootSource: "default" as const,
+    quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
+    preferencesPath:
+      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+  };
+}
 
 describe("desktop actions", () => {
   afterEach(() => {

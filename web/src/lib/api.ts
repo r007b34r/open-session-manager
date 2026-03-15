@@ -50,6 +50,9 @@ export type AuditEventRecord = {
   createdAt: string;
   result: string;
   detail: string;
+  outputPath?: string;
+  quarantinedPath?: string;
+  manifestPath?: string;
 };
 
 export type DashboardMetric = {
@@ -58,11 +61,25 @@ export type DashboardMetric = {
   note: string;
 };
 
+export type DashboardRuntime = {
+  auditDbPath: string;
+  exportRoot: string;
+  defaultExportRoot: string;
+  exportRootSource: "default" | "custom";
+  quarantineRoot: string;
+  preferencesPath: string;
+};
+
 export type DashboardSnapshot = {
   metrics: DashboardMetric[];
   sessions: SessionDetailRecord[];
   configs: ConfigRiskRecord[];
   auditEvents: AuditEventRecord[];
+  runtime: DashboardRuntime;
+};
+
+export type DashboardPreferencesUpdate = {
+  exportRoot: string | null;
 };
 
 declare global {
@@ -264,7 +281,9 @@ const fallbackSnapshot: DashboardSnapshot = {
       actor: "r007b34r",
       createdAt: "2026-03-15 13:12",
       result: "success",
-      detail: "Exported Markdown briefing for cleanup-ready OpenCode session."
+      detail: "Exported Markdown briefing for cleanup-ready OpenCode session.",
+      outputPath:
+        "C:/Users/Max/Documents/OpenSessionManager/exports/session-ses-003.md"
     },
     {
       eventId: "evt-002",
@@ -273,7 +292,11 @@ const fallbackSnapshot: DashboardSnapshot = {
       actor: "r007b34r",
       createdAt: "2026-03-15 13:13",
       result: "success",
-      detail: "Moved original transcript into quarantine manifest."
+      detail: "Moved original transcript into quarantine manifest.",
+      quarantinedPath:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine/ses-003/payload/ses_demo.json",
+      manifestPath:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine/ses-003/manifest.json"
     },
     {
       eventId: "evt-003",
@@ -284,7 +307,16 @@ const fallbackSnapshot: DashboardSnapshot = {
       result: "success",
       detail: "Restored transcript to original provider storage path."
     }
-  ]
+  ],
+  runtime: {
+    auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
+    exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+    defaultExportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+    exportRootSource: "default",
+    quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
+    preferencesPath:
+      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+  }
 };
 
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
@@ -295,7 +327,9 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   }
 
   const realSnapshot = await tryFetchRealSnapshot();
-  return normalizeDashboardSnapshot(realSnapshot ?? fallbackSnapshot);
+  return applyBrowserRuntimePreferences(
+    normalizeDashboardSnapshot(realSnapshot ?? fallbackSnapshot)
+  );
 }
 
 export function recordMarkdownExport(
@@ -313,7 +347,10 @@ export function recordMarkdownExport(
       createAuditEvent(
         "export_markdown",
         session.sessionId,
-        `Exported Markdown digest for ${session.title}.`
+        `Exported Markdown digest for ${session.title}.`,
+        {
+          outputPath: buildMarkdownOutputPath(current.runtime.exportRoot, session.sessionId)
+        }
       ),
       ...current.auditEvents
     ]
@@ -363,6 +400,28 @@ export async function applyMarkdownExport(
   return normalizeDashboardSnapshot(recordMarkdownExport(current, sessionId));
 }
 
+export async function applyDashboardPreferences(
+  current: DashboardSnapshot,
+  update: DashboardPreferencesUpdate
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "save_dashboard_preferences",
+    {
+      exportRoot: normalizeDashboardPreferencePath(update.exportRoot)
+    }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  const nextSnapshot = normalizeDashboardSnapshot(
+    updateDashboardRuntime(current, update)
+  );
+  persistBrowserRuntimePreferences(nextSnapshot.runtime);
+  return nextSnapshot;
+}
+
 export async function applySoftDelete(
   current: DashboardSnapshot,
   sessionId: string
@@ -394,7 +453,8 @@ export function hasSuccessfulMarkdownExport(
 function createAuditEvent(
   type: string,
   target: string,
-  detail: string
+  detail: string,
+  paths: Partial<Pick<AuditEventRecord, "outputPath" | "quarantinedPath" | "manifestPath">> = {}
 ): AuditEventRecord {
   return {
     eventId: `${type}-${target}-${Date.now()}`,
@@ -403,7 +463,8 @@ function createAuditEvent(
     actor: "r007b34r",
     createdAt: "2026-03-15 13:40",
     result: "success",
-    detail
+    detail,
+    ...paths
   };
 }
 
@@ -470,9 +531,37 @@ function normalizeDashboardSnapshot(
 ): DashboardSnapshot {
   return {
     ...snapshot,
+    auditEvents: Array.isArray(snapshot.auditEvents)
+      ? snapshot.auditEvents
+          .filter(isAuditEventRecord)
+          .map(normalizeAuditEventRecord)
+      : [],
+    runtime: normalizeDashboardRuntime(snapshot.runtime),
     sessions: [...snapshot.sessions]
       .map(normalizeSessionDetailRecord)
       .sort(compareSessionsByActivity)
+  };
+}
+
+function normalizeDashboardRuntime(
+  runtime?: Partial<DashboardRuntime>
+): DashboardRuntime {
+  return {
+    ...fallbackSnapshot.runtime,
+    ...runtime,
+    exportRootSource:
+      runtime?.exportRootSource === "custom" ? "custom" : "default"
+  };
+}
+
+function normalizeAuditEventRecord(event: AuditEventRecord): AuditEventRecord {
+  return {
+    ...event,
+    outputPath: typeof event.outputPath === "string" ? event.outputPath : undefined,
+    quarantinedPath:
+      typeof event.quarantinedPath === "string" ? event.quarantinedPath : undefined,
+    manifestPath:
+      typeof event.manifestPath === "string" ? event.manifestPath : undefined
   };
 }
 
@@ -538,4 +627,97 @@ function isTranscriptTodo(value: unknown): value is TranscriptTodo {
     typeof value.content === "string" &&
     typeof value.completed === "boolean"
   );
+}
+
+function isAuditEventRecord(value: unknown): value is AuditEventRecord {
+  return (
+    isRecord(value) &&
+    typeof value.eventId === "string" &&
+    typeof value.type === "string" &&
+    typeof value.target === "string" &&
+    typeof value.actor === "string" &&
+    typeof value.createdAt === "string" &&
+    typeof value.result === "string" &&
+    typeof value.detail === "string"
+  );
+}
+
+function buildMarkdownOutputPath(exportRoot: string, sessionId: string) {
+  return `${trimTrailingSlashes(exportRoot)}/session-${safeManagedName(sessionId)}.md`;
+}
+
+function safeManagedName(value: string) {
+  const sanitized = value
+    .split("")
+    .map((character) =>
+      /[A-Za-z0-9_-]/.test(character) ? character : "_"
+    )
+    .join("")
+    .replace(/^_+|_+$/g, "");
+
+  return sanitized || "session";
+}
+
+function trimTrailingSlashes(value: string) {
+  return value.replace(/[\\/]+$/g, "");
+}
+
+function normalizeDashboardPreferencePath(value: string | null) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function updateDashboardRuntime(
+  current: DashboardSnapshot,
+  update: DashboardPreferencesUpdate
+): DashboardSnapshot {
+  const exportRoot = normalizeDashboardPreferencePath(update.exportRoot);
+
+  return {
+    ...current,
+    runtime: {
+      ...current.runtime,
+      exportRoot: exportRoot ?? current.runtime.defaultExportRoot,
+      exportRootSource: exportRoot ? "custom" : "default"
+    }
+  };
+}
+
+function applyBrowserRuntimePreferences(
+  snapshot: DashboardSnapshot
+): DashboardSnapshot {
+  if (typeof window === "undefined") {
+    return snapshot;
+  }
+
+  try {
+    const storedExportRoot = normalizeDashboardPreferencePath(
+      window.localStorage.getItem("open-session-manager.export-root")
+    );
+    if (!storedExportRoot) {
+      return snapshot;
+    }
+
+    return normalizeDashboardSnapshot(
+      updateDashboardRuntime(snapshot, { exportRoot: storedExportRoot })
+    );
+  } catch {
+    return snapshot;
+  }
+}
+
+function persistBrowserRuntimePreferences(runtime: DashboardRuntime) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (runtime.exportRootSource === "custom") {
+      window.localStorage.setItem("open-session-manager.export-root", runtime.exportRoot);
+    } else {
+      window.localStorage.removeItem("open-session-manager.export-root");
+    }
+  } catch {
+    // Ignore storage failures in browser fallback mode.
+  }
 }

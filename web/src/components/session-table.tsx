@@ -1,3 +1,5 @@
+import type { KeyboardEvent } from "react";
+
 import type { SessionListItem } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
@@ -13,6 +15,22 @@ export function SessionTable({
   onSelectSession
 }: SessionTableProps) {
   const { copy, translateProgressState } = useI18n();
+
+  const selectSession = (sessionId: string) => {
+    onSelectSession?.(sessionId);
+  };
+
+  const handleRowKeyDown = (
+    event: KeyboardEvent<HTMLTableRowElement>,
+    sessionId: string
+  ) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    selectSession(sessionId);
+  };
 
   return (
     <section className="panel">
@@ -49,6 +67,9 @@ export function SessionTable({
                   <tr
                     className={isSelected ? "is-selected" : ""}
                     key={session.sessionId}
+                    onClick={() => selectSession(session.sessionId)}
+                    onKeyDown={(event) => handleRowKeyDown(event, session.sessionId)}
+                    tabIndex={0}
                   >
                     <td>
                       <button
@@ -58,7 +79,10 @@ export function SessionTable({
                             ? "session-row-button is-selected"
                             : "session-row-button"
                         }
-                        onClick={() => onSelectSession?.(session.sessionId)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectSession(session.sessionId);
+                        }}
                         type="button"
                       >
                         <span className="session-link">{session.title}</span>

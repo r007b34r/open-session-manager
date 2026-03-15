@@ -1,7 +1,4 @@
-use std::{
-    env,
-    path::{Path, PathBuf},
-};
+use std::{env, path::PathBuf};
 
 use crate::{
     commands::{
@@ -12,22 +9,17 @@ use crate::{
         },
     },
     discovery::DiscoveryContext,
+    preferences::{RuntimePaths, build_runtime_paths, save_export_root_preference},
     storage::sqlite::open_database,
 };
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RuntimePaths {
-    audit_db_path: PathBuf,
-    export_root: PathBuf,
-    quarantine_root: PathBuf,
-}
 
 pub fn run() -> Result<(), String> {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             load_dashboard_snapshot,
             export_session_markdown,
-            soft_delete_session
+            soft_delete_session,
+            save_dashboard_preferences
         ])
         .run(tauri::generate_context!())
         .map_err(|error| error.to_string())
@@ -36,11 +28,10 @@ pub fn run() -> Result<(), String> {
 #[tauri::command]
 pub async fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
-    let paths = build_runtime_paths();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
 
     tauri::async_runtime::spawn_blocking(move || {
-        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-            .map_err(|error| error.to_string())
+        build_snapshot_with_runtime(&context, &paths)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -49,7 +40,7 @@ pub async fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
 #[tauri::command]
 pub async fn export_session_markdown(session_id: String) -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
-    let paths = build_runtime_paths();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
     let actor = resolve_actor();
 
     tauri::async_runtime::spawn_blocking(move || {
@@ -65,8 +56,7 @@ pub async fn export_session_markdown(session_id: String) -> Result<DashboardSnap
         )
         .map_err(|error| error.to_string())?;
 
-        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-            .map_err(|error| error.to_string())
+        build_snapshot_with_runtime(&context, &paths)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -75,7 +65,7 @@ pub async fn export_session_markdown(session_id: String) -> Result<DashboardSnap
 #[tauri::command]
 pub async fn soft_delete_session(session_id: String) -> Result<DashboardSnapshot, String> {
     let context = build_discovery_context();
-    let paths = build_runtime_paths();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
     let actor = resolve_actor();
 
     tauri::async_runtime::spawn_blocking(move || {
@@ -90,8 +80,21 @@ pub async fn soft_delete_session(session_id: String) -> Result<DashboardSnapshot
         )
         .map_err(|error| error.to_string())?;
 
-        build_local_dashboard_snapshot_with_audit(&context, Some(&paths.audit_db_path))
-            .map_err(|error| error.to_string())
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn save_dashboard_preferences(
+    export_root: Option<String>,
+) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = save_export_root_preference(export_root).map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        build_snapshot_with_runtime(&context, &paths)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -117,39 +120,14 @@ fn build_discovery_context() -> DiscoveryContext {
     }
 }
 
-fn build_runtime_paths() -> RuntimePaths {
-    let data_root = resolve_app_data_root();
-    let export_root = resolve_export_root(&data_root);
-
-    RuntimePaths {
-        audit_db_path: data_root.join("audit").join("audit.db"),
-        export_root,
-        quarantine_root: data_root.join("quarantine"),
-    }
-}
-
-fn resolve_app_data_root() -> PathBuf {
-    if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
-        return PathBuf::from(local_app_data).join("OpenSessionManager");
-    }
-
-    if let Some(xdg_data_home) = env::var_os("XDG_DATA_HOME") {
-        return PathBuf::from(xdg_data_home).join("open-session-manager");
-    }
-
-    resolve_home_dir()
-        .join(".local")
-        .join("share")
-        .join("open-session-manager")
-}
-
-fn resolve_export_root(data_root: &Path) -> PathBuf {
-    let home_dir = resolve_home_dir();
-    if home_dir.as_os_str().is_empty() {
-        return data_root.join("exports");
-    }
-
-    home_dir.join("Documents").join("OpenSessionManager").join("exports")
+fn build_snapshot_with_runtime(
+    context: &DiscoveryContext,
+    paths: &RuntimePaths,
+) -> Result<DashboardSnapshot, String> {
+    let mut snapshot = build_local_dashboard_snapshot_with_audit(context, Some(&paths.audit_db_path))
+        .map_err(|error| error.to_string())?;
+    snapshot.runtime = paths.snapshot();
+    Ok(snapshot)
 }
 
 fn resolve_home_dir() -> PathBuf {
@@ -169,7 +147,10 @@ fn resolve_actor() -> String {
 mod tests {
     use std::future::Future;
 
-    use super::{export_session_markdown, load_dashboard_snapshot, soft_delete_session};
+    use super::{
+        export_session_markdown, load_dashboard_snapshot, save_dashboard_preferences,
+        soft_delete_session,
+    };
 
     #[test]
     fn desktop_commands_are_async_futures() {
@@ -183,5 +164,8 @@ mod tests {
 
         let delete = soft_delete_session("session-id".to_string());
         assert_future(&delete);
+
+        let save = save_dashboard_preferences(Some("D:/OSM/exports".to_string()));
+        assert_future(&save);
     }
 }

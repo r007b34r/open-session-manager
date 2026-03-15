@@ -1,12 +1,20 @@
 import type { PropsWithChildren } from "react";
 
 import { useI18n, type Language } from "../lib/i18n";
+import type { ThemePreference } from "../lib/theme";
 
 type RootShellProps = PropsWithChildren<{
   currentPath: string;
+  themePreference: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
 }>;
 
-export function RootShell({ children, currentPath }: RootShellProps) {
+export function RootShell({
+  children,
+  currentPath,
+  themePreference,
+  onThemeChange
+}: RootShellProps) {
   const { copy, language, setLanguage } = useI18n();
   const navigation = [
     { href: "#/", label: copy.root.nav.overview },
@@ -40,6 +48,25 @@ export function RootShell({ children, currentPath }: RootShellProps) {
                 type="button"
               >
                 {copy.root.languageNames[option]}
+              </button>
+            ))}
+          </div>
+
+          <div
+            aria-label={copy.root.themeLabel}
+            className="theme-switcher"
+            role="group"
+          >
+            {(["system", "light", "dark"] as ThemePreference[]).map((option) => (
+              <button
+                className={
+                  themePreference === option ? "theme-button is-active" : "theme-button"
+                }
+                key={option}
+                onClick={() => onThemeChange(option)}
+                type="button"
+              >
+                {copy.root.themeNames[option]}
               </button>
             ))}
           </div>

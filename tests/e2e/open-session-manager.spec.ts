@@ -52,6 +52,18 @@ test("keeps the session workspace aligned when filtering on a narrower viewport"
   ).toBeVisible();
 });
 
+test("selects a session when the user clicks the row instead of the title button", async ({
+  page
+}) => {
+  await page.goto("/#/sessions");
+
+  await page.locator(".data-table tbody tr").nth(1).click();
+
+  await expect(
+    page.getByRole("heading", { name: /audit anthropic relay settings/i })
+  ).toBeVisible();
+});
+
 test("keeps the session detail panel non-sticky and single-column to avoid stretched cards", async ({
   page
 }) => {
@@ -81,4 +93,31 @@ test("keeps the session detail panel non-sticky and single-column to avoid stret
   expect(detailLayout.position).toBe("static");
   expect(detailLayout.overflowY).toBe("visible");
   expect(detailCardColumns).toBe(1);
+});
+
+test("shows the markdown export location and lets the user override the export folder", async ({
+  page
+}) => {
+  await page.goto("/#/sessions");
+
+  await expect(
+    page.getByLabel(/markdown export folder/i)
+  ).toHaveValue(/openSessionManager\/exports/i);
+
+  await page.getByLabel(/markdown export folder/i).fill("D:/OSM/exports");
+  await page.getByRole("button", { name: /save export folder/i }).click();
+  await page.getByRole("button", { name: /export markdown/i }).click();
+
+  await expect(page.getByLabel(/markdown export folder/i)).toHaveValue("D:/OSM/exports");
+  await expect(page.getByText(/d:\/osm\/exports\/session-ses-001\.md/i)).toBeVisible();
+});
+
+test("supports system light-dark switching from the shell controls", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Light", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

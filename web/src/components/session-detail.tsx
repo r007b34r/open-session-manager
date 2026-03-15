@@ -4,6 +4,7 @@ import { useI18n } from "../lib/i18n";
 type SessionDetailProps = {
   session?: SessionDetailRecord;
   canSoftDelete?: boolean;
+  exportPath?: string;
   onExportMarkdown?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
@@ -11,6 +12,7 @@ type SessionDetailProps = {
 export function SessionDetail({
   session,
   canSoftDelete = false,
+  exportPath,
   onExportMarkdown,
   onSoftDelete
 }: SessionDetailProps) {
@@ -78,6 +80,11 @@ export function SessionDetail({
       {!canSoftDelete ? (
         <p className="action-hint">
           {copy.sessionDetail.cleanupRequirement}
+        </p>
+      ) : null}
+      {exportPath ? (
+        <p className="action-success">
+          {copy.sessionDetail.exportPathLabel}: <span>{exportPath}</span>
         </p>
       ) : null}
 

@@ -6,6 +6,7 @@ pub mod desktop;
 pub mod discovery;
 pub mod domain;
 pub mod insights;
+pub mod preferences;
 pub mod storage;
 pub mod transcript;
 
