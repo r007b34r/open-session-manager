@@ -1,3 +1,6 @@
+pub mod domain;
+pub mod storage;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppState {
     pub app_name: &'static str,
