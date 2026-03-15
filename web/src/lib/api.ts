@@ -212,3 +212,68 @@ const snapshot: DashboardSnapshot = {
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   return Promise.resolve(snapshot);
 }
+
+export function recordMarkdownExport(
+  current: DashboardSnapshot,
+  sessionId: string
+): DashboardSnapshot {
+  const session = current.sessions.find((item) => item.sessionId === sessionId);
+  if (!session) {
+    return current;
+  }
+
+  return {
+    ...current,
+    auditEvents: [
+      createAuditEvent(
+        "export_markdown",
+        session.sessionId,
+        `Exported Markdown digest for ${session.title}.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
+export function recordSoftDelete(
+  current: DashboardSnapshot,
+  sessionId: string
+): DashboardSnapshot {
+  const session = current.sessions.find((item) => item.sessionId === sessionId);
+  if (!session) {
+    return current;
+  }
+
+  const remainingSessions = current.sessions.filter(
+    (item) => item.sessionId !== sessionId
+  );
+
+  return {
+    ...current,
+    sessions: remainingSessions,
+    auditEvents: [
+      createAuditEvent(
+        "soft_delete",
+        session.sessionId,
+        `Moved ${session.title} into the quarantine queue.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
+function createAuditEvent(
+  type: string,
+  target: string,
+  detail: string
+): AuditEventRecord {
+  return {
+    eventId: `${type}-${target}-${Date.now()}`,
+    type,
+    target,
+    actor: "Max",
+    createdAt: "2026-03-15 13:40",
+    result: "success",
+    detail
+  };
+}

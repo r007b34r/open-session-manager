@@ -276,6 +276,36 @@ a {
   gap: 18px;
 }
 
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-button {
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+}
+
+.action-button-primary {
+  background: linear-gradient(135deg, var(--moss), #3c6b5c);
+  color: #f8f4ec;
+}
+
+.action-button-danger {
+  background: linear-gradient(135deg, var(--danger), #b3492d);
+  color: #fff5f1;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

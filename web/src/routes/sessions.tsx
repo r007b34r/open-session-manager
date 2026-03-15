@@ -7,11 +7,15 @@ import type { SessionDetailRecord } from "../lib/api";
 type SessionsRouteProps = {
   sessions: SessionDetailRecord[];
   selectedSessionId?: string;
+  onExportMarkdown?: (sessionId: string) => void;
+  onSoftDelete?: (sessionId: string) => void;
 };
 
 export function SessionsRoute({
   sessions,
-  selectedSessionId
+  selectedSessionId,
+  onExportMarkdown,
+  onSoftDelete
 }: SessionsRouteProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -56,7 +60,11 @@ export function SessionsRoute({
           selectedSessionId={selectedSession?.sessionId}
           sessions={filteredSessions}
         />
-        <SessionDetail session={selectedSession} />
+        <SessionDetail
+          onExportMarkdown={onExportMarkdown}
+          onSoftDelete={onSoftDelete}
+          session={selectedSession}
+        />
       </div>
     </section>
   );

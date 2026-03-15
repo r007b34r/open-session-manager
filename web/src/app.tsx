@@ -1,6 +1,11 @@
 import { startTransition, useEffect, useState } from "react";
 
-import { fetchDashboardSnapshot, type DashboardSnapshot } from "./lib/api";
+import {
+  fetchDashboardSnapshot,
+  recordMarkdownExport,
+  recordSoftDelete,
+  type DashboardSnapshot
+} from "./lib/api";
 import { AuditRoute } from "./routes/audit";
 import { ConfigsRoute } from "./routes/configs";
 import { OverviewRoute } from "./routes/index";
@@ -31,11 +36,32 @@ export function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  const handleExportMarkdown = (sessionId: string) => {
+    startTransition(() => {
+      setSnapshot((current) =>
+        current ? recordMarkdownExport(current, sessionId) : current
+      );
+    });
+  };
+
+  const handleSoftDelete = (sessionId: string) => {
+    startTransition(() => {
+      setSnapshot((current) =>
+        current ? recordSoftDelete(current, sessionId) : current
+      );
+    });
+  };
+
   return (
     <RootShell currentPath={normalizePath(currentPath)}>
       <section className="route-shell">
         {snapshot ? (
-          renderRoute(snapshot, normalizePath(currentPath))
+          renderRoute(
+            snapshot,
+            normalizePath(currentPath),
+            handleExportMarkdown,
+            handleSoftDelete
+          )
         ) : (
           <section className="panel empty-state">
             <p className="section-kicker">Loading</p>
@@ -50,7 +76,12 @@ export function App() {
   );
 }
 
-function renderRoute(snapshot: DashboardSnapshot, path: string) {
+function renderRoute(
+  snapshot: DashboardSnapshot,
+  path: string,
+  onExportMarkdown: (sessionId: string) => void,
+  onSoftDelete: (sessionId: string) => void
+) {
   if (path === "/configs") {
     return <ConfigsRoute configs={snapshot.configs} />;
   }
@@ -67,19 +98,29 @@ function renderRoute(snapshot: DashboardSnapshot, path: string) {
 
     return (
       <SessionDetailRoute
+        onExportMarkdown={onExportMarkdown}
+        onSoftDelete={onSoftDelete}
         session={selectedSession ?? snapshot.sessions[0]}
       />
     );
   }
 
   if (path === "/sessions") {
-    return <SessionsRoute sessions={snapshot.sessions} />;
+    return (
+      <SessionsRoute
+        onExportMarkdown={onExportMarkdown}
+        onSoftDelete={onSoftDelete}
+        sessions={snapshot.sessions}
+      />
+    );
   }
 
   return (
     <>
       <OverviewRoute snapshot={snapshot} />
       <SessionsRoute
+        onExportMarkdown={onExportMarkdown}
+        onSoftDelete={onSoftDelete}
         selectedSessionId={snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}
       />

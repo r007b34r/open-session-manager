@@ -15,3 +15,44 @@
 - [竞品与数据源分析](docs/research/2026-03-15-agent-session-landscape.md)
 - [完整设计方案](docs/plans/2026-03-15-agent-session-governance-design.md)
 - [实施计划](docs/plans/2026-03-15-agent-session-governance.md)
+
+## 当前能力
+
+- Rust 核心已经具备安装/路径发现、Codex/Claude Code/OpenCode 会话解析、洞察评分、配置与凭据审计
+- Web 控制台已经具备总览页、Session Explorer、Session Detail、Config Center、Audit Center 的初版界面
+- 已支持 Markdown 导出、软删除、恢复与审计日志链路
+- 默认以脱敏方式展示密钥和敏感配置
+
+## 本地运行
+
+### 依赖
+
+- Rust toolchain
+- Node.js 20+
+
+### Web 开发
+
+```bash
+npm --prefix web install
+npm --prefix web run dev
+```
+
+### 核心测试
+
+```bash
+cargo test -p agent-session-governance-core
+npm --prefix web run test
+```
+
+### 端到端验证
+
+首次运行需要安装 Playwright Chromium：
+
+```bash
+npx --prefix web playwright install chromium
+npm --prefix web run e2e
+```
+
+## 当前 UI 演示数据
+
+当前前端使用 `web/src/lib/api.ts` 中的 typed fixture snapshot 驱动，用来先验证交互流、布局和风险呈现。下一阶段会把这层替换为 Tauri 命令与真实本地索引数据。

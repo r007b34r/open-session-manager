@@ -2,9 +2,15 @@ import type { SessionDetailRecord } from "../lib/api";
 
 type SessionDetailProps = {
   session?: SessionDetailRecord;
+  onExportMarkdown?: (sessionId: string) => void;
+  onSoftDelete?: (sessionId: string) => void;
 };
 
-export function SessionDetail({ session }: SessionDetailProps) {
+export function SessionDetail({
+  session,
+  onExportMarkdown,
+  onSoftDelete
+}: SessionDetailProps) {
   if (!session) {
     return (
       <section className="panel detail-panel">
@@ -22,6 +28,23 @@ export function SessionDetail({ session }: SessionDetailProps) {
       <p className="section-kicker">Session Detail</p>
       <h2>{session.title}</h2>
       <p className="detail-summary">{session.summary}</p>
+
+      <div className="action-row">
+        <button
+          className="action-button action-button-primary"
+          onClick={() => onExportMarkdown?.(session.sessionId)}
+          type="button"
+        >
+          Export Markdown
+        </button>
+        <button
+          className="action-button action-button-danger"
+          onClick={() => onSoftDelete?.(session.sessionId)}
+          type="button"
+        >
+          Move to Quarantine
+        </button>
+      </div>
 
       <div className="detail-grid">
         <div>
