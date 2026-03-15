@@ -1,0 +1,5 @@
+{"type":"session.start","data":{"sessionId":"copilot-ses-1"},"timestamp":"2026-03-15T08:00:00.000Z","id":"evt-1"}
+{"type":"session.info","data":{"infoType":"folder_trust","message":"Folder C:\\Projects\\copilot-demo has been added to trusted folders."},"timestamp":"2026-03-15T08:00:01.000Z","id":"evt-2"}
+{"type":"user.message","data":{"content":"Summarize Copilot cleanup tasks."},"timestamp":"2026-03-15T08:00:03.000Z","id":"evt-3"}
+{"type":"assistant.message","data":{"content":"I found one stale branch and one pending approval.","toolRequests":[{"toolCallId":"tool-1","name":"run_terminal_command","arguments":{"command":"git status"}}]},"timestamp":"2026-03-15T08:00:08.000Z","id":"evt-4","parentId":"evt-3"}
+{"type":"tool.execution_complete","data":{"toolCallId":"tool-1","success":true,"result":{"content":"On branch main"}},"timestamp":"2026-03-15T08:00:09.000Z","id":"evt-5","parentId":"evt-4"}

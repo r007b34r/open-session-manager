@@ -74,6 +74,24 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             native_environment,
             opencode_user_data_root(&context.home_dir, context.xdg_data_home.as_deref()),
         ),
+        KnownPath::new(
+            "gemini-cli",
+            "session",
+            native_environment,
+            context.home_dir.join(".gemini").join("tmp"),
+        ),
+        KnownPath::new(
+            "github-copilot-cli",
+            "session",
+            native_environment,
+            context.home_dir.join(".copilot").join("session-state"),
+        ),
+        KnownPath::new(
+            "factory-droid",
+            "session",
+            native_environment,
+            context.home_dir.join(".factory"),
+        ),
     ];
 
     if let Some(wsl_home) = &context.wsl_home_dir {
@@ -94,6 +112,24 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             "session",
             "wsl",
             opencode_user_data_root(wsl_home, None),
+        ));
+        roots.push(KnownPath::new(
+            "gemini-cli",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".gemini").join("tmp"),
+        ));
+        roots.push(KnownPath::new(
+            "github-copilot-cli",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".copilot").join("session-state"),
+        ));
+        roots.push(KnownPath::new(
+            "factory-droid",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".factory"),
         ));
     }
 

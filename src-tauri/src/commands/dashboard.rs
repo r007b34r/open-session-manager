@@ -7,7 +7,10 @@ use serde_json::Value;
 use crate::{
     adapters::{
         claude_code::ClaudeCodeAdapter,
+        copilot_cli::CopilotCliAdapter,
         codex::CodexAdapter,
+        factory_droid::{DroidDialect, FactoryDroidAdapter, detect_droid_dialect, normalize_droid_kind},
+        gemini_cli::{GeminiCliAdapter, gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
         opencode::OpenCodeAdapter,
         traits::{AdapterError, SessionAdapter, collect_files},
     },
@@ -193,6 +196,24 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             fixtures_root.join("claude"),
         ),
         KnownPath::new("opencode", "session", "linux", fixtures_root.join("opencode")),
+        KnownPath::new(
+            "gemini-cli",
+            "session",
+            "windows",
+            fixtures_root.join("gemini").join("tmp"),
+        ),
+        KnownPath::new(
+            "github-copilot-cli",
+            "session",
+            "windows",
+            fixtures_root.join("copilot"),
+        ),
+        KnownPath::new(
+            "factory-droid",
+            "session",
+            "windows",
+            fixtures_root.join("factory"),
+        ),
     ];
 
     let config_targets = vec![
@@ -655,6 +676,9 @@ fn extract_session_narrative(session: &SessionRecord) -> SnapshotResult<SessionN
         "codex" => extract_codex_narrative(Path::new(&session.source_path)),
         "claude-code" => extract_claude_narrative(Path::new(&session.source_path)),
         "opencode" => extract_opencode_narrative(Path::new(&session.source_path)),
+        "gemini-cli" => extract_gemini_narrative(Path::new(&session.source_path)),
+        "github-copilot-cli" => extract_copilot_narrative(Path::new(&session.source_path)),
+        "factory-droid" => extract_factory_droid_narrative(Path::new(&session.source_path)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
     }
 }
@@ -799,6 +823,244 @@ fn extract_opencode_narrative(source: &Path) -> SnapshotResult<SessionNarrative>
     Ok(narrative)
 }
 
+fn extract_gemini_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let parsed: Value = serde_json::from_slice(&fs::read(source)?)?;
+    let messages = gemini_messages(&parsed);
+    let mut narrative = SessionNarrative::default();
+
+    for message in messages {
+        let text = gemini_text(message);
+        match gemini_role(message) {
+            Some("user") if narrative.first_user_goal.is_none() => {
+                narrative.first_user_goal = text;
+            }
+            Some("assistant") => {
+                if let Some(text) = text {
+                    if looks_like_error_message(&text) {
+                        narrative.error_count += 1;
+                    }
+                    narrative.last_assistant_message = Some(text);
+                }
+            }
+            _ => {}
+        }
+
+        for tool_call in gemini_tool_calls(message) {
+            if let Some(output) = tool_call
+                .get("resultDisplay")
+                .or_else(|| tool_call.get("output"))
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|output| !output.is_empty())
+            {
+                if looks_like_error_message(output) {
+                    narrative.error_count += 1;
+                }
+                narrative.last_assistant_message = Some(output.to_string());
+            }
+        }
+    }
+
+    Ok(narrative)
+}
+
+fn extract_copilot_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let lines = read_jsonl(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for line in lines {
+        let data = line.get("data").unwrap_or(&Value::Null);
+
+        match line.get("type").and_then(Value::as_str) {
+            Some("user.message") if narrative.first_user_goal.is_none() => {
+                narrative.first_user_goal = data
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                    .map(ToOwned::to_owned);
+            }
+            Some("assistant.message") => {
+                if let Some(content) = data
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    if looks_like_error_message(content) {
+                        narrative.error_count += 1;
+                    }
+                    narrative.last_assistant_message = Some(content.to_string());
+                }
+            }
+            Some("tool.execution_complete") => {
+                let success = data.get("success").and_then(Value::as_bool).unwrap_or(true);
+                let output = data
+                    .get("result")
+                    .and_then(|result| result.get("content"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty());
+
+                if !success {
+                    narrative.error_count += 1;
+                }
+
+                if let Some(output) = output {
+                    if !success || looks_like_error_message(output) {
+                        narrative.error_count += 1;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(narrative)
+}
+
+fn extract_factory_droid_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    match detect_droid_dialect(source)? {
+        DroidDialect::SessionStore => extract_factory_droid_session_store_narrative(source),
+        DroidDialect::StreamJson => extract_factory_droid_stream_narrative(source),
+    }
+}
+
+fn extract_factory_droid_session_store_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let lines = read_jsonl(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for line in lines {
+        if line.get("type").and_then(Value::as_str).map(normalize_droid_kind).as_deref()
+            != Some("message")
+        {
+            continue;
+        }
+
+        let Some(message) = line.get("message") else {
+            continue;
+        };
+        let role = message.get("role").and_then(Value::as_str).unwrap_or_default();
+        let parts = message
+            .get("content")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let text = parts
+            .iter()
+            .filter(|part| {
+                part.get("type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|kind| normalize_droid_kind(kind) == "text")
+            })
+            .filter_map(|part| part.get("text").and_then(Value::as_str))
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        if role == "user" && narrative.first_user_goal.is_none() && !text.is_empty() {
+            narrative.first_user_goal = Some(text.clone());
+        }
+
+        if role == "assistant" {
+            if !text.is_empty() {
+                if looks_like_error_message(&text) {
+                    narrative.error_count += 1;
+                }
+                narrative.last_assistant_message = Some(text);
+            }
+
+            for part in &parts {
+                if part
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|kind| normalize_droid_kind(kind) == "toolresult")
+                    && let Some(content) = part.get("content").and_then(Value::as_str)
+                    && looks_like_error_message(content)
+                {
+                    narrative.error_count += 1;
+                }
+            }
+        }
+    }
+
+    Ok(narrative)
+}
+
+fn extract_factory_droid_stream_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let lines = read_jsonl(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for line in lines {
+        match line
+            .get("type")
+            .and_then(Value::as_str)
+            .map(normalize_droid_kind)
+            .as_deref()
+        {
+            Some("message") => {
+                let role = line.get("role").and_then(Value::as_str).unwrap_or_default();
+                let content = line
+                    .get("content")
+                    .or_else(|| line.get("text"))
+                    .or_else(|| line.get("message"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty());
+
+                match (role, content) {
+                    ("user", Some(content)) if narrative.first_user_goal.is_none() => {
+                        narrative.first_user_goal = Some(content.to_string());
+                    }
+                    ("assistant", Some(content)) => {
+                        if looks_like_error_message(content) {
+                            narrative.error_count += 1;
+                        }
+                        narrative.last_assistant_message = Some(content.to_string());
+                    }
+                    _ => {}
+                }
+            }
+            Some("completion") => {
+                if let Some(content) = line
+                    .get("finalText")
+                    .or_else(|| line.get("final"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    if looks_like_error_message(content) {
+                        narrative.error_count += 1;
+                    }
+                    narrative.last_assistant_message = Some(content.to_string());
+                }
+            }
+            Some("toolresult") => {
+                let value = line.get("value").unwrap_or(&Value::Null);
+                let exit_code = value
+                    .get("exitCode")
+                    .or_else(|| value.get("exit_code"))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0);
+                let is_error = line
+                    .get("isError")
+                    .or_else(|| line.get("is_error"))
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+
+                if is_error || exit_code != 0 {
+                    narrative.error_count += 1;
+                }
+            }
+            Some("error") => narrative.error_count += 1,
+            _ => {}
+        }
+    }
+
+    Ok(narrative)
+}
+
 fn opencode_created_at(message: &Value) -> i64 {
     message
         .get("time")
@@ -851,6 +1113,9 @@ fn session_adapter(assistant: &str) -> SnapshotResult<Box<dyn SessionAdapter>> {
         "codex" => Ok(Box::new(CodexAdapter)),
         "claude-code" => Ok(Box::new(ClaudeCodeAdapter)),
         "opencode" => Ok(Box::new(OpenCodeAdapter)),
+        "gemini-cli" => Ok(Box::new(GeminiCliAdapter)),
+        "github-copilot-cli" => Ok(Box::new(CopilotCliAdapter)),
+        "factory-droid" => Ok(Box::new(FactoryDroidAdapter)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
     }
 }
@@ -1005,6 +1270,26 @@ mod tests {
             .iter()
             .find(|session| session.session_id == "ses_demo")
             .expect("opencode fixture session exists");
+        let gemini_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "gemini-ses-1")
+            .expect("gemini fixture session exists");
+        let copilot_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "copilot-ses-1")
+            .expect("copilot fixture session exists");
+        let droid_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "droid-session-1")
+            .expect("droid session-store fixture session exists");
+        let droid_stream = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "droid-stream-1")
+            .expect("droid stream-json fixture session exists");
 
         assert_eq!(claude_session.transcript_highlights[0].role, "User");
         assert!(
@@ -1015,6 +1300,18 @@ mod tests {
         assert_eq!(claude_session.todo_items.len(), 2);
         assert!(claude_session.todo_items[0].completed);
         assert_eq!(opencode_session.transcript_highlights[1].role, "Assistant");
+        assert!(gemini_session.transcript_highlights.iter().any(|highlight| {
+            highlight.content.contains("Audit Gemini session retention")
+        }));
+        assert!(copilot_session.transcript_highlights.iter().any(|highlight| {
+            highlight.content.contains("stale branch")
+        }));
+        assert!(droid_session.transcript_highlights.iter().any(|highlight| {
+            highlight.content.contains("stale session")
+        }));
+        assert!(droid_stream.transcript_highlights.iter().any(|highlight| {
+            highlight.content.contains("No dirty files were detected")
+        }));
     }
 
     fn fixtures_root() -> PathBuf {

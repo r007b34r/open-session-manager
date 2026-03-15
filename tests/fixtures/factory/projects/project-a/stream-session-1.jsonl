@@ -1,0 +1,5 @@
+{"type":"system","session_id":"droid-stream-1","cwd":"C:\\Projects\\factory-stream","timestamp":"2026-03-15T10:00:00.000Z","model":"factory/sonnet"}
+{"type":"message","session_id":"droid-stream-1","id":"stream-user-1","role":"user","content":"Summarize stream-json cleanup candidates.","timestamp":"2026-03-15T10:00:02.000Z"}
+{"type":"tool_call","session_id":"droid-stream-1","toolCallId":"call-1","toolName":"bash","parameters":{"command":"git status"},"timestamp":"2026-03-15T10:00:05.000Z"}
+{"type":"tool_result","session_id":"droid-stream-1","toolCallId":"call-1","toolName":"bash","value":{"stdout":"On branch main","exitCode":0},"timestamp":"2026-03-15T10:00:06.000Z"}
+{"type":"completion","session_id":"droid-stream-1","finalText":"No dirty files were detected.","timestamp":"2026-03-15T10:00:07.000Z"}

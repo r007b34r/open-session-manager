@@ -1,0 +1,3 @@
+{"type":"session_start","id":"droid-session-1","cwd":"C:\\Projects\\factory-demo","timestamp":"2026-03-15T09:00:00.000Z","title":"Factory session cleanup"}
+{"type":"message","timestamp":"2026-03-15T09:00:03.000Z","id":"msg-user-1","message":{"role":"user","content":[{"type":"text","text":"Review factory sessions and find stale runs."}]}}
+{"type":"message","timestamp":"2026-03-15T09:00:10.000Z","id":"msg-assistant-1","message":{"role":"assistant","content":[{"type":"text","text":"I found one stale session and one active branch."},{"type":"tool_use","id":"tool-1","name":"list_files","input":{"path":"."}},{"type":"tool_result","tool_use_id":"tool-1","content":"README.md\\nsrc-tauri/\\nweb/"}]}}

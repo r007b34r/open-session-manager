@@ -55,7 +55,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .and_then(Value::as_array)
         .expect("configs array exists");
 
-    assert_eq!(sessions.len(), 3);
+    assert_eq!(sessions.len(), 7);
     assert_eq!(configs.len(), 3);
     assert_eq!(
         sessions[0]
@@ -78,6 +78,14 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
             .expect("masked secret exists"),
         "***6789"
     );
+
+    let assistants = sessions
+        .iter()
+        .filter_map(|session| session.get("assistant").and_then(Value::as_str))
+        .collect::<Vec<_>>();
+    assert!(assistants.contains(&"gemini-cli"));
+    assert!(assistants.contains(&"github-copilot-cli"));
+    assert!(assistants.contains(&"factory-droid"));
 }
 
 #[test]

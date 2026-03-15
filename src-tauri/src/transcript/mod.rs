@@ -4,7 +4,12 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::{
-    adapters::traits::collect_files,
+    adapters::{
+        copilot_cli::copilot_tool_requests,
+        factory_droid::{DroidDialect, detect_droid_dialect, normalize_droid_kind},
+        gemini_cli::{gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
+        traits::collect_files,
+    },
     domain::session::SessionRecord,
 };
 
@@ -34,6 +39,9 @@ pub fn build_transcript_digest(session: &SessionRecord) -> TranscriptDigest {
         "codex" => build_codex_transcript_digest(Path::new(&session.source_path)),
         "claude-code" => build_claude_transcript_digest(Path::new(&session.source_path)),
         "opencode" => build_opencode_transcript_digest(Path::new(&session.source_path)),
+        "gemini-cli" => build_gemini_transcript_digest(Path::new(&session.source_path)),
+        "github-copilot-cli" => build_copilot_transcript_digest(Path::new(&session.source_path)),
+        "factory-droid" => build_factory_droid_transcript_digest(Path::new(&session.source_path)),
         _ => TranscriptDigest::default(),
     }
 }
@@ -194,6 +202,298 @@ fn build_opencode_transcript_digest(source: &Path) -> TranscriptDigest {
             role: role.to_string(),
             content,
         });
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_gemini_transcript_digest(source: &Path) -> TranscriptDigest {
+    let Some(parsed) = fs::read(source)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+    else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for message in gemini_messages(&parsed) {
+        if let Some(content) = gemini_text(message) {
+            let role = match gemini_role(message) {
+                Some("user") => Some("User"),
+                Some("assistant") => Some("Assistant"),
+                _ => None,
+            };
+
+            if let Some(role) = role {
+                digest.highlights.push(TranscriptHighlight {
+                    role: role.to_string(),
+                    content,
+                });
+            }
+        }
+
+        for tool_call in gemini_tool_calls(message) {
+            if let Some(output) = tool_call
+                .get("resultDisplay")
+                .or_else(|| tool_call.get("output"))
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|output| !output.is_empty())
+            {
+                digest.highlights.push(TranscriptHighlight {
+                    role: "Tool".to_string(),
+                    content: output.to_string(),
+                });
+            }
+        }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_copilot_transcript_digest(source: &Path) -> TranscriptDigest {
+    let Ok(lines) = read_jsonl(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for line in lines {
+        let data = line.get("data").unwrap_or(&Value::Null);
+
+        match line.get("type").and_then(Value::as_str) {
+            Some("user.message") => {
+                if let Some(content) = data
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "User".to_string(),
+                        content: content.to_string(),
+                    });
+                }
+            }
+            Some("assistant.message") => {
+                if let Some(content) = data
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Assistant".to_string(),
+                        content: content.to_string(),
+                    });
+                }
+
+                for request in copilot_tool_requests(data) {
+                    if let Some(name) = request.get("name").and_then(Value::as_str) {
+                        digest.highlights.push(TranscriptHighlight {
+                            role: "Tool".to_string(),
+                            content: format!("Tool call: {name}"),
+                        });
+                    }
+                }
+            }
+            Some("tool.execution_complete") => {
+                if let Some(content) = data
+                    .get("result")
+                    .and_then(|result| result.get("content"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Tool".to_string(),
+                        content: content.to_string(),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_factory_droid_transcript_digest(source: &Path) -> TranscriptDigest {
+    match detect_droid_dialect(source) {
+        Ok(DroidDialect::SessionStore) => build_factory_droid_session_store_digest(source),
+        Ok(DroidDialect::StreamJson) => build_factory_droid_stream_digest(source),
+        Err(_) => TranscriptDigest::default(),
+    }
+}
+
+fn build_factory_droid_session_store_digest(source: &Path) -> TranscriptDigest {
+    let Ok(lines) = read_jsonl(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for line in lines {
+        if line.get("type").and_then(Value::as_str).map(normalize_droid_kind).as_deref()
+            != Some("message")
+        {
+            continue;
+        }
+
+        let Some(message) = line.get("message") else {
+            continue;
+        };
+        let role = message.get("role").and_then(Value::as_str).unwrap_or_default();
+        let parts = message
+            .get("content")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let text = parts
+            .iter()
+            .filter(|part| {
+                part.get("type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|kind| normalize_droid_kind(kind) == "text")
+            })
+            .filter_map(|part| part.get("text").and_then(Value::as_str))
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        if !text.is_empty() {
+            let role = match role {
+                "user" => Some("User"),
+                "assistant" => Some("Assistant"),
+                _ => None,
+            };
+
+            if let Some(role) = role {
+                digest.highlights.push(TranscriptHighlight {
+                    role: role.to_string(),
+                    content: text,
+                });
+            }
+        }
+
+        for part in parts {
+            let Some(kind) = part.get("type").and_then(Value::as_str) else {
+                continue;
+            };
+            match normalize_droid_kind(kind).as_str() {
+                "tooluse" => {
+                    if let Some(name) = part.get("name").and_then(Value::as_str) {
+                        digest.highlights.push(TranscriptHighlight {
+                            role: "Tool".to_string(),
+                            content: format!("Tool call: {name}"),
+                        });
+                    }
+                }
+                "toolresult" => {
+                    if let Some(content) = part
+                        .get("content")
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|content| !content.is_empty())
+                    {
+                        digest.highlights.push(TranscriptHighlight {
+                            role: "Tool".to_string(),
+                            content: content.to_string(),
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_factory_droid_stream_digest(source: &Path) -> TranscriptDigest {
+    let Ok(lines) = read_jsonl(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for line in lines {
+        match line
+            .get("type")
+            .and_then(Value::as_str)
+            .map(normalize_droid_kind)
+            .as_deref()
+        {
+            Some("message") => {
+                let role = line.get("role").and_then(Value::as_str).unwrap_or_default();
+                let content = line
+                    .get("content")
+                    .or_else(|| line.get("text"))
+                    .or_else(|| line.get("message"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty());
+
+                let role = match role {
+                    "user" => Some("User"),
+                    "assistant" => Some("Assistant"),
+                    _ => None,
+                };
+
+                if let (Some(role), Some(content)) = (role, content) {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: role.to_string(),
+                        content: content.to_string(),
+                    });
+                }
+            }
+            Some("toolcall") => {
+                if let Some(name) = line
+                    .get("toolName")
+                    .or_else(|| line.get("tool_name"))
+                    .and_then(Value::as_str)
+                {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Tool".to_string(),
+                        content: format!("Tool call: {name}"),
+                    });
+                }
+            }
+            Some("toolresult") => {
+                let value = line.get("value").unwrap_or(&Value::Null);
+                let output = value
+                    .get("stdout")
+                    .or_else(|| value.get("output"))
+                    .or_else(|| value.get("text"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty());
+
+                if let Some(output) = output {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Tool".to_string(),
+                        content: output.to_string(),
+                    });
+                }
+            }
+            Some("completion") => {
+                if let Some(content) = line
+                    .get("finalText")
+                    .or_else(|| line.get("final"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|content| !content.is_empty())
+                {
+                    digest.highlights.push(TranscriptHighlight {
+                        role: "Assistant".to_string(),
+                        content: content.to_string(),
+                    });
+                }
+            }
+            _ => {}
+        }
     }
 
     digest.highlights.truncate(6);
