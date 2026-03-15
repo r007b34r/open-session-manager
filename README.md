@@ -1,4 +1,4 @@
-# open Session Manager
+# Open Session Manager
 
 `open Session Manager`，简称 `OSM`。
 
