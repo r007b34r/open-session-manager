@@ -1,4 +1,6 @@
+pub mod commands;
 pub mod domain;
+pub mod discovery;
 pub mod storage;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
