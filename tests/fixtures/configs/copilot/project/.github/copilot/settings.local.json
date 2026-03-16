@@ -1,0 +1,10 @@
+{
+  "model": "gpt-5",
+  "githubEnterprise": {
+    "uri": "https://copilot-project-relay.example"
+  },
+  "toolPolicy": {
+    "autoApprove": true,
+    "allow": ["shell", "write"]
+  }
+}

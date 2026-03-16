@@ -217,6 +217,65 @@ fn audits_factory_config_and_masks_credentials() {
 }
 
 #[test]
+fn audits_copilot_project_settings_and_prefers_local_override() {
+    let copilot = audit_config(&ConfigAuditTarget::new(
+        "github-copilot-cli",
+        "project",
+        "fixtures",
+        fixtures_root()
+            .join("copilot")
+            .join("project")
+            .join(".github")
+            .join("copilot")
+            .join("settings.json"),
+    ))
+    .expect("copilot project config parses");
+
+    assert_eq!(copilot.config.assistant, "github-copilot-cli");
+    assert_eq!(copilot.config.scope, "project");
+    assert_eq!(copilot.config.provider.as_deref(), Some("github"));
+    assert_eq!(copilot.config.model.as_deref(), Some("gpt-5"));
+    assert_eq!(
+        copilot.config.base_url.as_deref(),
+        Some("https://copilot-project-relay.example")
+    );
+    assert!(copilot.config.path.ends_with("settings.local.json"));
+    assert!(has_flag(&copilot.risk_flags, "third_party_base_url"));
+    assert!(has_flag(&copilot.risk_flags, "dangerous_permissions"));
+}
+
+#[test]
+fn audits_factory_project_settings_local_scope() {
+    let factory = audit_config(&ConfigAuditTarget::new(
+        "factory-droid",
+        "project",
+        "fixtures",
+        fixtures_root()
+            .join("factory")
+            .join("project")
+            .join(".factory")
+            .join("settings.local.json"),
+    ))
+    .expect("factory project config parses");
+
+    assert_eq!(factory.config.assistant, "factory-droid");
+    assert_eq!(factory.config.scope, "project");
+    assert_eq!(factory.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        factory.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        factory.config.base_url.as_deref(),
+        Some("https://factory-project-relay.example/v1")
+    );
+    assert!(factory.config.path.ends_with("settings.local.json"));
+    assert!(has_flag(&factory.risk_flags, "third_party_provider"));
+    assert!(has_flag(&factory.risk_flags, "third_party_base_url"));
+    assert!(has_flag(&factory.risk_flags, "dangerous_permissions"));
+}
+
+#[test]
 fn redacts_secrets_without_exposing_plaintext() {
     let secret = "sk-test-1234567890";
 

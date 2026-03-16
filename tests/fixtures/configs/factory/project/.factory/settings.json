@@ -1,0 +1,6 @@
+{
+  "provider": "openai",
+  "defaultModel": "gpt-5-mini",
+  "baseUrl": "https://api.openai.com/v1",
+  "commandAllowlist": ["read"]
+}

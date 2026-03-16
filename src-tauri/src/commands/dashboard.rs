@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, env, fmt, fs, io, path::Path};
+use std::{
+    collections::{BTreeSet, HashSet},
+    env, fmt, fs, io,
+    path::{Path, PathBuf},
+};
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -307,7 +311,10 @@ fn build_snapshot(
     audit_db_path: Option<&Path>,
 ) -> SnapshotResult<DashboardSnapshot> {
     let sessions = build_session_records(&session_roots)?;
-    let configs = build_config_records(&config_targets)?;
+    let derived_project_targets = derive_project_config_targets(&sessions);
+    let merged_config_targets =
+        merge_config_targets(config_targets, derived_project_targets);
+    let configs = build_config_records(&merged_config_targets)?;
     let audit_events = build_audit_records(audit_db_path)?;
     let usage_overview = build_usage_overview(
         sessions
@@ -596,6 +603,72 @@ fn build_config_records(
     }
 
     Ok(configs)
+}
+
+fn derive_project_config_targets(
+    sessions: &[SessionDetailRecord],
+) -> Vec<ConfigAuditTarget> {
+    let mut targets = Vec::new();
+
+    for session in sessions {
+        let project_path = normalize_project_path(&session.project_path);
+        let Some(project_path) = project_path else {
+            continue;
+        };
+
+        match session.assistant.as_str() {
+            "github-copilot-cli" => {
+                let copilot_dir = project_path.join(".github").join("copilot");
+                let local_path = copilot_dir.join("settings.local.json");
+                let base_path = copilot_dir.join("settings.json");
+                let target_path = if local_path.exists() { local_path } else { base_path };
+                targets.push(ConfigAuditTarget::new(
+                    "github-copilot-cli",
+                    "project",
+                    session.environment.clone(),
+                    target_path,
+                ));
+            }
+            "factory-droid" => {
+                let factory_dir = project_path.join(".factory");
+                let local_path = factory_dir.join("settings.local.json");
+                let base_path = factory_dir.join("settings.json");
+                let target_path = if local_path.exists() { local_path } else { base_path };
+                targets.push(ConfigAuditTarget::new(
+                    "factory-droid",
+                    "project",
+                    session.environment.clone(),
+                    target_path,
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    targets
+}
+
+fn merge_config_targets(
+    base_targets: Vec<ConfigAuditTarget>,
+    derived_targets: Vec<ConfigAuditTarget>,
+) -> Vec<ConfigAuditTarget> {
+    let mut seen = HashSet::new();
+    let mut merged = Vec::new();
+
+    for target in base_targets.into_iter().chain(derived_targets) {
+        let key = format!(
+            "{}:{}:{}:{}",
+            target.assistant,
+            target.scope,
+            target.source_layer,
+            target.path.display()
+        );
+        if seen.insert(key) {
+            merged.push(target);
+        }
+    }
+
+    merged
 }
 
 fn build_metrics(
@@ -1309,6 +1382,15 @@ fn derive_confidence(narrative: &SessionNarrative) -> f32 {
     }
 }
 
+fn normalize_project_path(value: &str) -> Option<PathBuf> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("unknown") {
+        None
+    } else {
+        Some(PathBuf::from(trimmed))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -1614,6 +1696,115 @@ mod tests {
 
         assert_eq!(copilot_config.model.as_deref(), Some("gpt-5"));
         assert!(copilot_config.risks.iter().any(|risk| risk == "dangerous_permissions"));
+        assert_eq!(
+            factory_config.model.as_deref(),
+            Some("openrouter/anthropic/claude-sonnet-4")
+        );
+        assert_eq!(factory_config.masked_secret, "***7890");
+    }
+
+    #[test]
+    fn local_snapshot_discovers_project_level_copilot_and_factory_configs() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let copilot_session_root = home_dir.join(".copilot").join("session-state");
+        let factory_session_root = home_dir.join(".factory").join("sessions").join("project-a");
+        let copilot_project = sandbox.join("projects").join("copilot-project");
+        let factory_project = sandbox.join("projects").join("factory-project");
+        let copilot_config_dir = copilot_project.join(".github").join("copilot");
+        let factory_config_dir = factory_project.join(".factory");
+        let copilot_project_json = serde_json::to_string(&copilot_project.display().to_string())
+            .expect("serialize copilot project path");
+        let factory_project_json = serde_json::to_string(&factory_project.display().to_string())
+            .expect("serialize factory project path");
+
+        fs::create_dir_all(&copilot_session_root).expect("create copilot session root");
+        fs::create_dir_all(&factory_session_root).expect("create factory session root");
+        fs::create_dir_all(&copilot_config_dir).expect("create copilot config dir");
+        fs::create_dir_all(&factory_config_dir).expect("create factory config dir");
+
+        fs::copy(
+            fixtures_root()
+                .join("configs/copilot/project/.github/copilot/settings.json"),
+            copilot_config_dir.join("settings.json"),
+        )
+        .expect("copy copilot project settings");
+        fs::copy(
+            fixtures_root()
+                .join("configs/copilot/project/.github/copilot/settings.local.json"),
+            copilot_config_dir.join("settings.local.json"),
+        )
+        .expect("copy copilot project local settings");
+        fs::copy(
+            fixtures_root()
+                .join("configs/factory/project/.factory/settings.json"),
+            factory_config_dir.join("settings.json"),
+        )
+        .expect("copy factory project settings");
+        fs::copy(
+            fixtures_root()
+                .join("configs/factory/project/.factory/settings.local.json"),
+            factory_config_dir.join("settings.local.json"),
+        )
+        .expect("copy factory project local settings");
+
+        fs::write(
+            copilot_session_root.join("copilot-project.jsonl"),
+            format!(
+                concat!(
+                    "{{\"type\":\"session.start\",\"data\":{{\"sessionId\":\"copilot-project-1\"}},",
+                    "\"timestamp\":\"2026-03-16T10:00:00.000Z\",\"id\":\"evt-1\"}}\n",
+                    "{{\"type\":\"session.info\",\"data\":{{\"infoType\":\"folder_trust\",",
+                    "\"message\":\"Folder {} has been added to trusted folders.\"}},",
+                    "\"timestamp\":\"2026-03-16T10:00:01.000Z\",\"id\":\"evt-2\"}}\n",
+                    "{{\"type\":\"user.message\",\"data\":{{\"content\":\"Audit project-level Copilot config.\"}},",
+                    "\"timestamp\":\"2026-03-16T10:00:02.000Z\",\"id\":\"evt-3\"}}\n"
+                ),
+                copilot_project_json.trim_matches('"')
+            ),
+        )
+        .expect("write copilot project session");
+
+        fs::write(
+            factory_session_root.join("droid-project.jsonl"),
+            format!(
+                concat!(
+                    "{{\"type\":\"session_start\",\"id\":\"factory-project-1\",\"cwd\":\"{}\",",
+                    "\"timestamp\":\"2026-03-16T11:00:00.000Z\",\"title\":\"Factory project config\"}}\n",
+                    "{{\"type\":\"message\",\"timestamp\":\"2026-03-16T11:00:03.000Z\",",
+                    "\"id\":\"msg-user-1\",\"message\":{{\"role\":\"user\",\"content\":[{{\"type\":\"text\",",
+                    "\"text\":\"Audit project-level Factory config.\"}}]}}}}\n"
+                ),
+                factory_project_json.trim_matches('"')
+            ),
+        )
+        .expect("write factory project session");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        let copilot_config = snapshot
+            .configs
+            .iter()
+            .find(|config| {
+                config.assistant == "github-copilot-cli" && config.scope == "project"
+            })
+            .expect("copilot project config should be discovered");
+        let factory_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "factory-droid" && config.scope == "project")
+            .expect("factory project config should be discovered");
+
+        assert!(copilot_config.path.ends_with("settings.local.json"));
+        assert_eq!(copilot_config.model.as_deref(), Some("gpt-5"));
+        assert!(copilot_config.risks.iter().any(|risk| risk == "dangerous_permissions"));
+        assert!(factory_config.path.ends_with("settings.local.json"));
         assert_eq!(
             factory_config.model.as_deref(),
             Some("openrouter/anthropic/claude-sonnet-4")

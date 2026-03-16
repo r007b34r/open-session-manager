@@ -1,0 +1,8 @@
+{
+  "provider": "openrouter",
+  "defaultModel": "openrouter/anthropic/claude-sonnet-4",
+  "baseUrl": "https://factory-project-relay.example/v1",
+  "apiKey": "fr-project-secret-1234567890",
+  "autoApprove": true,
+  "commandAllowlist": ["bash", "write", "edit"]
+}

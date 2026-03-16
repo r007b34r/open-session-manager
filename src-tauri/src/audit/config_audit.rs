@@ -462,17 +462,7 @@ fn audit_openclaw(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudi
 }
 
 fn audit_github_copilot_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
-    let (config_path, mcp_path) = copilot_companion_paths(&target.path);
-    let parsed = if config_path.exists() {
-        load_json_value(&config_path)?
-    } else {
-        load_json_value(&target.path)?
-    };
-    let mcp = if mcp_path.exists() {
-        load_json_value(&mcp_path)?
-    } else {
-        Value::Object(Map::new())
-    };
+    let (parsed, mcp, effective_path) = load_copilot_effective_config(&target.path)?;
     let provider = parsed
         .get("provider")
         .and_then(Value::as_str)
@@ -513,11 +503,6 @@ fn audit_github_copilot_cli(target: &ConfigAuditTarget) -> AuditResult<Assistant
         .cloned()
         .unwrap_or_else(|| Value::Object(Map::new()));
 
-    let effective_path = if config_path.exists() {
-        config_path.clone()
-    } else {
-        target.path.clone()
-    };
     let mut artifact_target = target.clone();
     artifact_target.path = effective_path.clone();
 
@@ -978,6 +963,54 @@ fn copilot_companion_paths(path: &Path) -> (PathBuf, PathBuf) {
     match path.file_name().and_then(|value| value.to_str()) {
         Some("mcp-config.json") => (path.with_file_name("config.json"), path.to_path_buf()),
         _ => (path.to_path_buf(), path.with_file_name("mcp-config.json")),
+    }
+}
+
+fn load_copilot_effective_config(path: &Path) -> AuditResult<(Value, Value, PathBuf)> {
+    match path.file_name().and_then(|value| value.to_str()) {
+        Some("settings.json" | "settings.local.json") => {
+            let local_path = path.with_file_name("settings.local.json");
+            let base_path = path.with_file_name("settings.json");
+            let primary_path = if base_path.exists() {
+                base_path
+            } else {
+                path.to_path_buf()
+            };
+            let mut parsed = load_json_value(&primary_path)?;
+            let effective_path = if local_path.exists() && local_path != primary_path {
+                merge_json_value(&mut parsed, load_json_value(&local_path)?);
+                local_path
+            } else {
+                primary_path
+            };
+
+            Ok((parsed, Value::Object(Map::new()), effective_path))
+        }
+        Some("config.json" | "mcp-config.json") => {
+            let (config_path, mcp_path) = copilot_companion_paths(path);
+            let parsed = if config_path.exists() {
+                load_json_value(&config_path)?
+            } else {
+                load_json_value(path)?
+            };
+            let mcp = if mcp_path.exists() {
+                load_json_value(&mcp_path)?
+            } else {
+                Value::Object(Map::new())
+            };
+            let effective_path = if config_path.exists() {
+                config_path
+            } else {
+                path.to_path_buf()
+            };
+
+            Ok((parsed, mcp, effective_path))
+        }
+        _ => Ok((
+            load_json_value(path)?,
+            Value::Object(Map::new()),
+            path.to_path_buf(),
+        )),
     }
 }
 
