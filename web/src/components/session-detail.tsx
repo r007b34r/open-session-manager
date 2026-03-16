@@ -123,6 +123,45 @@ export function SessionDetail({
         </section>
 
         <section className="detail-card">
+          <h3>{copy.sessionDetail.sections.usage}</h3>
+          {session.usage ? (
+            <ul className="detail-list">
+              <li>
+                {copy.sessionDetail.fields.model}: {session.usage.model ?? "unknown"}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.inputTokens}: {formatCount(session.usage.inputTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.outputTokens}: {formatCount(session.usage.outputTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.cacheReadTokens}:{" "}
+                {formatCount(session.usage.cacheReadTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.cacheWriteTokens}:{" "}
+                {formatCount(session.usage.cacheWriteTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.reasoningTokens}:{" "}
+                {formatCount(session.usage.reasoningTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.totalTokens}: {formatCount(session.usage.totalTokens)}
+              </li>
+              <li>
+                {copy.sessionDetail.fields.costUsd}: {formatUsd(session.usage.costUsd)}
+              </li>
+            </ul>
+          ) : (
+            <p className="detail-empty-copy">
+              {copy.sessionDetail.noTranscriptHighlights}
+            </p>
+          )}
+        </section>
+
+        <section className="detail-card">
           <h3>{copy.sessionDetail.sections.keyArtifacts}</h3>
           <ul className="detail-list">
             {session.keyArtifacts.map((artifact) => (
@@ -206,4 +245,17 @@ export function SessionDetail({
       </div>
     </section>
   );
+}
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatUsd(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 }

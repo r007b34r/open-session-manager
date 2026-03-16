@@ -51,6 +51,8 @@
 - `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` 会话发现与解析
 - 会话洞察：标题、摘要、进度、价值分、风险标记
 - transcript digest：基础 highlights 与 Claude todo 提取
+- 本地加权 lexical 搜索、命中片段和来源标签
+- usage / cost analytics：`Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw`
 - Markdown 导出
 - 软删除 / 恢复
 - 配置审计：`Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw`
@@ -66,12 +68,12 @@
 ### 当前明显短板
 
 - 配置治理仍缺 `GitHub Copilot CLI / Factory Droid`，且 `Gemini / OpenClaw` 还没进入安全写回
-- 缺全文检索 / 跨会话搜索
+- 缺大历史索引、BM25、语义搜索和 search API
 - 缺恢复/继续/附着真实会话
 - 缺活跃会话监控
 - 缺 worktree 编排
 - 缺 Git 视图
-- 缺 token / cost / usage 分析
+- 缺 pricing lookup、usage 趋势图和更宽连接器覆盖
 - 缺 MCP / HTTP / headless 自动化接口
 - 缺插件 / 技能 / 提示词治理
 - 缺云同步 / 多 profile / 多账号
@@ -101,7 +103,7 @@
 
 对应 OSM 缺口：
 
-- 缺统一搜索
+- 已有加权本地搜索预览，但仍缺后台索引、FTS/BM25 和 transcript 内导航
 - 缺 active session cockpit
 - 缺 session resume
 - 缺 schema drift 监控
@@ -196,7 +198,7 @@
 - 缺文档与表格预览
 - 缺 MCP marketplace
 - 缺 skills marketplace
-- 缺 usage analytics dashboard
+- 已有本地 usage 面板，但仍缺更完整的 dashboard、价格同步和 workspace 级分析
 - 缺对外 API 化能力
 
 ### 3.5 `farion1231/cc-switch`
@@ -255,7 +257,7 @@
 对应 OSM 缺口：
 
 - 助手覆盖面远弱于它
-- 缺 lexical search
+- 已有轻量 lexical 搜索预览，但仍缺 BM25 索引和大库性能治理
 - 缺 semantic search
 - 缺 hybrid ranking
 - 缺 robot/json mode
@@ -668,7 +670,7 @@ OSM 目前没有或没有完整支持：
 
 ### 4.2 搜索与索引缺口
 
-- 跨会话全文检索
+- 大历史索引驱动的跨会话搜索
 - BM25 排序
 - semantic search
 - hybrid search
@@ -749,11 +751,9 @@ OSM 目前没有或没有完整支持：
 
 ### 4.9 分析与可视化缺口
 
-- token usage dashboard
-- cost dashboard
-- model/platform breakdown
 - pricing lookup
 - usage timeline
+- model/platform breakdown
 - contribution graph
 - leaderboards/shareable stats
 
@@ -809,10 +809,10 @@ OSM 目前没有或没有完整支持：
 最关键缺口不是再调一层配色，而是：
 
 1. 助手覆盖面离头部竞品还有明显距离
-2. 没有搜索
+2. 搜索还停在轻量工作台级，没有 BM25 / semantic / API
 3. 不能恢复/控制会话
 4. 没有 worktree / 并行工作流
-5. 没有 token/cost 分析
+5. token/cost 只完成了本地聚合，还没有价格、趋势和更宽连接器
 6. 没有 MCP/API/自动化出口
 7. 没有配置与 provider 治理平台
 

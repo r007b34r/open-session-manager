@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
@@ -211,6 +211,28 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("搜索结果在列表里显示命中片段和来源标签", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("searchbox", { name: /search sessions/i });
+    await user.type(
+      screen.getByRole("searchbox", { name: /search sessions/i }),
+      "manifest framing"
+    );
+
+    const sessionButton = await screen.findByRole("button", {
+      name: /refactor wsl collector handshake/i
+    });
+    const row = sessionButton.closest("tr");
+
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText(/Finalize manifest framing/i)).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText(/To-do/i)).toBeInTheDocument();
+  });
+
   it("在详情面板中展示 transcript 高亮和待办快照", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/sessions";
@@ -244,6 +266,44 @@ describe("App", () => {
     expect(
       await screen.findByText(/viewer-style transcript detail/i)
     ).toBeInTheDocument();
+  });
+
+  it("在总览里展示 usage analytics 面板和助手级汇总", async () => {
+    render(<App />);
+
+    const heading = await screen.findByRole("heading", {
+      name: /usage analytics/i
+    });
+    const panel = heading.closest("section");
+
+    expect(heading).toBeInTheDocument();
+    expect(panel).not.toBeNull();
+    const openCodeCard = within(panel as HTMLElement)
+      .getByText(/^OpenCode$/)
+      .closest("article");
+
+    expect(openCodeCard).not.toBeNull();
+    expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
+  });
+
+  it("在会话详情里展示 token 和成本细节", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(
+      screen.getByRole("button", {
+        name: /package export and quarantine workflow/i
+      })
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: /^usage$/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/gpt-5/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$0\.02/i)).toBeInTheDocument();
   });
 });
 

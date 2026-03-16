@@ -1,18 +1,23 @@
 import type { KeyboardEvent } from "react";
 
 import type { SessionListItem } from "../lib/api";
+import type { SessionSearchReason } from "../lib/session-search";
 import { useI18n } from "../lib/i18n";
 
 type SessionTableProps = {
   sessions: SessionListItem[];
   selectedSessionId?: string;
   onSelectSession?: (sessionId: string) => void;
+  searchSnippets?: ReadonlyMap<string, string>;
+  searchMatchReasons?: ReadonlyMap<string, SessionSearchReason[]>;
 };
 
 export function SessionTable({
   sessions,
   selectedSessionId,
-  onSelectSession
+  onSelectSession,
+  searchSnippets,
+  searchMatchReasons
 }: SessionTableProps) {
   const { copy, translateProgressState } = useI18n();
 
@@ -62,6 +67,8 @@ export function SessionTable({
             <tbody>
               {sessions.map((session) => {
                 const isSelected = session.sessionId === selectedSessionId;
+                const snippet = searchSnippets?.get(session.sessionId);
+                const matchReasons = searchMatchReasons?.get(session.sessionId) ?? [];
 
                 return (
                   <tr
@@ -92,6 +99,18 @@ export function SessionTable({
                             {shortenSessionId(session.sessionId)}
                           </span>
                         </span>
+                        {snippet ? (
+                          <span className="session-search-snippet">{snippet}</span>
+                        ) : null}
+                        {matchReasons.length > 0 ? (
+                          <span className="session-search-reasons">
+                            {matchReasons.map((reason) => (
+                              <span className="badge badge-neutral" key={reason}>
+                                {copy.sessions.matchReasonLabels[reason] ?? reason}
+                              </span>
+                            ))}
+                          </span>
+                        ) : null}
                       </button>
                     </td>
                     <td>{session.assistant}</td>

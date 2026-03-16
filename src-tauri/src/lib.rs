@@ -10,6 +10,7 @@ pub mod preferences;
 pub mod session_text;
 pub mod storage;
 pub mod transcript;
+pub mod usage;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppState {

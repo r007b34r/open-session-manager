@@ -36,6 +36,7 @@ use crate::{
     session_text::normalize_session_text,
     storage::sqlite::{load_audit_events, open_database},
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
+    usage::{SessionUsageRecord, UsageOverviewRecord, build_usage_overview, extract_session_usage},
 };
 
 #[derive(Debug)]
@@ -104,6 +105,7 @@ pub struct DashboardSnapshot {
     pub sessions: Vec<SessionDetailRecord>,
     pub configs: Vec<ConfigRiskRecord>,
     pub audit_events: Vec<AuditEventRecord>,
+    pub usage_overview: UsageOverviewRecord,
     pub runtime: RuntimeSnapshot,
 }
 
@@ -133,6 +135,8 @@ pub struct SessionDetailRecord {
     pub key_artifacts: Vec<String>,
     pub transcript_highlights: Vec<TranscriptHighlight>,
     pub todo_items: Vec<TranscriptTodo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<SessionUsageRecord>,
 }
 
 #[derive(Debug)]
@@ -293,12 +297,18 @@ fn build_snapshot(
     let sessions = build_session_records(&session_roots)?;
     let configs = build_config_records(&config_targets)?;
     let audit_events = build_audit_records(audit_db_path)?;
+    let usage_overview = build_usage_overview(
+        sessions
+            .iter()
+            .map(|session| (session.assistant.clone(), session.usage.clone())),
+    );
 
     Ok(DashboardSnapshot {
         metrics: build_metrics(&sessions, &configs),
         sessions,
         configs,
         audit_events,
+        usage_overview,
         runtime: RuntimeSnapshot::default(),
     })
 }
@@ -415,6 +425,7 @@ fn build_indexed_session(
         .unwrap_or_else(|| "unknown".to_string());
     let confidence = derive_confidence(&narrative);
     let progress_state = progress_state.to_string();
+    let usage = extract_session_usage(&session);
     let detail = SessionDetailRecord {
         session_id: session.session_id.clone(),
         title: title.clone(),
@@ -432,6 +443,7 @@ fn build_indexed_session(
         key_artifacts,
         transcript_highlights: transcript_digest.highlights.clone(),
         todo_items: transcript_digest.todos.clone(),
+        usage,
     };
     let insight = SessionInsight {
         session_id: session.session_id.clone(),
@@ -1415,6 +1427,74 @@ mod tests {
         }));
         assert_eq!(gemini_config.provider, "google");
         assert_eq!(openclaw_config.provider, "openrouter");
+    }
+
+    #[test]
+    fn fixture_snapshot_includes_usage_analytics() {
+        let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
+            .expect("fixture snapshot builds");
+        let serialized = serde_json::to_value(&snapshot).expect("snapshot serializes");
+        let usage_overview = serialized
+            .get("usageOverview")
+            .expect("usage overview should be present");
+        let assistants = usage_overview
+            .get("assistants")
+            .and_then(serde_json::Value::as_array)
+            .expect("assistant usage list exists");
+        let opencode_usage = assistants
+            .iter()
+            .find(|assistant| {
+                assistant.get("assistant").and_then(serde_json::Value::as_str) == Some("opencode")
+            })
+            .expect("opencode usage aggregate exists");
+        let session_usage = serialized
+            .get("sessions")
+            .and_then(serde_json::Value::as_array)
+            .expect("sessions array exists")
+            .iter()
+            .find(|session| {
+                session.get("sessionId").and_then(serde_json::Value::as_str) == Some("ses_demo")
+            })
+            .and_then(|session| session.get("usage"))
+            .expect("opencode session usage should be present");
+
+        assert_eq!(
+            usage_overview
+                .get("totals")
+                .and_then(|totals| totals.get("sessionsWithUsage"))
+                .and_then(serde_json::Value::as_u64),
+            Some(5)
+        );
+        assert_eq!(
+            opencode_usage
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(210)
+        );
+        assert_eq!(
+            opencode_usage
+                .get("costUsd")
+                .and_then(serde_json::Value::as_f64),
+            Some(0.02)
+        );
+        assert_eq!(
+            session_usage
+                .get("model")
+                .and_then(serde_json::Value::as_str),
+            Some("gpt-5")
+        );
+        assert_eq!(
+            session_usage
+                .get("cacheReadTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(0)
+        );
+        assert_eq!(
+            session_usage
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(210)
+        );
     }
 
     #[test]

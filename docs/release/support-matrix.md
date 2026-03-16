@@ -31,6 +31,8 @@
 | 会话列表辨识度增强 | 已实现 | 列表显示会话 ID，便于区分相近标题 |
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
+| Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总 |
+| 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地加权 lexical 搜索、命中片段和来源标签 |
 | upstream intake pipeline | 已实现 | 支持 catalog、研究索引、发布致谢和镜像规划产物 |
 
 ## 平台支持
@@ -51,8 +53,8 @@
 | `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief 思路已落进 OSM 的 Markdown 导出 |
 | `kbwo/ccmanager` | 已研究 | worktree / 多项目调度方向 |
 | `farion1231/cc-switch` | 已吸收 | `Gemini CLI` / `OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
-| `junhoyeo/tokscale` | 已研究 | token / cost analytics 方向 |
-| `yoavf/ai-sessions-mcp` | 已研究 | MCP / headless 数据暴露方向 |
+| `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板与字段模型已落进 OSM clean-room 实现 |
+| `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段和命中来源；MCP `list/search/get` 仍在后续计划里 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
 | `sugyan/claude-code-webui` | 已研究 | 轻量远程壳层、plan mode / permission mode、history loader 方向 |
 | `ssdeanx/Gemini-CLI-Web` | Reference-only | 远程 Gemini 工作台样本，但许可证口径冲突，暂不吸收代码 |
@@ -63,12 +65,12 @@
 
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
-| 全文搜索 / BM25 / 语义搜索 | 未纳入本版承诺 | 当前仍以会话发现、治理和导出为主 |
+| BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
 | 会话恢复 / attach / process control | 未纳入本版承诺 | 当前还没有真实会话进程控制层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 仍在研究与规格阶段 |
 | `GitHub Copilot CLI / Factory Droid` 配置审计 | 未纳入本版承诺 | 当前仍只有会话支持，配置治理尚未接入 |
 | `Gemini / OpenClaw` 配置写回与可视化修改 | 未纳入本版承诺 | 当前先完成读取、预览与风险审计，尚未做安全写回链路 |
-| token / cost analytics | 未纳入本版承诺 | 仍在研究与设计阶段 |
+| pricing lookup / usage 趋势图 / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地 usage 面板，但还没有价格同步和长期趋势分析 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |
 
@@ -78,4 +80,4 @@
 - 符号链接 / 目录联接逃逸专项测试
 - 超大历史库性能压测
 - 发布包 smoke test
-- 搜索与恢复能力线的下一阶段集成
+- 搜索、配置写回和恢复能力线的下一阶段集成

@@ -17,6 +17,13 @@
   - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
   - `Claude Code` 不再把纯 `file-history-snapshot` JSONL 当候选会话
 - Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
+- 支持 usage / cost analytics：
+  - `Codex`
+  - `Claude Code`
+  - `OpenCode`
+  - `Gemini CLI`
+  - `OpenClaw`
+- Sessions 搜索现在会做本地加权排序，展示命中片段和命中来源标签
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - 新增三条本地镜像研究并纳入治理目录：
@@ -38,6 +45,12 @@
   - 吸收 session closure / resume 的 brief 思路，补到 OSM 的 `Session Handoff` Markdown 导出
 - `farion1231/cc-switch`
   - clean-room 吸收 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模
+- `junhoyeo/tokscale`
+  - clean-room 吸收 usage / token / cost 字段模型和本地聚合面板
+- `jazzyalex/agent-sessions`
+  - 吸收本地搜索结果呈现、命中来源可视化的工作台方向
+- `yoavf/ai-sessions-mcp`
+  - 吸收本地 lexical ranking + snippet 的产品线索，先落到 Web 工作台
 
 已经纳入本地镜像、研究索引和致谢体系的还包括：
 
@@ -74,8 +87,10 @@
 
 - 7 个终端代码助手的本地会话发现与解析
 - `Gemini CLI` 与 `OpenClaw` 配置审计
+- `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
+- Sessions 页加权搜索、命中片段和来源标签
 - `Session Handoff` Markdown 导出
 - Markdown 导出、软删除、恢复、审计历史
 - 中英文切换与跟随系统语言
@@ -88,12 +103,12 @@
 
 以下内容不包含在 `v0.3.0 Public Preview` 承诺范围内：
 
-- 搜索、BM25、语义搜索、hybrid ranking
+- 大历史索引、BM25、语义搜索、hybrid ranking
 - 会话恢复 / attach / pause / process control
 - worktree 编排、多项目调度、容器隔离执行
 - `GitHub Copilot CLI / Factory Droid` 配置审计
 - `Gemini / OpenClaw` 配置写回与可视化修改
-- token / cost analytics
+- pricing lookup、usage 趋势图、更多助手连接器
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归
 - 发布安装包与签名流程

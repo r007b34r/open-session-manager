@@ -45,10 +45,26 @@ type Messages = {
     adoptedBadge: string;
     researchTitle: string;
     researchBadge: string;
+    usageKicker: string;
+    usageTitle: string;
+    usageDescription: string;
+    usageTotalsTitle: string;
+    usageAssistantsTitle: string;
+    usageFields: {
+      sessionsWithUsage: string;
+      totalTokens: string;
+      totalCost: string;
+      cacheRead: string;
+      assistant: string;
+      sessionCount: string;
+    };
   };
   sessions: {
     searchLabel: string;
     searchPlaceholder: string;
+    searchSummary: string;
+    searchSummaryEmpty: string;
+    matchReasonLabels: Record<string, string>;
   };
   sessionTable: {
     kicker: string;
@@ -74,25 +90,34 @@ type Messages = {
       exportMarkdown: string;
       moveToQuarantine: string;
     };
-    sections: {
-      context: string;
-      signals: string;
-      transcriptHighlights: string;
-      todoSnapshot: string;
-      keyArtifacts: string;
-      riskFlags: string;
-      topicLabels: string;
+      sections: {
+        context: string;
+        signals: string;
+        usage: string;
+        transcriptHighlights: string;
+        todoSnapshot: string;
+        keyArtifacts: string;
+        riskFlags: string;
+        topicLabels: string;
     };
     fields: {
       assistant: string;
       environment: string;
       project: string;
       source: string;
-      progress: string;
-      completion: string;
-      valueScore: string;
-      lastActive: string;
-    };
+        progress: string;
+        completion: string;
+        valueScore: string;
+        lastActive: string;
+        model: string;
+        inputTokens: string;
+        outputTokens: string;
+        cacheReadTokens: string;
+        cacheWriteTokens: string;
+        reasoningTokens: string;
+        totalTokens: string;
+        costUsd: string;
+      };
     noRiskFlags: string;
     noTranscriptHighlights: string;
     noTodoItems: string;
@@ -198,11 +223,40 @@ const messages: Record<Language, Messages> = {
       adoptedTitle: "Adopted",
       adoptedBadge: "Landed in product",
       researchTitle: "Researched next",
-      researchBadge: "Tracked for follow-up"
+      researchBadge: "Tracked for follow-up",
+      usageKicker: "Usage Analytics",
+      usageTitle: "Usage analytics",
+      usageDescription:
+        "Token and cost signals are now extracted from supported local session formats instead of living only in research notes.",
+      usageTotalsTitle: "Totals",
+      usageAssistantsTitle: "By assistant",
+      usageFields: {
+        sessionsWithUsage: "Sessions with usage",
+        totalTokens: "Total tokens",
+        totalCost: "Total cost",
+        cacheRead: "Cache read",
+        assistant: "Assistant",
+        sessionCount: "Sessions"
+      }
     },
     sessions: {
       searchLabel: "Search sessions",
-      searchPlaceholder: "topic, project, assistant, risk"
+      searchPlaceholder: "topic, project, assistant, risk",
+      searchSummary: "ranked local matches",
+      searchSummaryEmpty: "Type to search across titles, summaries, transcript highlights, and todos.",
+      matchReasonLabels: {
+        title: "Title",
+        assistant: "Assistant",
+        environment: "Environment",
+        summary: "Summary",
+        project: "Project",
+        source: "Source",
+        tag: "Tag",
+        risk: "Risk",
+        artifact: "Artifact",
+        transcript: "Transcript",
+        todo: "To-do"
+      }
     },
     sessionTable: {
       kicker: "Session Explorer",
@@ -235,6 +289,7 @@ const messages: Record<Language, Messages> = {
       sections: {
         context: "Context",
         signals: "Signals",
+        usage: "Usage",
         transcriptHighlights: "Transcript Highlights",
         todoSnapshot: "Todo Snapshot",
         keyArtifacts: "Key Artifacts",
@@ -249,7 +304,15 @@ const messages: Record<Language, Messages> = {
         progress: "Progress",
         completion: "Completion",
         valueScore: "Value score",
-        lastActive: "Last active"
+        lastActive: "Last active",
+        model: "Model",
+        inputTokens: "Input tokens",
+        outputTokens: "Output tokens",
+        cacheReadTokens: "Cache read",
+        cacheWriteTokens: "Cache write",
+        reasoningTokens: "Reasoning",
+        totalTokens: "Total tokens",
+        costUsd: "Cost (USD)"
       },
       noRiskFlags: "no active risk flags",
       noTranscriptHighlights: "No transcript highlights were extracted for this session.",
@@ -385,11 +448,40 @@ const messages: Record<Language, Messages> = {
       adoptedTitle: "已吸收",
       adoptedBadge: "已落地",
       researchTitle: "下一批研究对象",
-      researchBadge: "已建档"
+      researchBadge: "已建档",
+      usageKicker: "用量分析",
+      usageTitle: "Usage analytics",
+      usageDescription:
+        "支持的本地会话格式现在会直接提取 token 和成本信号，不再只停留在研究文档里。",
+      usageTotalsTitle: "总体汇总",
+      usageAssistantsTitle: "按助手汇总",
+      usageFields: {
+        sessionsWithUsage: "含用量数据的会话",
+        totalTokens: "总 Token",
+        totalCost: "总成本",
+        cacheRead: "缓存读取",
+        assistant: "助手",
+        sessionCount: "会话数"
+      }
     },
     sessions: {
       searchLabel: "搜索会话",
-      searchPlaceholder: "主题、项目、助手、风险"
+      searchPlaceholder: "主题、项目、助手、风险",
+      searchSummary: "条排序后的本地命中结果",
+      searchSummaryEmpty: "输入关键词后，可在标题、摘要、高亮和待办中检索。",
+      matchReasonLabels: {
+        title: "标题",
+        assistant: "助手",
+        environment: "环境",
+        summary: "摘要",
+        project: "项目",
+        source: "来源",
+        tag: "标签",
+        risk: "风险",
+        artifact: "产物",
+        transcript: "高亮",
+        todo: "待办"
+      }
     },
     sessionTable: {
       kicker: "会话浏览",
@@ -418,6 +510,7 @@ const messages: Record<Language, Messages> = {
       sections: {
         context: "上下文",
         signals: "信号",
+        usage: "Usage",
         transcriptHighlights: "会话高亮",
         todoSnapshot: "待办快照",
         keyArtifacts: "关键产物",
@@ -432,7 +525,15 @@ const messages: Record<Language, Messages> = {
         progress: "进度",
         completion: "完成度",
         valueScore: "价值分",
-        lastActive: "最后活跃"
+        lastActive: "最后活跃",
+        model: "模型",
+        inputTokens: "输入 Token",
+        outputTokens: "输出 Token",
+        cacheReadTokens: "缓存读取",
+        cacheWriteTokens: "缓存写入",
+        reasoningTokens: "推理 Token",
+        totalTokens: "总 Token",
+        costUsd: "成本（USD）"
       },
       noRiskFlags: "当前没有风险标记",
       noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",

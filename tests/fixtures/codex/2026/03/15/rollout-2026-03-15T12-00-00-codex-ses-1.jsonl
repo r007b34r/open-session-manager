@@ -1,3 +1,4 @@
 {"timestamp":"2026-03-15T04:00:00.000Z","type":"session_meta","payload":{"id":"codex-ses-1","timestamp":"2026-03-15T04:00:00.000Z","cwd":"C:\\Projects\\demo","originator":"codex_cli_rs","cli_version":"0.97.0","source":"cli"}}
 {"timestamp":"2026-03-15T04:00:03.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"整理本地 agent 会话"}]}}
 {"timestamp":"2026-03-15T04:00:06.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"先扫描 Codex 和 Claude 的 transcript 目录。"}]}}
+{"timestamp":"2026-03-15T04:00:07.000Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":640,"output_tokens":128,"cached_input_tokens":256}}}}

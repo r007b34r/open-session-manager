@@ -54,6 +54,9 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .get("configs")
         .and_then(Value::as_array)
         .expect("configs array exists");
+    let usage_overview = snapshot
+        .get("usageOverview")
+        .expect("usage overview exists");
 
     assert_eq!(sessions.len(), 8);
     assert_eq!(configs.len(), 5);
@@ -103,6 +106,24 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
     assert!(assistants.contains(&"github-copilot-cli"));
     assert!(assistants.contains(&"factory-droid"));
     assert!(assistants.contains(&"openclaw"));
+    assert_eq!(
+        usage_overview
+            .get("totals")
+            .and_then(|totals| totals.get("sessionsWithUsage"))
+            .and_then(Value::as_u64),
+        Some(5)
+    );
+    assert!(
+        sessions.iter().any(|session| {
+            session.get("sessionId").and_then(Value::as_str) == Some("openclaw-ses-1")
+                && session
+                    .get("usage")
+                    .and_then(|usage| usage.get("costUsd"))
+                    .and_then(Value::as_f64)
+                    == Some(0.02)
+        }),
+        "fixture snapshot should expose session usage payloads"
+    );
 }
 
 #[test]

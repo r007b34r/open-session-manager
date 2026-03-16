@@ -77,14 +77,17 @@ describe("fetchDashboardSnapshot", () => {
         {
           ...realSnapshot.sessions[1],
           transcriptHighlights: [],
-          todoItems: []
+          todoItems: [],
+          usage: undefined
         },
         {
           ...realSnapshot.sessions[0],
           transcriptHighlights: [],
-          todoItems: []
+          todoItems: [],
+          usage: undefined
         }
-      ]
+      ],
+      usageOverview: buildEmptyUsageOverview()
     } satisfies DashboardSnapshot);
     expect(fetchMock).toHaveBeenCalledWith("/dashboard-snapshot.json", {
       cache: "no-store"
@@ -119,7 +122,10 @@ describe("fetchDashboardSnapshot", () => {
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
-    await expect(fetchDashboardSnapshot()).resolves.toEqual(nativeSnapshot);
+    await expect(fetchDashboardSnapshot()).resolves.toEqual({
+      ...nativeSnapshot,
+      usageOverview: buildEmptyUsageOverview()
+    });
     expect(invokeMock).toHaveBeenCalledWith("load_dashboard_snapshot", {});
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -134,6 +140,22 @@ function buildRuntime() {
     quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
     preferencesPath:
       "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+  };
+}
+
+function buildEmptyUsageOverview() {
+  return {
+    totals: {
+      sessionsWithUsage: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      reasoningTokens: 0,
+      totalTokens: 0,
+      costUsd: 0
+    },
+    assistants: []
   };
 }
 

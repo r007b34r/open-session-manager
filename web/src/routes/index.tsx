@@ -1,4 +1,5 @@
 import type { DashboardSnapshot } from "../lib/api";
+import { UsagePanel } from "../components/usage-panel";
 import { useI18n } from "../lib/i18n";
 
 type OverviewRouteProps = {
@@ -75,6 +76,8 @@ export function OverviewRoute({ snapshot }: OverviewRouteProps) {
           </article>
         ))}
       </section>
+
+      <UsagePanel usageOverview={snapshot.usageOverview} />
 
       <section className="panel adoption-panel">
         <div className="panel-header">

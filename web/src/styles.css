@@ -187,6 +187,10 @@ a {
   margin-top: 22px;
 }
 
+.usage-panel {
+  margin-top: 22px;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -257,6 +261,12 @@ a {
   color: var(--ink);
 }
 
+.search-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
@@ -270,19 +280,81 @@ a {
 }
 
 .runtime-grid,
-.adoption-grid {
+.adoption-grid,
+.usage-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 .runtime-card,
-.adoption-card {
+.adoption-card,
+.usage-card {
   border: 1px solid rgba(31, 39, 34, 0.08);
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 242, 231, 0.94));
   padding: 18px;
+}
+
+.usage-card {
+  display: grid;
+  gap: 14px;
+}
+
+.usage-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.usage-total-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usage-total-stat {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.usage-total-stat span,
+.usage-inline span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.usage-total-stat strong,
+.usage-inline strong {
+  font-family: "Rockwell", "Georgia", serif;
+  font-size: 1.1rem;
+}
+
+.usage-assistant-list {
+  display: grid;
+  gap: 12px;
+}
+
+.usage-assistant-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.usage-inline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
 }
 
 .runtime-note,
@@ -404,6 +476,21 @@ a {
 .session-meta-stack {
   display: grid;
   gap: 4px;
+}
+
+.session-search-snippet {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.session-search-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .session-meta-id {
@@ -764,7 +851,8 @@ a {
   .detail-card-grid,
   .hero-shell,
   .runtime-grid,
-  .adoption-grid {
+  .adoption-grid,
+  .usage-grid {
     grid-template-columns: 1fr;
   }
 

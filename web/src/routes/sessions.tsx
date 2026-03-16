@@ -5,6 +5,7 @@ import { SessionDetail } from "../components/session-detail";
 import { SessionTable } from "../components/session-table";
 import type { DashboardRuntime, SessionDetailRecord } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { searchSessions } from "../lib/session-search";
 
 type SessionsRouteProps = {
   runtime: DashboardRuntime;
@@ -34,28 +35,19 @@ export function SessionsRoute({
   const { copy } = useI18n();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const normalizedQuery = deferredQuery.trim().toLowerCase();
-
-  const filteredSessions = sessions.filter((session) => {
-    const haystack = [
-      session.sessionId,
-      session.title,
-      session.assistant,
-      session.environment,
-      session.summary,
-      session.projectPath,
-      session.sourcePath,
-      session.tags.join(" "),
-      session.riskFlags.join(" "),
-      session.keyArtifacts.join(" "),
-      session.transcriptHighlights.map((item) => item.content).join(" "),
-      session.todoItems.map((item) => item.content).join(" ")
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(normalizedQuery);
-  });
+  const trimmedQuery = deferredQuery.trim();
+  const searchResults = searchSessions(sessions, trimmedQuery);
+  const filteredSessions = searchResults.map((result) => result.session);
+  const searchSnippets = new Map(
+    searchResults
+      .filter((result) => Boolean(result.snippet))
+      .map((result) => [result.session.sessionId, result.snippet as string])
+  );
+  const searchMatchReasons = new Map(
+    searchResults
+      .filter((result) => result.matchReasons.length > 0)
+      .map((result) => [result.session.sessionId, result.matchReasons])
+  );
 
   const selectedSession =
     filteredSessions.find((session) => session.sessionId === selectedSessionId) ??
@@ -78,6 +70,11 @@ export function SessionsRoute({
           type="search"
           value={query}
         />
+        <p className="search-summary">
+          {trimmedQuery
+            ? `${filteredSessions.length} ${copy.sessions.searchSummary}`
+            : copy.sessions.searchSummaryEmpty}
+        </p>
       </section>
 
       <RuntimePanel
@@ -89,6 +86,8 @@ export function SessionsRoute({
       <div className="content-grid">
         <SessionTable
           onSelectSession={onSelectSession}
+          searchMatchReasons={searchMatchReasons}
+          searchSnippets={searchSnippets}
           selectedSessionId={selectedSession?.sessionId}
           sessions={filteredSessions}
         />
