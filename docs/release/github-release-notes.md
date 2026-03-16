@@ -13,6 +13,7 @@
   - `Factory Droid`
   - `OpenClaw`
 - 配置审计扩到 7 个助手，`GitHub Copilot CLI / Factory Droid` 已补上用户级配置治理
+- `GitHub Copilot CLI / Factory Droid` 现在会按会话项目路径带出项目级配置覆盖层
 - 把一批真实竞品镜像拉到本地并纳入 catalog、研究索引和开源致谢，不再只有零散笔记
 - 修掉会直接影响可用性的会话质量问题：
   - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
@@ -90,6 +91,7 @@
 
 - 7 个终端代码助手的本地会话发现与解析
 - 7 个终端代码助手的配置审计读取与风险预览
+- `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
@@ -109,7 +111,7 @@
 - 大历史索引、BM25、语义搜索、hybrid ranking
 - 会话恢复 / attach / pause / process control
 - worktree 编排、多项目调度、容器隔离执行
-- `GitHub Copilot CLI / Factory Droid` 项目级配置发现与安全写回
+- `GitHub Copilot CLI / Factory Droid` 配置写回与更完整的项目级编辑
 - `Gemini / OpenClaw / GitHub Copilot CLI / Factory Droid` 配置写回与可视化修改
 - pricing lookup、usage 趋势图、更多助手连接器
 - MCP / HTTP / headless 自动化接口

@@ -67,7 +67,7 @@
 
 ### 当前明显短板
 
-- 已补 `GitHub Copilot CLI / Factory Droid` 用户级配置治理，但项目级配置、统一 provider/MCP/skills 面板和安全写回还没做
+- 已补 `GitHub Copilot CLI / Factory Droid` 用户级配置治理与项目级配置发现，但统一 provider/MCP/skills 面板和安全写回还没做
 - 缺大历史索引、BM25、语义搜索和 search API
 - 缺恢复/继续/附着真实会话
 - 缺活跃会话监控
@@ -109,7 +109,7 @@
 - 缺 schema drift 监控
 - 缺版本跟踪 / fixture 漂移治理
 - 缺 OpenCode SQLite 新存储兼容
-- `GitHub Copilot CLI / Droid` 已有用户级配置治理，但项目级配置发现、写回和统一 provider 治理还没接入
+- `GitHub Copilot CLI / Droid` 已有用户级配置治理与项目级配置发现，但写回和统一 provider 治理还没接入
 - `Gemini / OpenClaw` 仍缺写回、provider presets、MCP/skills/prompts 治理
 
 ### 3.2 `kbwo/ccmanager`
@@ -725,7 +725,7 @@ OSM 目前没有或没有完整支持：
 
 ### 4.7 配置与 provider 治理缺口
 
-- GitHub Copilot CLI / Factory Droid 项目级配置治理与安全写回
+- GitHub Copilot CLI / Factory Droid 配置写回与统一 provider 治理
 - Gemini / OpenClaw 配置写回与更深编辑
 - provider presets
 - provider import/export
@@ -846,7 +846,7 @@ OSM 目前没有或没有完整支持：
 
 必须补：
 
-- `GitHub Copilot CLI / Factory Droid` 项目级配置治理与安全写回
+- `GitHub Copilot CLI / Factory Droid` 配置写回与统一 provider 治理
 - `Gemini / OpenClaw` 配置写回与可视化修改
 - worktree orchestration
 - cleanup checklist / hooks
@@ -878,7 +878,7 @@ OSM 目前没有或没有完整支持：
 
 - session handoff / resume brief
 - 全文检索入口
-- `GitHub Copilot CLI / Factory Droid` 项目级配置治理与安全写回
+- `GitHub Copilot CLI / Factory Droid` 配置写回与统一 provider 治理
 - `Gemini / OpenClaw` 配置写回与可视化修改
 - 相应 fixtures + tests + snapshot coverage
 
