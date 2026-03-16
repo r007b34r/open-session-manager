@@ -18,6 +18,8 @@
 | `Claude Code` 配置审计 | 已实现 | 支持 `settings.json`、shell hook、权限风险 |
 | `OpenCode` 配置审计 | 已实现 | 支持 provider/base URL/权限风险 |
 | `Gemini CLI` 配置审计 | 已实现 | 支持 `settings.json`、同级 `.env`、auth mode、base URL、model 与 MCP 线索 |
+| `GitHub Copilot CLI` 配置审计 | 已实现 | 支持 `~/.copilot/config.json`，联动 `mcp-config.json`，展示 enterprise endpoint、tool policy、MCP 与 masked token 风险 |
+| `Factory Droid` 配置审计 | 已实现 | 支持 `settings.json` + `settings.local.json` 合并视图，展示 provider/base URL、command allowlist、MCP 与 masked key 风险 |
 | `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
@@ -52,7 +54,8 @@
 | `d-kimuson/claude-code-viewer` | 已吸收 | viewer 风格 transcript detail 面板、session todo evidence 展示 |
 | `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief 思路已落进 OSM 的 Markdown 导出 |
 | `kbwo/ccmanager` | 已研究 | worktree / 多项目调度方向 |
-| `farion1231/cc-switch` | 已吸收 | `Gemini CLI` / `OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
+| `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
+| `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
 | `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板与字段模型已落进 OSM clean-room 实现 |
 | `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段和命中来源；MCP `list/search/get` 仍在后续计划里 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
@@ -68,7 +71,7 @@
 | BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
 | 会话恢复 / attach / process control | 未纳入本版承诺 | 当前还没有真实会话进程控制层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 仍在研究与规格阶段 |
-| `GitHub Copilot CLI / Factory Droid` 配置审计 | 未纳入本版承诺 | 当前仍只有会话支持，配置治理尚未接入 |
+| `GitHub Copilot CLI / Factory Droid` 项目级配置与安全写回 | 未纳入本版承诺 | 当前先完成用户级配置读取、风险预览和 companion file 合并，还没做项目级覆盖与写回 |
 | `Gemini / OpenClaw` 配置写回与可视化修改 | 未纳入本版承诺 | 当前先完成读取、预览与风险审计，尚未做安全写回链路 |
 | pricing lookup / usage 趋势图 / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地 usage 面板，但还没有价格同步和长期趋势分析 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
