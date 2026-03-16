@@ -1,0 +1,12 @@
+{
+  "provider": "github",
+  "model": "gpt-5",
+  "authToken": "ghu_copilot_secret_1234567890",
+  "githubEnterprise": {
+    "uri": "https://copilot.enterprise-relay.example"
+  },
+  "toolPolicy": {
+    "autoApprove": true,
+    "allow": ["shell", "write"]
+  }
+}

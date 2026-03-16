@@ -89,6 +89,8 @@ pub fn audit_config(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAu
         "claude-code" => audit_claude_code(target),
         "opencode" => audit_opencode(target),
         "gemini-cli" => audit_gemini_cli(target),
+        "github-copilot-cli" => audit_github_copilot_cli(target),
+        "factory-droid" => audit_factory_droid(target),
         "openclaw" => audit_openclaw(target),
         assistant => Err(AuditError::UnsupportedAssistant(assistant.to_string())),
     }
@@ -459,6 +461,164 @@ fn audit_openclaw(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudi
     })
 }
 
+fn audit_github_copilot_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
+    let (config_path, mcp_path) = copilot_companion_paths(&target.path);
+    let parsed = if config_path.exists() {
+        load_json_value(&config_path)?
+    } else {
+        load_json_value(&target.path)?
+    };
+    let mcp = if mcp_path.exists() {
+        load_json_value(&mcp_path)?
+    } else {
+        Value::Object(Map::new())
+    };
+    let provider = parsed
+        .get("provider")
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+        .or_else(|| Some("github".to_string()));
+    let model = parsed
+        .get("model")
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let base_url = parsed
+        .get("githubEnterprise")
+        .and_then(|value| {
+            value
+                .get("uri")
+                .or_else(|| value.get("baseUrl"))
+                .or_else(|| value.get("base_url"))
+        })
+        .or_else(|| parsed.get("baseUrl").or_else(|| parsed.get("base_url")))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let token = parsed
+        .get("authToken")
+        .or_else(|| parsed.get("oauthToken"))
+        .or_else(|| parsed.get("token"))
+        .or_else(|| {
+            parsed.get("githubEnterprise").and_then(|value| {
+                value
+                    .get("token")
+                    .or_else(|| value.get("authToken"))
+                    .or_else(|| value.get("oauthToken"))
+            })
+        })
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let permissions = parsed
+        .get("toolPolicy")
+        .or_else(|| parsed.get("tools"))
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+
+    let effective_path = if config_path.exists() {
+        config_path.clone()
+    } else {
+        target.path.clone()
+    };
+    let mut artifact_target = target.clone();
+    artifact_target.path = effective_path.clone();
+
+    let official_or_proxy = classify_endpoint(provider.as_deref(), base_url.as_deref());
+    let risk_flags = copilot_risk_flags(provider.as_deref(), base_url.as_deref(), &permissions);
+
+    Ok(AssistantConfigAudit {
+        config: build_config_artifact(
+            &artifact_target,
+            provider.clone(),
+            model,
+            base_url.clone(),
+            permissions.to_string(),
+            mcp.to_string(),
+        ),
+        secrets: token
+            .into_iter()
+            .map(|value| SecretMaterial {
+                provider: provider.clone().unwrap_or_else(|| "github".to_string()),
+                kind: "auth_token".to_string(),
+                location: "authToken".to_string(),
+                source_type: "json".to_string(),
+                value,
+                official_or_proxy: official_or_proxy.clone(),
+                last_modified_at: file_modified_at(&effective_path),
+            })
+            .collect(),
+        risk_flags,
+    })
+}
+
+fn audit_factory_droid(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
+    let (parsed, effective_path) = load_factory_effective_config(&target.path)?;
+    let provider = parsed
+        .get("provider")
+        .or_else(|| parsed.get("providerId"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let model = parsed
+        .get("defaultModel")
+        .or_else(|| parsed.get("model"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let base_url = parsed
+        .get("baseUrl")
+        .or_else(|| parsed.get("base_url"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let secret = parsed
+        .get("apiKey")
+        .or_else(|| parsed.get("api_key"))
+        .or_else(|| parsed.get("authToken"))
+        .or_else(|| parsed.get("token"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let permissions = json!({
+        "autoApprove": parsed.get("autoApprove").cloned().unwrap_or(Value::Bool(false)),
+        "commandAllowlist": parsed
+            .get("commandAllowlist")
+            .cloned()
+            .unwrap_or_else(|| Value::Array(Vec::new())),
+    });
+    let mcp = parsed
+        .get("mcpServers")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+
+    let mut artifact_target = target.clone();
+    artifact_target.path = effective_path.clone();
+
+    let provider_ref = provider.as_deref();
+    let official_or_proxy = classify_endpoint(provider_ref, base_url.as_deref());
+    let risk_flags = factory_risk_flags(provider_ref, base_url.as_deref(), &permissions);
+
+    Ok(AssistantConfigAudit {
+        config: build_config_artifact(
+            &artifact_target,
+            provider.clone(),
+            model,
+            base_url.clone(),
+            permissions.to_string(),
+            mcp.to_string(),
+        ),
+        secrets: secret
+            .into_iter()
+            .map(|value| SecretMaterial {
+                provider: provider
+                    .clone()
+                    .unwrap_or_else(|| "factory-droid".to_string()),
+                kind: "api_key".to_string(),
+                location: "apiKey".to_string(),
+                source_type: "json".to_string(),
+                value,
+                official_or_proxy: official_or_proxy.clone(),
+                last_modified_at: file_modified_at(&effective_path),
+            })
+            .collect(),
+        risk_flags,
+    })
+}
+
 fn codex_risk_flags(
     provider: Option<&str>,
     base_url: Option<&str>,
@@ -609,6 +769,66 @@ fn openclaw_risk_flags(
     flags
 }
 
+fn copilot_risk_flags(
+    provider: Option<&str>,
+    base_url: Option<&str>,
+    permissions: &Value,
+) -> Vec<RiskFlag> {
+    let mut flags = endpoint_risk_flags(provider, base_url);
+
+    let has_dangerous_permissions = permissions
+        .get("autoApprove")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        || permissions
+            .get("allow")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items.iter().filter_map(Value::as_str).any(is_dangerous_tool_name)
+            })
+            .unwrap_or(false);
+
+    if has_dangerous_permissions {
+        flags.push(RiskFlag::new(
+            "dangerous_permissions",
+            "high",
+            "GitHub Copilot CLI allows shell or write tools without manual confirmation.",
+        ));
+    }
+
+    flags
+}
+
+fn factory_risk_flags(
+    provider: Option<&str>,
+    base_url: Option<&str>,
+    permissions: &Value,
+) -> Vec<RiskFlag> {
+    let mut flags = endpoint_risk_flags(provider, base_url);
+
+    let has_dangerous_permissions = permissions
+        .get("autoApprove")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        || permissions
+            .get("commandAllowlist")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items.iter().filter_map(Value::as_str).any(is_dangerous_tool_name)
+            })
+            .unwrap_or(false);
+
+    if has_dangerous_permissions {
+        flags.push(RiskFlag::new(
+            "dangerous_permissions",
+            "high",
+            "Factory Droid command policy allows shell or write flows without extra review.",
+        ));
+    }
+
+    flags
+}
+
 fn endpoint_risk_flags(provider: Option<&str>, base_url: Option<&str>) -> Vec<RiskFlag> {
     let mut flags = Vec::new();
 
@@ -691,7 +911,7 @@ fn classify_endpoint(provider: Option<&str>, base_url: Option<&str>) -> String {
 }
 
 fn is_official_provider(provider: &str) -> bool {
-    matches!(provider, "openai" | "anthropic" | "opencode" | "google")
+    matches!(provider, "openai" | "anthropic" | "opencode" | "google" | "github")
 }
 
 fn is_official_base_url(provider: Option<&str>, base_url: &str) -> bool {
@@ -703,6 +923,7 @@ fn is_official_base_url(provider: Option<&str>, base_url: &str) -> bool {
         Some("openai") => host.ends_with("openai.com"),
         Some("anthropic") => host.ends_with("anthropic.com"),
         Some("google") => host.ends_with("googleapis.com") || host.ends_with("google.com"),
+        Some("github") => host.ends_with("github.com"),
         Some("opencode") => host.ends_with("opencode.ai"),
         Some("openrouter") => host.ends_with("openrouter.ai"),
         _ => false,
@@ -747,4 +968,62 @@ fn parse_dotenv(content: &str) -> HashMap<String, String> {
             Some((key.trim().to_string(), value.trim().to_string()))
         })
         .collect()
+}
+
+fn load_json_value(path: &Path) -> AuditResult<Value> {
+    Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
+}
+
+fn copilot_companion_paths(path: &Path) -> (PathBuf, PathBuf) {
+    match path.file_name().and_then(|value| value.to_str()) {
+        Some("mcp-config.json") => (path.with_file_name("config.json"), path.to_path_buf()),
+        _ => (path.to_path_buf(), path.with_file_name("mcp-config.json")),
+    }
+}
+
+fn load_factory_effective_config(path: &Path) -> AuditResult<(Value, PathBuf)> {
+    let local_path = path.with_file_name("settings.local.json");
+    let base_path = match path.file_name().and_then(|value| value.to_str()) {
+        Some("settings.local.json") => path.with_file_name("settings.json"),
+        _ => path.to_path_buf(),
+    };
+    let primary_path = if base_path.exists() {
+        base_path
+    } else {
+        path.to_path_buf()
+    };
+    let mut parsed = load_json_value(&primary_path)?;
+    let effective_path = if local_path.exists() && local_path != primary_path {
+        merge_json_value(&mut parsed, load_json_value(&local_path)?);
+        local_path
+    } else {
+        primary_path
+    };
+
+    Ok((parsed, effective_path))
+}
+
+fn merge_json_value(base: &mut Value, overlay: Value) {
+    match (base, overlay) {
+        (Value::Object(base_map), Value::Object(overlay_map)) => {
+            for (key, value) in overlay_map {
+                if let Some(existing) = base_map.get_mut(&key) {
+                    merge_json_value(existing, value);
+                } else {
+                    base_map.insert(key, value);
+                }
+            }
+        }
+        (slot, value) => *slot = value,
+    }
+}
+
+fn is_dangerous_tool_name(value: &str) -> bool {
+    let lowered = value.trim().to_ascii_lowercase();
+    matches!(
+        lowered.as_str(),
+        "bash" | "shell" | "write" | "edit" | "patch" | "multiedit" | "command" | "terminal"
+    ) || lowered.contains("shell")
+        || lowered.contains("write")
+        || lowered.contains("edit")
 }

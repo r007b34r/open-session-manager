@@ -34,6 +34,18 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             context.home_dir.join(".gemini").join("settings.json"),
         ),
         KnownPath::new(
+            "github-copilot-cli",
+            "config",
+            native_environment,
+            context.home_dir.join(".copilot").join("config.json"),
+        ),
+        KnownPath::new(
+            "factory-droid",
+            "config",
+            native_environment,
+            context.home_dir.join(".factory").join("settings.json"),
+        ),
+        KnownPath::new(
             "openclaw",
             "config",
             native_environment,
@@ -65,6 +77,18 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "config",
             "wsl",
             PathBuf::from(wsl_home).join(".gemini").join("settings.json"),
+        ));
+        roots.push(KnownPath::new(
+            "github-copilot-cli",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".copilot").join("config.json"),
+        ));
+        roots.push(KnownPath::new(
+            "factory-droid",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".factory").join("settings.json"),
         ));
         roots.push(KnownPath::new(
             "openclaw",

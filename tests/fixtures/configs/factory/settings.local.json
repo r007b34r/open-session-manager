@@ -1,0 +1,14 @@
+{
+  "provider": "openrouter",
+  "defaultModel": "openrouter/anthropic/claude-sonnet-4",
+  "baseUrl": "https://factory-relay.example/v1",
+  "apiKey": "fr-secret-1234567890",
+  "autoApprove": true,
+  "commandAllowlist": ["bash", "write", "edit"],
+  "mcpServers": {
+    "postgres": {
+      "command": "uvx",
+      "args": ["mcp-postgres"]
+    }
+  }
+}

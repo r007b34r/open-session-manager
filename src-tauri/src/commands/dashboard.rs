@@ -256,6 +256,18 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             fixtures_root.join("configs").join("gemini").join("settings.json"),
         ),
         ConfigAuditTarget::new(
+            "github-copilot-cli",
+            "global",
+            "fixtures",
+            fixtures_root.join("configs").join("copilot").join("config.json"),
+        ),
+        ConfigAuditTarget::new(
+            "factory-droid",
+            "global",
+            "fixtures",
+            fixtures_root.join("configs").join("factory").join("settings.json"),
+        ),
+        ConfigAuditTarget::new(
             "openclaw",
             "global",
             "fixtures",
@@ -1548,6 +1560,65 @@ mod tests {
                 .iter()
                 .any(|highlight| highlight.content.contains("AGENTS.md instructions"))
         );
+    }
+
+    #[test]
+    fn local_snapshot_discovers_copilot_and_factory_configs() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let copilot_dir = home_dir.join(".copilot");
+        let factory_dir = home_dir.join(".factory");
+
+        fs::create_dir_all(&copilot_dir).expect("create copilot dir");
+        fs::create_dir_all(&factory_dir).expect("create factory dir");
+
+        fs::copy(
+            fixtures_root().join("configs/copilot/config.json"),
+            copilot_dir.join("config.json"),
+        )
+        .expect("copy copilot config");
+        fs::copy(
+            fixtures_root().join("configs/copilot/mcp-config.json"),
+            copilot_dir.join("mcp-config.json"),
+        )
+        .expect("copy copilot mcp config");
+        fs::copy(
+            fixtures_root().join("configs/factory/settings.json"),
+            factory_dir.join("settings.json"),
+        )
+        .expect("copy factory config");
+        fs::copy(
+            fixtures_root().join("configs/factory/settings.local.json"),
+            factory_dir.join("settings.local.json"),
+        )
+        .expect("copy factory local config");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        let copilot_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "github-copilot-cli")
+            .expect("copilot config should be discovered");
+        let factory_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "factory-droid")
+            .expect("factory config should be discovered");
+
+        assert_eq!(copilot_config.model.as_deref(), Some("gpt-5"));
+        assert!(copilot_config.risks.iter().any(|risk| risk == "dangerous_permissions"));
+        assert_eq!(
+            factory_config.model.as_deref(),
+            Some("openrouter/anthropic/claude-sonnet-4")
+        );
+        assert_eq!(factory_config.masked_secret, "***7890");
     }
 
     fn fixtures_root() -> PathBuf {

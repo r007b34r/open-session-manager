@@ -346,6 +346,34 @@ const fallbackSnapshot: DashboardSnapshot = {
       maskedSecret: "***3456",
       officialOrProxy: "Proxy",
       risks: ["third_party_provider", "dangerous_permissions"]
+    },
+    {
+      artifactId: "cfg-004",
+      assistant: "GitHub Copilot CLI",
+      scope: "Global",
+      path: "~/.copilot/config.json",
+      provider: "github",
+      model: "gpt-5",
+      baseUrl: "https://copilot.enterprise-relay.example",
+      maskedSecret: "***7890",
+      officialOrProxy: "Proxy",
+      risks: ["third_party_base_url", "dangerous_permissions"]
+    },
+    {
+      artifactId: "cfg-005",
+      assistant: "Factory Droid",
+      scope: "Global",
+      path: "~/.factory/settings.local.json",
+      provider: "openrouter",
+      model: "openrouter/anthropic/claude-sonnet-4",
+      baseUrl: "https://factory-relay.example/v1",
+      maskedSecret: "***7890",
+      officialOrProxy: "Proxy",
+      risks: [
+        "third_party_provider",
+        "third_party_base_url",
+        "dangerous_permissions"
+      ]
     }
   ],
   auditEvents: [

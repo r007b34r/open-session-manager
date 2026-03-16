@@ -157,6 +157,66 @@ fn audits_openclaw_config_and_detects_proxy_risks() {
 }
 
 #[test]
+fn audits_copilot_config_and_detects_enterprise_or_tool_risks() {
+    let copilot = audit_config(&ConfigAuditTarget::new(
+        "github-copilot-cli",
+        "user",
+        "global",
+        fixtures_root().join("copilot").join("config.json"),
+    ))
+    .expect("copilot config parses");
+
+    assert_eq!(copilot.config.assistant, "github-copilot-cli");
+    assert_eq!(copilot.config.provider.as_deref(), Some("github"));
+    assert_eq!(copilot.config.model.as_deref(), Some("gpt-5"));
+    assert_eq!(
+        copilot.config.base_url.as_deref(),
+        Some("https://copilot.enterprise-relay.example")
+    );
+    assert!(has_flag(&copilot.risk_flags, "third_party_base_url"));
+    assert!(has_flag(&copilot.risk_flags, "dangerous_permissions"));
+    assert!(copilot.config.mcp_json.contains("filesystem"));
+
+    let credentials = build_credential_artifacts(&copilot.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "github");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert!(credentials[0].masked_value.starts_with("***"));
+}
+
+#[test]
+fn audits_factory_config_and_masks_credentials() {
+    let factory = audit_config(&ConfigAuditTarget::new(
+        "factory-droid",
+        "user",
+        "global",
+        fixtures_root().join("factory").join("settings.json"),
+    ))
+    .expect("factory config parses");
+
+    assert_eq!(factory.config.assistant, "factory-droid");
+    assert_eq!(factory.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        factory.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        factory.config.base_url.as_deref(),
+        Some("https://factory-relay.example/v1")
+    );
+    assert!(has_flag(&factory.risk_flags, "third_party_provider"));
+    assert!(has_flag(&factory.risk_flags, "third_party_base_url"));
+    assert!(has_flag(&factory.risk_flags, "dangerous_permissions"));
+    assert!(factory.config.mcp_json.contains("postgres"));
+
+    let credentials = build_credential_artifacts(&factory.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "openrouter");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert!(credentials[0].masked_value.starts_with("***"));
+}
+
+#[test]
 fn redacts_secrets_without_exposing_plaintext() {
     let secret = "sk-test-1234567890";
 

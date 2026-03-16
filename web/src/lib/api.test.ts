@@ -100,7 +100,10 @@ describe("fetchDashboardSnapshot", () => {
     const snapshot = await fetchDashboardSnapshot();
 
     expect(snapshot.sessions).toHaveLength(3);
-    expect(snapshot.configs).toHaveLength(3);
+    expect(snapshot.configs).toHaveLength(5);
+    expect(snapshot.configs.map((config) => config.assistant)).toEqual(
+      expect.arrayContaining(["GitHub Copilot CLI", "Factory Droid"])
+    );
   });
 
   it("桌面模式下优先调用 Tauri 原生命令读取快照", async () => {

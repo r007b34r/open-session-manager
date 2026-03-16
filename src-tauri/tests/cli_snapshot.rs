@@ -59,7 +59,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .expect("usage overview exists");
 
     assert_eq!(sessions.len(), 8);
-    assert_eq!(configs.len(), 5);
+    assert_eq!(configs.len(), 7);
     assert_eq!(
         sessions[0]
             .get("title")
@@ -96,6 +96,26 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
                     == Some("openrouter/anthropic/claude-sonnet-4")
         }),
         "fixture snapshot should include OpenClaw config preview"
+    );
+    assert!(
+        configs.iter().any(|config| {
+            config.get("assistant").and_then(Value::as_str) == Some("github-copilot-cli")
+                && config.get("model").and_then(Value::as_str) == Some("gpt-5")
+                && config
+                    .get("risks")
+                    .and_then(Value::as_array)
+                    .is_some_and(|risks| risks.iter().any(|risk| risk.as_str() == Some("dangerous_permissions")))
+        }),
+        "fixture snapshot should include Copilot config governance data"
+    );
+    assert!(
+        configs.iter().any(|config| {
+            config.get("assistant").and_then(Value::as_str) == Some("factory-droid")
+                && config.get("model").and_then(Value::as_str)
+                    == Some("openrouter/anthropic/claude-sonnet-4")
+                && config.get("maskedSecret").and_then(Value::as_str) == Some("***7890")
+        }),
+        "fixture snapshot should include Factory Droid config governance data"
     );
 
     let assistants = sessions
