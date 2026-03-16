@@ -17,6 +17,8 @@
 | `Codex` 配置审计 | 已实现 | 支持用户级配置发现与风险审计 |
 | `Claude Code` 配置审计 | 已实现 | 支持 `settings.json`、shell hook、权限风险 |
 | `OpenCode` 配置审计 | 已实现 | 支持 provider/base URL/权限风险 |
+| `Gemini CLI` 配置审计 | 已实现 | 支持 `settings.json`、同级 `.env`、auth mode、base URL、model 与 MCP 线索 |
+| `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
@@ -48,7 +50,7 @@
 | `d-kimuson/claude-code-viewer` | 已吸收 | viewer 风格 transcript detail 面板、session todo evidence 展示 |
 | `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief 思路已落进 OSM 的 Markdown 导出 |
 | `kbwo/ccmanager` | 已研究 | worktree / 多项目调度方向 |
-| `farion1231/cc-switch` | 已研究 | provider / MCP / prompts / skills 治理方向 |
+| `farion1231/cc-switch` | 已吸收 | `Gemini CLI` / `OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
 | `junhoyeo/tokscale` | 已研究 | token / cost analytics 方向 |
 | `yoavf/ai-sessions-mcp` | 已研究 | MCP / headless 数据暴露方向 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
@@ -64,7 +66,8 @@
 | 全文搜索 / BM25 / 语义搜索 | 未纳入本版承诺 | 当前仍以会话发现、治理和导出为主 |
 | 会话恢复 / attach / process control | 未纳入本版承诺 | 当前还没有真实会话进程控制层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 仍在研究与规格阶段 |
-| `Gemini / Copilot / Factory / OpenClaw` 配置审计 | 未纳入本版承诺 | 当前只有会话支持，配置治理尚未接入 |
+| `GitHub Copilot CLI / Factory Droid` 配置审计 | 未纳入本版承诺 | 当前仍只有会话支持，配置治理尚未接入 |
+| `Gemini / OpenClaw` 配置写回与可视化修改 | 未纳入本版承诺 | 当前先完成读取、预览与风险审计，尚未做安全写回链路 |
 | token / cost analytics | 未纳入本版承诺 | 仍在研究与设计阶段 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |

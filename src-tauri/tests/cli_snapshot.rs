@@ -56,7 +56,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .expect("configs array exists");
 
     assert_eq!(sessions.len(), 8);
-    assert_eq!(configs.len(), 3);
+    assert_eq!(configs.len(), 5);
     assert_eq!(
         sessions[0]
             .get("title")
@@ -77,6 +77,22 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
             .and_then(Value::as_str)
             .expect("masked secret exists"),
         "***6789"
+    );
+    assert!(
+        configs.iter().any(|config| {
+            config.get("assistant").and_then(Value::as_str) == Some("gemini-cli")
+                && config.get("model").and_then(Value::as_str)
+                    == Some("gemini-2.5-pro-preview-06-05")
+        }),
+        "fixture snapshot should include Gemini config preview"
+    );
+    assert!(
+        configs.iter().any(|config| {
+            config.get("assistant").and_then(Value::as_str) == Some("openclaw")
+                && config.get("model").and_then(Value::as_str)
+                    == Some("openrouter/anthropic/claude-sonnet-4")
+        }),
+        "fixture snapshot should include OpenClaw config preview"
     );
 
     let assistants = sessions

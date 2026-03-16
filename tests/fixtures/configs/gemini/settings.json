@@ -1,0 +1,18 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "gemini-api-key"
+    }
+  },
+  "general": {
+    "sessionRetention": {
+      "enabled": true
+    }
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["mcp-filesystem.js"]
+    }
+  }
+}

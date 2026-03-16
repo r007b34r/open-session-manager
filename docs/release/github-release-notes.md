@@ -36,6 +36,8 @@
   - 延续 viewer 风格详情面板和 todo evidence 呈现思路
 - `ChristopherA/claude_code_tools`
   - 吸收 session closure / resume 的 brief 思路，补到 OSM 的 `Session Handoff` Markdown 导出
+- `farion1231/cc-switch`
+  - clean-room 吸收 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模
 
 已经纳入本地镜像、研究索引和致谢体系的还包括：
 
@@ -71,6 +73,7 @@
 ## 当前已实现的能力
 
 - 7 个终端代码助手的本地会话发现与解析
+- `Gemini CLI` 与 `OpenClaw` 配置审计
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
 - `Session Handoff` Markdown 导出
@@ -88,7 +91,8 @@
 - 搜索、BM25、语义搜索、hybrid ranking
 - 会话恢复 / attach / pause / process control
 - worktree 编排、多项目调度、容器隔离执行
-- `Gemini / Copilot / Factory / OpenClaw` 配置审计
+- `GitHub Copilot CLI / Factory Droid` 配置审计
+- `Gemini / OpenClaw` 配置写回与可视化修改
 - token / cost analytics
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归

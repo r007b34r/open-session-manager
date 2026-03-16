@@ -96,6 +96,67 @@ fn audits_opencode_provider_options_and_masks_api_keys() {
 }
 
 #[test]
+fn audits_gemini_config_and_masks_credentials() {
+    let gemini = audit_config(&ConfigAuditTarget::new(
+        "gemini-cli",
+        "user",
+        "global",
+        fixtures_root().join("gemini").join("settings.json"),
+    ))
+    .expect("gemini config parses");
+
+    assert_eq!(gemini.config.assistant, "gemini-cli");
+    assert_eq!(gemini.config.provider.as_deref(), Some("google"));
+    assert_eq!(
+        gemini.config.model.as_deref(),
+        Some("gemini-2.5-pro-preview-06-05")
+    );
+    assert_eq!(
+        gemini.config.base_url.as_deref(),
+        Some("https://gateway.gemini-proxy.example/v1beta")
+    );
+    assert!(has_flag(&gemini.risk_flags, "third_party_base_url"));
+    assert!(gemini.config.mcp_json.contains("filesystem"));
+
+    let credentials = build_credential_artifacts(&gemini.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "google");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert!(credentials[0].masked_value.starts_with("***"));
+}
+
+#[test]
+fn audits_openclaw_config_and_detects_proxy_risks() {
+    let openclaw = audit_config(&ConfigAuditTarget::new(
+        "openclaw",
+        "user",
+        "global",
+        fixtures_root().join("openclaw").join("openclaw.json"),
+    ))
+    .expect("openclaw config parses");
+
+    assert_eq!(openclaw.config.assistant, "openclaw");
+    assert_eq!(openclaw.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        openclaw.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        openclaw.config.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert!(has_flag(&openclaw.risk_flags, "third_party_provider"));
+    assert!(has_flag(&openclaw.risk_flags, "dangerous_permissions"));
+    assert!(openclaw.config.permissions_json.contains("\"profile\":\"full\""));
+
+    let credentials = build_credential_artifacts(&openclaw.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "openrouter");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert!(credentials[0].masked_value.starts_with("***"));
+}
+
+#[test]
 fn redacts_secrets_without_exposing_plaintext() {
     let secret = "sk-test-1234567890";
 

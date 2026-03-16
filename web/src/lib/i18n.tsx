@@ -104,6 +104,7 @@ type Messages = {
     fields: {
       scope: string;
       provider: string;
+      model: string;
       endpoint: string;
       maskedKey: string;
     };
@@ -262,6 +263,7 @@ const messages: Record<Language, Messages> = {
       fields: {
         scope: "Scope",
         provider: "Provider",
+        model: "Model",
         endpoint: "Endpoint",
         maskedKey: "Masked Key"
       }
@@ -332,7 +334,8 @@ const messages: Record<Language, Messages> = {
         third_party_base_url: "third_party_base_url",
         dangerous_sandbox: "dangerous_sandbox",
         dangerous_approval_policy: "dangerous_approval_policy",
-        third_party_provider: "third_party_provider"
+        third_party_provider: "third_party_provider",
+        missing_primary_secret: "missing_primary_secret"
       },
       auditTypes: {
         export_markdown: "export_markdown",
@@ -442,6 +445,7 @@ const messages: Record<Language, Messages> = {
       fields: {
         scope: "范围",
         provider: "提供商",
+        model: "模型",
         endpoint: "端点",
         maskedKey: "脱敏密钥"
       }
@@ -510,7 +514,8 @@ const messages: Record<Language, Messages> = {
         third_party_base_url: "第三方 Base URL",
         dangerous_sandbox: "高危沙箱设置",
         dangerous_approval_policy: "高危审批策略",
-        third_party_provider: "第三方提供商"
+        third_party_provider: "第三方提供商",
+        missing_primary_secret: "缺少主凭据"
       },
       auditTypes: {
         export_markdown: "导出 Markdown",

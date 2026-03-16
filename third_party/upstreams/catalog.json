@@ -291,14 +291,35 @@
       },
       "absorption": {
         "mode": "candidate-absorb",
-        "rationale": "Strong reference for provider, proxy, MCP, prompts, and skills governance that OSM still lacks.",
+        "rationale": "Directly relevant to Gemini and OpenClaw config governance, especially path discovery, auth mode handling, and provider/base URL risk modeling.",
         "blockedBy": []
       },
-      "reviewStatus": "screened",
+      "reviewStatus": "adopted",
       "reviewedAt": "2026-03-16",
       "summary": "Desktop switchboard for provider presets, MCP, prompts, skills, usage, proxy failover, and session management.",
       "projectShape": "Provider governance console",
-      "releaseAcknowledgement": "Clarified the configuration and provider governance surface OSM still needs to absorb.",
+      "verifiedPaths": [
+        "src-tauri/src/gemini_config.rs",
+        "src-tauri/src/openclaw_config.rs",
+        "docs/user-manual/en/2-providers/2.2-switch.md",
+        "docs/user-manual/en/5-faq/5.1-config-files.md"
+      ],
+      "integrationTargets": [
+        "Gemini CLI config audit",
+        "OpenClaw config audit",
+        "future provider/MCP governance roadmap"
+      ],
+      "adoptedCapabilities": [
+        "Gemini CLI config audit",
+        "OpenClaw config audit"
+      ],
+      "upstreamSourceFiles": [
+        "src-tauri/src/gemini_config.rs",
+        "src-tauri/src/openclaw_config.rs",
+        "docs/user-manual/en/2-providers/2.2-switch.md",
+        "docs/user-manual/en/5-faq/5.1-config-files.md"
+      ],
+      "releaseAcknowledgement": "Provided the clearest path and field model for OSM's first Gemini CLI and OpenClaw config governance pass.",
       "evidence": [
         {
           "label": "Repository",

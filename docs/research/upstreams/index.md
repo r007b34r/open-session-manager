@@ -12,7 +12,7 @@ This index is generated from `third_party/upstreams/catalog.json`.
 | Dicklesworthstone/coding_agent_session_search | LicenseRef-Restricted | reference-only | restricted | Broad multi-agent search tooling that proves the scale of connector coverage and export patterns OSM must beat. |
 | Dimension-AI-Technologies/Entropic | MIT | candidate-absorb | screened | Cross-platform desktop maintenance console that already thinks in provider-aware views and cleanup actions. |
 | endorhq/rover | Apache-2.0 | candidate-absorb | screened | Container-isolated coding agent runner with background task lifecycle, inspect/diff/merge loop, and VSCode extension hooks. |
-| farion1231/cc-switch | MIT | candidate-absorb | screened | Desktop switchboard for provider presets, MCP, prompts, skills, usage, proxy failover, and session management. |
+| farion1231/cc-switch | MIT | candidate-absorb | adopted | Desktop switchboard for provider presets, MCP, prompts, skills, usage, proxy failover, and session management. |
 | jazzyalex/agent-sessions | MIT | candidate-absorb | adopted | Desktop-first local session explorer with deep indexing, search, analytics, and broad assistant parser coverage. |
 | junhoyeo/tokscale | MIT | candidate-absorb | screened | Usage and cost analytics toolkit with wide connector matrix, pricing lookup, and contribution-style visualizations. |
 | kbwo/ccmanager | MIT | candidate-absorb | screened | Worktree-centric manager for multiple coding agents, project queues, and session state switching. |

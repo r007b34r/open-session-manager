@@ -27,6 +27,18 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             native_environment,
             opencode_user_config(&context.home_dir, context.xdg_config_home.as_deref()),
         ),
+        KnownPath::new(
+            "gemini-cli",
+            "config",
+            native_environment,
+            context.home_dir.join(".gemini").join("settings.json"),
+        ),
+        KnownPath::new(
+            "openclaw",
+            "config",
+            native_environment,
+            context.home_dir.join(".openclaw").join("openclaw.json"),
+        ),
     ];
 
     if let Some(wsl_home) = &context.wsl_home_dir {
@@ -47,6 +59,18 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "config",
             "wsl",
             opencode_user_config(wsl_home, None),
+        ));
+        roots.push(KnownPath::new(
+            "gemini-cli",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".gemini").join("settings.json"),
+        ));
+        roots.push(KnownPath::new(
+            "openclaw",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".openclaw").join("openclaw.json"),
         ));
     }
 

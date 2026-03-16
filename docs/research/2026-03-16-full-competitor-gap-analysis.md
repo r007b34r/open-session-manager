@@ -53,7 +53,7 @@
 - transcript digest：基础 highlights 与 Claude todo 提取
 - Markdown 导出
 - 软删除 / 恢复
-- 配置审计：`Codex / Claude Code / OpenCode`
+- 配置审计：`Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw`
 - 审计事件持久化
 - Web/Tauri 桌面 UI
 - 中英双语
@@ -65,7 +65,7 @@
 
 ### 当前明显短板
 
-- 配置治理仍只覆盖 `Codex / Claude Code / OpenCode`
+- 配置治理仍缺 `GitHub Copilot CLI / Factory Droid`，且 `Gemini / OpenClaw` 还没进入安全写回
 - 缺全文检索 / 跨会话搜索
 - 缺恢复/继续/附着真实会话
 - 缺活跃会话监控
@@ -107,7 +107,8 @@
 - 缺 schema drift 监控
 - 缺版本跟踪 / fixture 漂移治理
 - 缺 OpenCode SQLite 新存储兼容
-- `Gemini / Copilot / Droid / OpenClaw` 配置治理仍未接入
+- `GitHub Copilot CLI / Droid` 配置治理仍未接入
+- `Gemini / OpenClaw` 仍缺写回、provider presets、MCP/skills/prompts 治理
 
 ### 3.2 `kbwo/ccmanager`
 
@@ -223,7 +224,6 @@
 
 对应 OSM 缺口：
 
-- 缺 `Gemini / OpenClaw` 配置治理
 - 缺 provider presets
 - 缺统一 provider 管理
 - 缺 tray quick switch
@@ -723,7 +723,8 @@ OSM 目前没有或没有完整支持：
 
 ### 4.7 配置与 provider 治理缺口
 
-- Gemini / Copilot / Factory / OpenClaw 配置治理
+- GitHub Copilot CLI / Factory Droid 配置治理
+- Gemini / OpenClaw 配置写回与更深编辑
 - provider presets
 - provider import/export
 - provider health monitor
@@ -844,7 +845,8 @@ OSM 目前没有或没有完整支持：
 
 必须补：
 
-- `Gemini / Copilot / Factory / OpenClaw` 配置治理
+- `GitHub Copilot CLI / Factory Droid` 配置治理
+- `Gemini / OpenClaw` 配置写回与可视化修改
 - worktree orchestration
 - cleanup checklist / hooks
 - Git 视图
@@ -875,7 +877,8 @@ OSM 目前没有或没有完整支持：
 
 - session handoff / resume brief
 - 全文检索入口
-- `Gemini / Copilot / Factory / OpenClaw` 配置治理
+- `GitHub Copilot CLI / Factory Droid` 配置治理
+- `Gemini / OpenClaw` 配置写回与可视化修改
 - 相应 fixtures + tests + snapshot coverage
 
 ### P1 本轮若时间允许继续落地

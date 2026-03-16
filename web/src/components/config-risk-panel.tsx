@@ -38,6 +38,12 @@ export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
                 <dt>{copy.configRisk.fields.provider}</dt>
                 <dd>{config.provider}</dd>
               </div>
+              {config.model ? (
+                <div>
+                  <dt>{copy.configRisk.fields.model}</dt>
+                  <dd>{config.model}</dd>
+                </div>
+              ) : null}
               <div>
                 <dt>{copy.configRisk.fields.endpoint}</dt>
                 <dd>{config.baseUrl}</dd>

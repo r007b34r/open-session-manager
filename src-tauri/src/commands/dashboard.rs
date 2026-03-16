@@ -150,6 +150,8 @@ pub struct ConfigRiskRecord {
     pub scope: String,
     pub path: String,
     pub provider: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
     pub base_url: String,
     pub masked_secret: String,
     pub official_or_proxy: String,
@@ -242,6 +244,18 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             "global",
             "fixtures",
             fixtures_root.join("configs").join("opencode").join("opencode.json"),
+        ),
+        ConfigAuditTarget::new(
+            "gemini-cli",
+            "global",
+            "fixtures",
+            fixtures_root.join("configs").join("gemini").join("settings.json"),
+        ),
+        ConfigAuditTarget::new(
+            "openclaw",
+            "global",
+            "fixtures",
+            fixtures_root.join("configs").join("openclaw").join("openclaw.json"),
         ),
     ];
 
@@ -541,6 +555,7 @@ fn build_config_records(
             scope: normalize_scope(&audit.config.scope),
             path: audit.config.path,
             provider,
+            model: audit.config.model,
             base_url,
             masked_secret: primary_credential
                 .map(|credential| credential.masked_value.clone())
@@ -1361,6 +1376,16 @@ mod tests {
             .iter()
             .find(|session| session.session_id == "openclaw-ses-1")
             .expect("openclaw fixture session exists");
+        let gemini_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "gemini-cli")
+            .expect("gemini config fixture exists");
+        let openclaw_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "openclaw")
+            .expect("openclaw config fixture exists");
 
         assert_eq!(claude_session.transcript_highlights[0].role, "User");
         assert!(
@@ -1388,6 +1413,8 @@ mod tests {
                 .content
                 .contains("Review OpenClaw transcripts and flag cleanup candidates")
         }));
+        assert_eq!(gemini_config.provider, "google");
+        assert_eq!(openclaw_config.provider, "openrouter");
     }
 
     #[test]

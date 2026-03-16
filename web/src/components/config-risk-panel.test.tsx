@@ -13,6 +13,7 @@ describe("ConfigRiskPanel", () => {
             scope: "Global",
             path: "~/.codex/config.toml",
             provider: "cch",
+            model: "gpt-5-codex",
             baseUrl: "https://relay.cch.example/v1",
             maskedSecret: "***6789",
             officialOrProxy: "Proxy",
@@ -39,6 +40,8 @@ describe("ConfigRiskPanel", () => {
     expect(screen.getByText("Codex")).toBeInTheDocument();
     expect(screen.getAllByText("Proxy")).toHaveLength(2);
     expect(screen.getByText("***6789")).toBeInTheDocument();
+    expect(screen.getByText(/model/i)).toBeInTheDocument();
+    expect(screen.getByText("gpt-5-codex")).toBeInTheDocument();
     expect(screen.getByText(/third_party_base_url/i)).toBeInTheDocument();
     expect(screen.getByText(/dangerous_sandbox/i)).toBeInTheDocument();
   });

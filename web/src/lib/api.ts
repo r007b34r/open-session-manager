@@ -36,6 +36,7 @@ export type ConfigRiskRecord = {
   scope: string;
   path: string;
   provider: string;
+  model?: string;
   baseUrl: string;
   maskedSecret: string;
   officialOrProxy: string;
@@ -245,6 +246,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       scope: "Global",
       path: "~/.codex/config.toml",
       provider: "cch",
+      model: "gpt-5-codex",
       baseUrl: "https://relay.cch.example/v1",
       maskedSecret: "***6789",
       officialOrProxy: "Proxy",
@@ -256,6 +258,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       scope: "Global",
       path: "~/.claude/settings.json",
       provider: "anthropic",
+      model: "claude-sonnet-4",
       baseUrl: "https://relay.anthropic-proxy.example/v1",
       maskedSecret: "***4321",
       officialOrProxy: "Proxy",
@@ -267,6 +270,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       scope: "Project",
       path: ".opencode/opencode.json",
       provider: "openrouter",
+      model: "openrouter/anthropic/claude-sonnet-4",
       baseUrl: "https://openrouter.ai/api/v1",
       maskedSecret: "***3456",
       officialOrProxy: "Proxy",
