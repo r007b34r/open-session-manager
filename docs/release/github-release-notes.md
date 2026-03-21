@@ -92,10 +92,12 @@
 - 7 个终端代码助手的本地会话发现与解析
 - 7 个终端代码助手的配置审计读取与风险预览
 - `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
+- `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、备份、回滚和审计事件
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
 - Sessions 页加权搜索、命中片段和来源标签
+- `doctor` CLI 与总览环境诊断面板，可显示被跳过的 malformed session 文件
 - `Session Handoff` Markdown 导出
 - Markdown 导出、软删除、恢复、审计历史
 - 中英文切换与跟随系统语言

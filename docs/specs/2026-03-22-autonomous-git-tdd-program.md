@@ -182,7 +182,7 @@
 | `API-05` | P1 | todo | robot / json mode | CLI/HTTP 可输出稳定 JSON 结构 |
 | `API-06` | P1 | todo | `list/search/get/view/expand` 对外接口 | API 与 CLI 能共享同一查询层 |
 | `API-07` | P2 | todo | Prometheus metrics | 指标暴露和采集测试通过 |
-| `API-08` | P0 | todo | health / doctor checks | `doctor` 可发现关键环境问题 |
+| `API-08` | P0 | done | health / doctor checks | `doctor` 可发现关键环境问题 |
 | `API-09` | P1 | todo | 远程壳层鉴权 | token/JWT 或本地授权测试通过 |
 
 ### 4.11 质量、诊断与运维

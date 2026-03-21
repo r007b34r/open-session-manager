@@ -104,7 +104,11 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
                 && config
                     .get("risks")
                     .and_then(Value::as_array)
-                    .is_some_and(|risks| risks.iter().any(|risk| risk.as_str() == Some("dangerous_permissions")))
+                    .is_some_and(|risks| {
+                        risks
+                            .iter()
+                            .any(|risk| risk.as_str() == Some("dangerous_permissions"))
+                    })
         }),
         "fixture snapshot should include Copilot config governance data"
     );
@@ -156,8 +160,8 @@ fn snapshot_command_skips_invalid_local_sessions_without_stderr_noise() {
     fs::create_dir_all(&codex_root).expect("create codex root");
     fs::create_dir_all(&claude_root).expect("create claude root");
 
-    let codex_fixture = fixtures_root()
-        .join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
+    let codex_fixture =
+        fixtures_root().join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
     fs::copy(&codex_fixture, codex_root.join("rollout-2026-03-15.jsonl"))
         .expect("copy codex fixture");
 
@@ -195,6 +199,10 @@ fn snapshot_command_skips_invalid_local_sessions_without_stderr_noise() {
         .get("sessions")
         .and_then(Value::as_array)
         .expect("sessions array exists");
+    let doctor_findings = snapshot
+        .get("doctorFindings")
+        .and_then(Value::as_array)
+        .expect("doctor findings array exists");
 
     assert_eq!(sessions.len(), 1);
     assert_eq!(
@@ -203,6 +211,28 @@ fn snapshot_command_skips_invalid_local_sessions_without_stderr_noise() {
             .and_then(Value::as_str)
             .expect("session id exists"),
         "codex-ses-1"
+    );
+    assert_eq!(doctor_findings.len(), 1);
+    assert_eq!(
+        doctor_findings[0]
+            .get("code")
+            .and_then(Value::as_str)
+            .expect("code exists"),
+        "malformed_session_skipped"
+    );
+    assert_eq!(
+        doctor_findings[0]
+            .get("severity")
+            .and_then(Value::as_str)
+            .expect("severity exists"),
+        "warn"
+    );
+    assert!(
+        doctor_findings[0]
+            .get("detail")
+            .and_then(Value::as_str)
+            .is_some_and(|detail| detail.contains("broken-session.jsonl")),
+        "doctor finding should preserve the skipped file path"
     );
 }
 
@@ -315,6 +345,72 @@ fn snapshot_command_includes_persisted_audit_history() {
             .and_then(Value::as_str)
             .expect("event type exists"),
         "export_markdown"
+    );
+}
+
+#[test]
+fn doctor_command_reports_malformed_local_sessions() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let codex_root = home_dir.join(".codex").join("sessions");
+    let claude_root = home_dir.join(".claude").join("projects");
+
+    fs::create_dir_all(&codex_root).expect("create codex root");
+    fs::create_dir_all(&claude_root).expect("create claude root");
+
+    let codex_fixture =
+        fixtures_root().join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
+    fs::copy(&codex_fixture, codex_root.join("rollout-2026-03-15.jsonl"))
+        .expect("copy codex fixture");
+
+    fs::write(
+        claude_root.join("broken-session.jsonl"),
+        concat!(
+            "{\"type\":\"user\",\"timestamp\":\"2026-03-15T10:00:00Z\",",
+            "\"cwd\":\"C:/Projects/broken-session\",",
+            "\"message\":{\"content\":\"collect local sessions\"}}\n"
+        ),
+    )
+    .expect("write invalid claude session");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
+        .env("HOME", &home_dir)
+        .env("USERPROFILE", &home_dir)
+        .args(["doctor"])
+        .output()
+        .expect("doctor command runs");
+
+    assert!(
+        output.status.success(),
+        "doctor command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "doctor command should report via stdout JSON instead of stderr noise: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor command prints json");
+    let findings = report
+        .get("findings")
+        .and_then(Value::as_array)
+        .expect("doctor findings array exists");
+
+    assert_eq!(
+        report
+            .get("status")
+            .and_then(Value::as_str)
+            .expect("status exists"),
+        "warn"
+    );
+    assert_eq!(findings.len(), 1);
+    assert_eq!(
+        findings[0]
+            .get("code")
+            .and_then(Value::as_str)
+            .expect("code exists"),
+        "malformed_session_skipped"
     );
 }
 

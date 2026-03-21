@@ -109,6 +109,7 @@ pub struct DashboardSnapshot {
     pub metrics: Vec<DashboardMetric>,
     pub sessions: Vec<SessionDetailRecord>,
     pub configs: Vec<ConfigRiskRecord>,
+    pub doctor_findings: Vec<DoctorFindingRecord>,
     pub audit_events: Vec<AuditEventRecord>,
     pub usage_overview: UsageOverviewRecord,
     pub runtime: RuntimeSnapshot,
@@ -183,6 +184,23 @@ pub struct AuditEventRecord {
     pub quarantined_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manifest_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DoctorFindingRecord {
+    pub code: String,
+    pub severity: String,
+    pub assistant: String,
+    pub path: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DoctorReport {
+    pub status: String,
+    pub findings: Vec<DoctorFindingRecord>,
 }
 
 #[derive(Debug, Default)]
@@ -329,7 +347,7 @@ pub fn build_local_dashboard_snapshot_with_audit(
 pub fn build_local_indexed_sessions(
     context: &DiscoveryContext,
 ) -> SnapshotResult<Vec<IndexedSession>> {
-    build_indexed_sessions(discover_known_session_roots(context))
+    Ok(build_indexed_sessions_with_findings(discover_known_session_roots(context))?.sessions)
 }
 
 pub fn find_local_config_target(
@@ -358,12 +376,29 @@ pub fn find_local_config_target(
     Ok(None)
 }
 
+pub fn build_local_doctor_report(context: &DiscoveryContext) -> SnapshotResult<DoctorReport> {
+    let findings = build_indexed_sessions_with_findings(discover_known_session_roots(context))?
+        .doctor_findings;
+
+    Ok(DoctorReport {
+        status: doctor_status(&findings).to_string(),
+        findings,
+    })
+}
+
 fn build_snapshot(
     session_roots: Vec<KnownPath>,
     config_targets: Vec<ConfigAuditTarget>,
     audit_db_path: Option<&Path>,
 ) -> SnapshotResult<DashboardSnapshot> {
-    let sessions = build_session_records(&session_roots)?;
+    let IndexedSessionBuildResult {
+        sessions: indexed_sessions,
+        doctor_findings,
+    } = build_indexed_sessions_with_findings(session_roots)?;
+    let sessions = indexed_sessions
+        .into_iter()
+        .map(|indexed| indexed.detail)
+        .collect::<Vec<_>>();
     let derived_project_targets = derive_project_config_targets(&sessions);
     let merged_config_targets = merge_config_targets(config_targets, derived_project_targets);
     let configs = build_config_records(&merged_config_targets)?;
@@ -378,6 +413,7 @@ fn build_snapshot(
         metrics: build_metrics(&sessions, &configs),
         sessions,
         configs,
+        doctor_findings,
         audit_events,
         usage_overview,
         runtime: RuntimeSnapshot::default(),
@@ -385,14 +421,25 @@ fn build_snapshot(
 }
 
 fn build_session_records(session_roots: &[KnownPath]) -> SnapshotResult<Vec<SessionDetailRecord>> {
-    Ok(build_indexed_sessions(session_roots.to_vec())?
-        .into_iter()
-        .map(|indexed| indexed.detail)
-        .collect())
+    Ok(
+        build_indexed_sessions_with_findings(session_roots.to_vec())?
+            .sessions
+            .into_iter()
+            .map(|indexed| indexed.detail)
+            .collect(),
+    )
 }
 
-fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<IndexedSession>> {
+struct IndexedSessionBuildResult {
+    sessions: Vec<IndexedSession>,
+    doctor_findings: Vec<DoctorFindingRecord>,
+}
+
+fn build_indexed_sessions_with_findings(
+    session_roots: Vec<KnownPath>,
+) -> SnapshotResult<IndexedSessionBuildResult> {
     let mut sessions = Vec::new();
+    let mut doctor_findings = Vec::new();
 
     for root in &session_roots {
         if !root.path.exists() {
@@ -406,6 +453,11 @@ fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<I
             match build_indexed_session_from_file(adapter.as_ref(), root, &session_file) {
                 Ok(indexed) => sessions.push(indexed),
                 Err(error) if is_recoverable_session_file_error(&error) => {
+                    doctor_findings.push(build_recoverable_session_file_finding(
+                        root,
+                        &session_file,
+                        &error,
+                    ));
                     emit_recoverable_session_file_warning(root, &session_file, &error);
                 }
                 Err(error) => return Err(error),
@@ -413,7 +465,10 @@ fn build_indexed_sessions(session_roots: Vec<KnownPath>) -> SnapshotResult<Vec<I
         }
     }
 
-    Ok(sessions)
+    Ok(IndexedSessionBuildResult {
+        sessions,
+        doctor_findings,
+    })
 }
 
 fn build_indexed_session_from_file(
@@ -452,6 +507,31 @@ fn emit_recoverable_session_file_warning(
         root.assistant,
         session_file.display()
     );
+}
+
+fn build_recoverable_session_file_finding(
+    root: &KnownPath,
+    session_file: &Path,
+    error: &SnapshotError,
+) -> DoctorFindingRecord {
+    DoctorFindingRecord {
+        code: "malformed_session_skipped".to_string(),
+        severity: "warn".to_string(),
+        assistant: root.assistant.clone(),
+        path: session_file.display().to_string(),
+        detail: format!(
+            "Skipped malformed session file for {} because it could not be parsed safely ({error}).",
+            root.assistant
+        ),
+    }
+}
+
+fn doctor_status(findings: &[DoctorFindingRecord]) -> &str {
+    if findings.iter().any(|finding| finding.severity == "warn") {
+        "warn"
+    } else {
+        "ok"
+    }
 }
 
 fn build_indexed_session(

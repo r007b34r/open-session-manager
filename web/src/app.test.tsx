@@ -269,6 +269,15 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("在总览里显示环境诊断并指出被跳过的坏会话文件", async () => {
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: /environment doctor/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/broken-session\.jsonl/i)).toBeInTheDocument();
+  });
+
   it("在总览里展示 usage analytics 面板和助手级汇总", async () => {
     render(<App />);
 

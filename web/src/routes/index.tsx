@@ -1,3 +1,4 @@
+import { DoctorPanel } from "../components/doctor-panel";
 import type { DashboardSnapshot } from "../lib/api";
 import { UsagePanel } from "../components/usage-panel";
 import { useI18n } from "../lib/i18n";
@@ -76,6 +77,8 @@ export function OverviewRoute({ snapshot }: OverviewRouteProps) {
           </article>
         ))}
       </section>
+
+      <DoctorPanel findings={snapshot.doctorFindings} />
 
       <UsagePanel usageOverview={snapshot.usageOverview} />
 

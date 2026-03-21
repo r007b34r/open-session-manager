@@ -62,6 +62,7 @@ describe("fetchDashboardSnapshot", () => {
         }
       ],
       configs: [],
+      doctorFindings: [],
       auditEvents: [],
       runtime: buildRuntime()
     };
@@ -128,6 +129,7 @@ describe("fetchDashboardSnapshot", () => {
       ],
       sessions: [],
       configs: [],
+      doctorFindings: [],
       auditEvents: [],
       runtime: buildRuntime()
     };
@@ -205,6 +207,7 @@ describe("fetchDashboardSnapshot", () => {
         }
       ],
       configs: [],
+      doctorFindings: [],
       auditEvents: [],
       runtime: buildRuntime()
     };

@@ -68,6 +68,14 @@ export type AuditEventRecord = {
   manifestPath?: string;
 };
 
+export type DoctorFindingRecord = {
+  code: string;
+  severity: string;
+  assistant: string;
+  path: string;
+  detail: string;
+};
+
 export type DashboardMetric = {
   label: string;
   value: string;
@@ -115,6 +123,7 @@ export type DashboardSnapshot = {
   metrics: DashboardMetric[];
   sessions: SessionDetailRecord[];
   configs: ConfigRiskRecord[];
+  doctorFindings: DoctorFindingRecord[];
   auditEvents: AuditEventRecord[];
   usageOverview: UsageOverviewRecord;
   runtime: DashboardRuntime;
@@ -406,6 +415,16 @@ const fallbackSnapshot: DashboardSnapshot = {
         "third_party_base_url",
         "dangerous_permissions"
       ]
+    }
+  ],
+  doctorFindings: [
+    {
+      code: "malformed_session_skipped",
+      severity: "warn",
+      assistant: "Claude Code",
+      path: "C:/Users/Max/.claude/projects/C--Users-Max/broken-session.jsonl",
+      detail:
+        "Skipped malformed session file for Claude Code because the session id was missing."
     }
   ],
   auditEvents: [
@@ -773,6 +792,9 @@ function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
     Array.isArray(value.metrics) &&
     Array.isArray(value.sessions) &&
     Array.isArray(value.configs) &&
+    (!("doctorFindings" in value) ||
+      (Array.isArray(value.doctorFindings) &&
+        value.doctorFindings.every(isDoctorFindingRecord))) &&
     Array.isArray(value.auditEvents)
   );
 }
@@ -790,6 +812,9 @@ function normalizeDashboardSnapshot(
 
   return {
     ...snapshot,
+    doctorFindings: Array.isArray(snapshot.doctorFindings)
+      ? snapshot.doctorFindings.filter(isDoctorFindingRecord)
+      : [],
     auditEvents: Array.isArray(snapshot.auditEvents)
       ? snapshot.auditEvents
           .filter(isAuditEventRecord)
@@ -899,6 +924,17 @@ function isAuditEventRecord(value: unknown): value is AuditEventRecord {
     typeof value.actor === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.result === "string" &&
+    typeof value.detail === "string"
+  );
+}
+
+function isDoctorFindingRecord(value: unknown): value is DoctorFindingRecord {
+  return (
+    isRecord(value) &&
+    typeof value.code === "string" &&
+    typeof value.severity === "string" &&
+    typeof value.assistant === "string" &&
+    typeof value.path === "string" &&
     typeof value.detail === "string"
   );
 }
@@ -1096,6 +1132,7 @@ function buildEmptyDashboardSnapshot(): DashboardSnapshot {
     metrics: [],
     sessions: [],
     configs: [],
+    doctorFindings: [],
     auditEvents: [],
     usageOverview: EMPTY_USAGE_OVERVIEW,
     runtime: EMPTY_RUNTIME

@@ -41,6 +41,10 @@ type Messages = {
     adoptionKicker: string;
     adoptionTitle: string;
     adoptionDescription: string;
+    doctorKicker: string;
+    doctorTitle: string;
+    doctorDescription: string;
+    doctorEmpty: string;
     adoptedTitle: string;
     adoptedBadge: string;
     researchTitle: string;
@@ -227,6 +231,11 @@ const messages: Record<Language, Messages> = {
       adoptionTitle: "What OSM already absorbed",
       adoptionDescription:
         "These references are visible in the product now, not only in research notes.",
+      doctorKicker: "Doctor",
+      doctorTitle: "Environment doctor",
+      doctorDescription:
+        "Recoverable discovery problems are surfaced here so they can be fixed without relying on noisy terminal output.",
+      doctorEmpty: "No recoverable discovery problems were detected in the current snapshot.",
       adoptedTitle: "Adopted",
       adoptedBadge: "Landed in product",
       researchTitle: "Researched next",
@@ -459,6 +468,10 @@ const messages: Record<Language, Messages> = {
       adoptionKicker: "上游吸收",
       adoptionTitle: "已经落到产品里的能力",
       adoptionDescription: "这些能力已经在界面和导出链路里可见，不只是文档记录。",
+      doctorKicker: "环境诊断",
+      doctorTitle: "环境诊断",
+      doctorDescription: "可恢复的发现问题会在这里展示，不再依赖终端噪声提醒用户。",
+      doctorEmpty: "当前快照里没有发现可恢复的发现问题。",
       adoptedTitle: "已吸收",
       adoptedBadge: "已落地",
       researchTitle: "下一批研究对象",

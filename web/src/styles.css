@@ -187,6 +187,10 @@ a {
   margin-top: 22px;
 }
 
+.doctor-panel {
+  margin-top: 22px;
+}
+
 .usage-panel {
   margin-top: 22px;
 }
@@ -281,7 +285,8 @@ a {
 
 .runtime-grid,
 .adoption-grid,
-.usage-grid {
+.usage-grid,
+.doctor-stack {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -289,7 +294,8 @@ a {
 
 .runtime-card,
 .adoption-card,
-.usage-card {
+.usage-card,
+.doctor-card {
   border: 1px solid rgba(31, 39, 34, 0.08);
   border-radius: 22px;
   background:
@@ -358,7 +364,8 @@ a {
 }
 
 .runtime-note,
-.adoption-card p {
+.adoption-card p,
+.doctor-card p {
   margin: 0;
   color: var(--muted);
 }

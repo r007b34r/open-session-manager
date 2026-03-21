@@ -21,11 +21,13 @@
 | `GitHub Copilot CLI` 配置审计 | 已实现 | 支持用户级 `~/.copilot/config.json` + `mcp-config.json`，并能按会话派生项目级 `.github/copilot/settings.json/settings.local.json` |
 | `Factory Droid` 配置审计 | 已实现 | 支持用户级与项目级 `settings.json/settings.local.json` 合并视图，展示 provider/base URL、command allowlist、MCP 与 masked key 风险 |
 | `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
+| `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、输入校验、备份 manifest、回滚测试与审计事件 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
 | 软删除 / 恢复 | 已实现 | Rust actions 已有测试覆盖，恢复边界已加固 |
 | 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
+| Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件 |
 | Web / Tauri UI | 已实现 | 桌面端与浏览器端共用同一套 React UI |
 | 中英文切换 | 已实现 | 默认按系统或浏览器语言自动切换 |
 | 浅色 / 深色 / 跟随系统主题 | 已实现 | 支持手动覆盖并持久化主题选择 |
