@@ -103,15 +103,22 @@
 - 真实 0 值时才显示 `$0.00`
 - 总览和详情语义一致
 
-## 4. 本轮实施范围
+## 4. 当前执行状态
 
-这次先只落 `FIX-01`。
+- `FIX-01` 已完成
+  浏览器模式默认不再默默回退整包内置样例；只有显式开启 demo 模式时才允许展示样例 sessions/configs/usage/runtime。
+- `FIX-02` 已完成
+  会话选中改成受控状态更新；在首页嵌入区不会再强制跳到 `#/sessions/...`，在 Sessions 路由里也不会再触发异常滚动。
+- `FIX-03` 已完成
+  `costUsd` 已区分真实 `0` 和未知成本；无可靠依据时不再显示 `$0.00`。
 
-原因：
+相关验证已经进入当前测试链：
 
-- 这是当前最严重的真实性问题
-- 它同时污染了 sessions、configs、usage 和 runtime
-- 不先修复，后面两项会继续被假数据干扰
+- `web/src/lib/api.test.ts`
+- `web/src/app.test.tsx`
+- `web/src/components/session-detail.test.tsx`
+- `web/src/components/usage-panel.test.tsx`
+- `tests/e2e/open-session-manager.spec.ts`
 
 ## 5. TDD 要求
 
@@ -125,7 +132,7 @@
 
 ## 6. 非目标
 
-本轮不顺手混改：
+这轮之外仍不顺手混改：
 
 - hash 路由整体重构
 - usage/cost 模型重构

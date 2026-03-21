@@ -414,6 +414,63 @@ fn doctor_command_reports_malformed_local_sessions() {
     );
 }
 
+#[test]
+fn doctor_command_reports_unknown_session_candidates() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let factory_root = home_dir.join(".factory").join("projects").join("project-a");
+
+    fs::create_dir_all(&factory_root).expect("create factory root");
+    fs::write(
+        factory_root.join("mystery.jsonl"),
+        concat!(
+            "{\"type\":\"heartbeat\",\"timestamp\":\"2026-03-15T10:00:00Z\"}\n",
+            "{\"type\":\"state_dump\",\"payload\":{\"phase\":\"unknown\"}}\n"
+        ),
+    )
+    .expect("write unknown factory transcript");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
+        .env("HOME", &home_dir)
+        .env("USERPROFILE", &home_dir)
+        .args(["doctor"])
+        .output()
+        .expect("doctor command runs");
+
+    assert!(
+        output.status.success(),
+        "doctor command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor command prints json");
+    let findings = report
+        .get("findings")
+        .and_then(Value::as_array)
+        .expect("doctor findings array exists");
+    let finding = findings
+        .iter()
+        .find(|entry| {
+            entry.get("code").and_then(Value::as_str) == Some("unknown_session_candidate")
+        })
+        .expect("doctor should report unknown session candidate");
+
+    assert_eq!(
+        finding
+            .get("assistant")
+            .and_then(Value::as_str)
+            .expect("assistant exists"),
+        "factory-droid"
+    );
+    assert!(
+        finding
+            .get("path")
+            .and_then(Value::as_str)
+            .is_some_and(|path| path.ends_with("mystery.jsonl")),
+        "doctor finding should preserve the unknown file path"
+    );
+}
+
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(

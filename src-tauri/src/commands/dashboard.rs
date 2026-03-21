@@ -448,6 +448,11 @@ fn build_indexed_sessions_with_findings(
 
         let adapter = session_adapter(&root.assistant)?;
         let discovered = adapter.discover_session_files(&root.path)?;
+        let discovered_paths = discovered.iter().cloned().collect::<HashSet<_>>();
+        doctor_findings.extend(build_unknown_session_candidate_findings(
+            root,
+            &discovered_paths,
+        )?);
 
         for session_file in discovered {
             match build_indexed_session_from_file(adapter.as_ref(), root, &session_file) {
@@ -523,6 +528,48 @@ fn build_recoverable_session_file_finding(
             "Skipped malformed session file for {} because it could not be parsed safely ({error}).",
             root.assistant
         ),
+    }
+}
+
+fn build_unknown_session_candidate_findings(
+    root: &KnownPath,
+    discovered_paths: &HashSet<PathBuf>,
+) -> SnapshotResult<Vec<DoctorFindingRecord>> {
+    Ok(collect_unknown_session_candidate_files(root)?
+        .into_iter()
+        .filter(|path| !discovered_paths.contains(path))
+        .map(|path| DoctorFindingRecord {
+            code: "unknown_session_candidate".to_string(),
+            severity: "warn".to_string(),
+            assistant: root.assistant.clone(),
+            path: path.display().to_string(),
+            detail: format!(
+                "Found a session-like file under the known {} root, but no supported parser recognized its format yet.",
+                root.assistant
+            ),
+        })
+        .collect())
+}
+
+fn collect_unknown_session_candidate_files(root: &KnownPath) -> SnapshotResult<Vec<PathBuf>> {
+    match root.assistant.as_str() {
+        "factory-droid" => collect_files(&root.path, &|path| {
+            path.extension().and_then(|value| value.to_str()) == Some("jsonl")
+        })
+        .map_err(Into::into),
+        "openclaw" => collect_files(&root.path, &|path| {
+            path.file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|name| name.ends_with(".jsonl.lock"))
+                && path
+                    .components()
+                    .any(|component| component.as_os_str() == "agents")
+                && path
+                    .components()
+                    .any(|component| component.as_os_str() == "sessions")
+        })
+        .map_err(Into::into),
+        _ => Ok(Vec::new()),
     }
 }
 

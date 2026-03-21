@@ -190,7 +190,7 @@
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
 | `QLT-01` | P0 | done | metadata repair / self-healing | `Claude Code` 缺失 `sessionId` 的历史 JSONL 可按 UUID 文件名自愈，并有回归测试与全量验证 |
-| `QLT-02` | P0 | todo | unknown session diagnostics | 未识别目录和格式有明确诊断输出 |
+| `QLT-02` | P0 | done | unknown session diagnostics | 已知会话根目录下被静默过滤的未知 session-like 文件会进入 `doctor` 诊断输出，而不是直接消失 |
 | `QLT-03` | P0 | todo | fixture drift ledger | fixture 版本、来源和失败记录可追踪 |
 | `QLT-04` | P1 | todo | screenshot automation | UI 回归截图脚本和对比测试通过 |
 | `QLT-05` | P1 | todo | config hot reload | 配置变更自动刷新测试通过 |
@@ -208,7 +208,7 @@
 | `UX-04` | P0 | todo | richer diff / review flows | 审查链路支持 diff、风险提示和确认动作 |
 | `UX-05` | P1 | todo | uploads and previews | 图片、文档和附件预览测试通过 |
 | `UX-06` | P1 | todo | richer filters | 高级筛选器测试通过 |
-| `UX-07` | P0 | partial | responsive detail panes | 会话详情在高 DPI、窄窗和宽窗下不拉伸、不失真 |
+| `UX-07` | P0 | done | responsive detail panes | 会话详情已改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI 与窄窗场景 |
 
 ## 5. P0 执行顺序
 

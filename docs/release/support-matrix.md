@@ -27,8 +27,9 @@
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
 | 软删除 / 恢复 | 已实现 | Rust actions 已有测试覆盖，恢复边界已加固 |
 | 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
-| Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件 |
+| Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件，以及已知根目录下被静默过滤的未知 session-like 文件 |
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
+| Responsive detail panes | 已实现 | 会话详情改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI、窄窗和嵌入式选中场景 |
 | Web / Tauri UI | 已实现 | 桌面端与浏览器端共用同一套 React UI |
 | 中英文切换 | 已实现 | 默认按系统或浏览器语言自动切换 |
 | 浅色 / 深色 / 跟随系统主题 | 已实现 | 支持手动覆盖并持久化主题选择 |
