@@ -77,7 +77,7 @@
 | `SRCH-07` | P1 | todo | `list/search/get/view/expand` 统一 CLI | CLI 集成测试覆盖五类命令 |
 | `SRCH-08` | P1 | todo | 统一 search API | HTTP 或 Tauri command 测试验证分页、过滤和排序 |
 | `SRCH-09` | P0 | todo | 大规模索引缓存与增量更新 | 重复启动基准测试能明显快于全量重建 |
-| `SRCH-10` | P0 | todo | schema drift 监控 | fixture drift ledger + 失败快照对比输出 |
+| `SRCH-10` | P0 | done | schema drift 监控 | fixture ledger 与 snapshot golden diff 已接入统一 verify，失败时会返回具体 JSON 路径差异 |
 
 ### 4.3 会话控制与恢复
 

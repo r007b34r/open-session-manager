@@ -39,7 +39,9 @@ try {
   Invoke-Step "Upstream intake dry run" { node scripts/intake-upstreams.mjs --dry-run }
   Invoke-Step "Git workflow tooling tests" { node --test tests/git-workflow/git-workflow.test.mjs }
   Invoke-Step "Fixture ledger tests" { node --test tests/fixture-ledger/fixture-ledger.test.mjs }
+  Invoke-Step "Fixture snapshot tests" { node --test tests/fixture-ledger/fixture-snapshot.test.mjs }
   Invoke-Step "Fixture ledger check" { node scripts/fixture-ledger.mjs --check }
+  Invoke-Step "Fixture snapshot check" { node scripts/check-fixture-snapshot.mjs }
   Invoke-Step "Git review snapshot dry run" {
     $reviewPath = Join-Path ([System.IO.Path]::GetTempPath()) "osm-git-review-smoke.md"
     node scripts/git-review-snapshot.mjs --item TOOL-01 --phase review --note "verify smoke test" --command "node --test tests/git-workflow/git-workflow.test.mjs" --output $reviewPath

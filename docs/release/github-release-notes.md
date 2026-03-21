@@ -102,6 +102,7 @@
 - 已知会话根目录下被适配器静默过滤的未知 session-like 文件，现在也会进入 `doctor` 诊断输出
 - Sessions 详情面板改成非 sticky、单列卡片布局，选中交互和高 DPI 窗口下不再出现拉伸失真
 - fixtures 现在有版本/来源/hash ledger，`verify.ps1` 会强制跑 drift 检查，fixture 漂移不再靠人工记忆
+- fixtures snapshot 现在有规范化 golden 基线；一旦输出漂移，校验会直接报出具体 JSON 路径差异
 - `Session Handoff` Markdown 导出
 - Markdown 导出、软删除、恢复、审计历史
 - 中英文切换与跟随系统语言

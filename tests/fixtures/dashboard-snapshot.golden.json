@@ -1,0 +1,613 @@
+{
+  "metrics": [
+    {
+      "label": "indexed_sessions",
+      "value": "8",
+      "note": "across_windows_linux_and_wsl_surfaces"
+    },
+    {
+      "label": "high_value_candidates",
+      "value": "0",
+      "note": "worth_exporting_before_cleanup"
+    },
+    {
+      "label": "risky_configs",
+      "value": "7",
+      "note": "relay_wide_permissions_or_shell_hooks"
+    },
+    {
+      "label": "cold_storage_saved",
+      "value": "0 B",
+      "note": "potential_reclaim_from_soft_delete_queue"
+    }
+  ],
+  "sessions": [
+    {
+      "sessionId": "codex-ses-1",
+      "title": "整理本地 agent 会话",
+      "assistant": "codex",
+      "progressState": "new",
+      "progressPercent": 10,
+      "lastActivityAt": "2026-03-15T04:00:07.000Z",
+      "environment": "windows",
+      "valueScore": 40,
+      "summary": "先扫描 Codex 和 Claude 的 transcript 目录。",
+      "projectPath": "C:\\Projects\\demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\codex\\2026\\03\\15\\rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+      "tags": [
+        "agent",
+        "codex",
+        "demo",
+        "windows",
+        "整理本地"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: 整理本地 agent 会话",
+        "Latest assistant note: 先扫描 Codex 和 Claude 的 transcript 目录。",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\codex\\2026\\03\\15\\rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+        "Messages indexed: 2"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "整理本地 agent 会话"
+        },
+        {
+          "role": "Assistant",
+          "content": "先扫描 Codex 和 Claude 的 transcript 目录。"
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "inputTokens": 640,
+        "outputTokens": 128,
+        "cacheReadTokens": 256,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 1024
+      }
+    },
+    {
+      "sessionId": "claude-ses-1",
+      "title": "扫描 Claude transcripts",
+      "assistant": "claude-code",
+      "progressState": "new",
+      "progressPercent": 10,
+      "lastActivityAt": "2026-03-15T05:00:08.000Z",
+      "environment": "windows",
+      "valueScore": 40,
+      "summary": "已定位项目目录并准备索引。",
+      "projectPath": "C:\\Projects\\claude-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\claude\\projects\\C--Projects-Claude-Demo\\claude-ses-1.jsonl",
+      "tags": [
+        "claude",
+        "claude-code",
+        "claude-demo",
+        "windows",
+        "扫描"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: 扫描 Claude transcripts",
+        "Latest assistant note: 已定位项目目录并准备索引。",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\claude\\projects\\C--Projects-Claude-Demo\\claude-ses-1.jsonl",
+        "Messages indexed: 2"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "扫描 Claude transcripts"
+        },
+        {
+          "role": "Assistant",
+          "content": "已定位项目目录并准备索引。"
+        }
+      ],
+      "todoItems": [
+        {
+          "content": "导出 transcript 摘要",
+          "completed": true
+        },
+        {
+          "content": "确认索引范围",
+          "completed": false
+        }
+      ],
+      "usage": {
+        "model": "claude-sonnet-4-20250514",
+        "inputTokens": 1234,
+        "outputTokens": 567,
+        "cacheReadTokens": 890,
+        "cacheWriteTokens": 144,
+        "reasoningTokens": 0,
+        "totalTokens": 2835
+      }
+    },
+    {
+      "sessionId": "ses_demo",
+      "title": "Inspect local agent sessions",
+      "assistant": "opencode",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "1742011200000",
+      "environment": "linux",
+      "valueScore": 50,
+      "summary": "Found the session storage layout.",
+      "projectPath": "/home/max/project",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\opencode\\storage\\session\\info\\ses_demo.json",
+      "tags": [
+        "inspect",
+        "linux",
+        "local",
+        "opencode",
+        "project"
+      ],
+      "riskFlags": [
+        "stale_session"
+      ],
+      "keyArtifacts": [
+        "First goal: Inspect local agent sessions",
+        "Latest assistant note: Found the session storage layout.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\opencode\\storage\\session\\info\\ses_demo.json",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Review opencode sessions"
+        },
+        {
+          "role": "Assistant",
+          "content": "Found the session storage layout. Tool call: list_files"
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "model": "gpt-5",
+        "inputTokens": 120,
+        "outputTokens": 80,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 10,
+        "totalTokens": 210,
+        "costUsd": 0.02
+      }
+    },
+    {
+      "sessionId": "gemini-ses-1",
+      "title": "Audit Gemini session retention.",
+      "assistant": "gemini-cli",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "2026-03-15T07:05:00.000Z",
+      "environment": "windows",
+      "valueScore": 50,
+      "summary": "Loaded README.md",
+      "projectPath": "C:\\Projects\\gemini-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\gemini\\tmp\\project_hash_a\\chats\\session-gemini-demo.json",
+      "tags": [
+        "audit",
+        "gemini",
+        "gemini-cli",
+        "gemini-demo",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Audit Gemini session retention.",
+        "Latest assistant note: Loaded README.md",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\gemini\\tmp\\project_hash_a\\chats\\session-gemini-demo.json",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Audit Gemini session retention."
+        },
+        {
+          "role": "Assistant",
+          "content": "I found two stale sessions and one session worth exporting."
+        },
+        {
+          "role": "Tool",
+          "content": "Loaded README.md"
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "model": "gemini-2.5-pro",
+        "inputTokens": 345,
+        "outputTokens": 123,
+        "cacheReadTokens": 77,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 45,
+        "totalTokens": 590
+      }
+    },
+    {
+      "sessionId": "copilot-ses-1",
+      "title": "Summarize Copilot cleanup tasks.",
+      "assistant": "github-copilot-cli",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "2026-03-15T08:00:09.000Z",
+      "environment": "windows",
+      "valueScore": 50,
+      "summary": "I found one stale branch and one pending approval.",
+      "projectPath": "C:\\Projects\\copilot-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\copilot\\session-state\\copilot-ses-1.jsonl",
+      "tags": [
+        "copilot",
+        "copilot-demo",
+        "github-copilot-cli",
+        "summarize",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Summarize Copilot cleanup tasks.",
+        "Latest assistant note: I found one stale branch and one pending approval.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\copilot\\session-state\\copilot-ses-1.jsonl",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Summarize Copilot cleanup tasks."
+        },
+        {
+          "role": "Assistant",
+          "content": "I found one stale branch and one pending approval."
+        },
+        {
+          "role": "Tool",
+          "content": "Tool call: run_terminal_command"
+        },
+        {
+          "role": "Tool",
+          "content": "On branch main"
+        }
+      ],
+      "todoItems": []
+    },
+    {
+      "sessionId": "droid-stream-1",
+      "title": "Summarize stream-json cleanup candidates.",
+      "assistant": "factory-droid",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "2026-03-15T10:00:07.000Z",
+      "environment": "windows",
+      "valueScore": 50,
+      "summary": "No dirty files were detected.",
+      "projectPath": "C:\\Projects\\factory-stream",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\factory\\projects\\project-a\\stream-session-1.jsonl",
+      "tags": [
+        "factory-droid",
+        "factory-stream",
+        "stream",
+        "summarize",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Summarize stream-json cleanup candidates.",
+        "Latest assistant note: No dirty files were detected.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\factory\\projects\\project-a\\stream-session-1.jsonl",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Summarize stream-json cleanup candidates."
+        },
+        {
+          "role": "Tool",
+          "content": "Tool call: bash"
+        },
+        {
+          "role": "Tool",
+          "content": "On branch main"
+        },
+        {
+          "role": "Assistant",
+          "content": "No dirty files were detected."
+        }
+      ],
+      "todoItems": []
+    },
+    {
+      "sessionId": "droid-session-1",
+      "title": "Review factory sessions and find stale runs.",
+      "assistant": "factory-droid",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "2026-03-15T09:00:10.000Z",
+      "environment": "windows",
+      "valueScore": 50,
+      "summary": "I found one stale session and one active branch.",
+      "projectPath": "C:\\Projects\\factory-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\factory\\sessions\\project-a\\droid-session-1.jsonl",
+      "tags": [
+        "factory",
+        "factory-demo",
+        "factory-droid",
+        "review",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Review factory sessions and find stale runs.",
+        "Latest assistant note: I found one stale session and one active branch.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\factory\\sessions\\project-a\\droid-session-1.jsonl",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Review factory sessions and find stale runs."
+        },
+        {
+          "role": "Assistant",
+          "content": "I found one stale session and one active branch."
+        },
+        {
+          "role": "Tool",
+          "content": "Tool call: list_files"
+        },
+        {
+          "role": "Tool",
+          "content": "README.md\\nsrc-tauri/\\nweb/"
+        }
+      ],
+      "todoItems": []
+    },
+    {
+      "sessionId": "openclaw-ses-1",
+      "title": "Review OpenClaw transcripts and flag cleanup candidates.",
+      "assistant": "openclaw",
+      "progressState": "in_progress",
+      "progressPercent": 65,
+      "lastActivityAt": "2026-03-15T11:00:09.000Z",
+      "environment": "windows",
+      "valueScore": 50,
+      "summary": "I found one archived session worth exporting first.",
+      "projectPath": "C:\\Projects\\openclaw-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\openclaw\\agents\\agent-main\\sessions\\openclaw-ses-1.jsonl",
+      "tags": [
+        "openclaw",
+        "openclaw-demo",
+        "review",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Review OpenClaw transcripts and flag cleanup candidates.",
+        "Latest assistant note: I found one archived session worth exporting first.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\openclaw\\agents\\agent-main\\sessions\\openclaw-ses-1.jsonl",
+        "Messages indexed: 2",
+        "Tool calls indexed: 1"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Review OpenClaw transcripts and flag cleanup candidates."
+        },
+        {
+          "role": "Assistant",
+          "content": "I found one archived session worth exporting first."
+        },
+        {
+          "role": "Tool",
+          "content": "Tool call: read_file"
+        },
+        {
+          "role": "Tool",
+          "content": "README.md loaded"
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "model": "openrouter/anthropic/claude-sonnet-4",
+        "inputTokens": 1660,
+        "outputTokens": 55,
+        "cacheReadTokens": 108928,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 110643,
+        "costUsd": 0.02
+      }
+    }
+  ],
+  "configs": [
+    {
+      "artifactId": "65f49c88c59530092871c9e2c607692e50b2ab8da1b4310a92002aef2cb94f8c",
+      "assistant": "codex",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\codex\\config.toml",
+      "provider": "cch",
+      "model": "gpt-5-codex",
+      "baseUrl": "https://relay.cch.example/v1",
+      "maskedSecret": "***6789",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_provider",
+        "third_party_base_url",
+        "dangerous_approval_policy",
+        "dangerous_sandbox"
+      ]
+    },
+    {
+      "artifactId": "36e05b0b0a842b7f70b070cf2e29f5c9234a87742fe151b7fc0ad05da87ef7d6",
+      "assistant": "claude-code",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\claude\\settings.json",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514",
+      "baseUrl": "https://relay.anthropic-proxy.example/v1",
+      "maskedSecret": "***4321",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_base_url",
+        "dangerous_permissions",
+        "shell_hook"
+      ]
+    },
+    {
+      "artifactId": "93616c2ef15b7a7d5d5326bda0ae7d917baff4cac22087ff809b9e61e8f94a0e",
+      "assistant": "opencode",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\opencode\\opencode.json",
+      "provider": "openrouter",
+      "model": "openrouter/anthropic/claude-sonnet-4",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "maskedSecret": "***3456",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_provider",
+        "dangerous_permissions"
+      ]
+    },
+    {
+      "artifactId": "20711656a1e007f1a7871275fd50a400a8db158c35bef8352572b4d339cdb17b",
+      "assistant": "gemini-cli",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\gemini\\settings.json",
+      "provider": "google",
+      "model": "gemini-2.5-pro-preview-06-05",
+      "baseUrl": "https://gateway.gemini-proxy.example/v1beta",
+      "maskedSecret": "***4321",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_base_url"
+      ]
+    },
+    {
+      "artifactId": "684853c955cc64fcbc29595fbf5fecb66ccf15fb8ce995757d543bb6672869c0",
+      "assistant": "github-copilot-cli",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\copilot\\config.json",
+      "provider": "github",
+      "model": "gpt-5",
+      "baseUrl": "https://copilot.enterprise-relay.example",
+      "maskedSecret": "***7890",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_base_url",
+        "dangerous_permissions"
+      ]
+    },
+    {
+      "artifactId": "dd72ceaf64110e5c53b743970a6693944ccc9336daa18345d9a7fbebc13d1ba5",
+      "assistant": "factory-droid",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\factory\\settings.local.json",
+      "provider": "openrouter",
+      "model": "openrouter/anthropic/claude-sonnet-4",
+      "baseUrl": "https://factory-relay.example/v1",
+      "maskedSecret": "***7890",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_provider",
+        "third_party_base_url",
+        "dangerous_permissions"
+      ]
+    },
+    {
+      "artifactId": "03d802b1cf4f3b8b97825047b7e283326f9b660b3e8b43ca3d0edca3cf5be3b9",
+      "assistant": "openclaw",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\openclaw\\openclaw.json",
+      "provider": "openrouter",
+      "model": "openrouter/anthropic/claude-sonnet-4",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "maskedSecret": "***7890",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_provider",
+        "dangerous_permissions"
+      ]
+    }
+  ],
+  "doctorFindings": [],
+  "auditEvents": [],
+  "usageOverview": {
+    "totals": {
+      "sessionsWithUsage": 5,
+      "inputTokens": 3999,
+      "outputTokens": 953,
+      "cacheReadTokens": 110151,
+      "cacheWriteTokens": 144,
+      "reasoningTokens": 55,
+      "totalTokens": 115302
+    },
+    "assistants": [
+      {
+        "assistant": "openclaw",
+        "sessionCount": 1,
+        "inputTokens": 1660,
+        "outputTokens": 55,
+        "cacheReadTokens": 108928,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 110643,
+        "costUsd": 0.02
+      },
+      {
+        "assistant": "claude-code",
+        "sessionCount": 1,
+        "inputTokens": 1234,
+        "outputTokens": 567,
+        "cacheReadTokens": 890,
+        "cacheWriteTokens": 144,
+        "reasoningTokens": 0,
+        "totalTokens": 2835
+      },
+      {
+        "assistant": "codex",
+        "sessionCount": 1,
+        "inputTokens": 640,
+        "outputTokens": 128,
+        "cacheReadTokens": 256,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 1024
+      },
+      {
+        "assistant": "gemini-cli",
+        "sessionCount": 1,
+        "inputTokens": 345,
+        "outputTokens": 123,
+        "cacheReadTokens": 77,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 45,
+        "totalTokens": 590
+      },
+      {
+        "assistant": "opencode",
+        "sessionCount": 1,
+        "inputTokens": 120,
+        "outputTokens": 80,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 10,
+        "totalTokens": 210,
+        "costUsd": 0.02
+      }
+    ]
+  },
+  "runtime": {
+    "auditDbPath": "<runtime>",
+    "exportRoot": "<runtime>",
+    "defaultExportRoot": "<runtime>",
+    "exportRootSource": "default",
+    "quarantineRoot": "<runtime>",
+    "preferencesPath": "<runtime>"
+  }
+}
