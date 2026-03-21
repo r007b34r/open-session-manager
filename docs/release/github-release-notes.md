@@ -25,7 +25,7 @@
   - `OpenCode`
   - `Gemini CLI`
   - `OpenClaw`
-- Sessions 搜索现在会做本地加权排序，展示命中片段和命中来源标签
+- Sessions 搜索现在会做本地 BM25 风格 lexical 排序，展示命中片段和命中来源标签
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地

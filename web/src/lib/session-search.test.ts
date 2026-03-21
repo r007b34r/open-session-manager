@@ -78,6 +78,33 @@ describe("searchSessions", () => {
     expect(results[0]?.session.sessionId).toBe("s1");
     expect(results[0]?.matchReasons).toEqual(["title", "todo"]);
   });
+
+  it("优先保留标题中的精确短语命中，不让低信号字段堆分数反超", () => {
+    const sessions = [
+      buildSession("s1", {
+        title: "Relay cleanup",
+        summary: "Tight title match for the cleanup queue."
+      }),
+      buildSession("s2", {
+        title: "General notes",
+        summary: "relay cleanup relay cleanup relay cleanup",
+        keyArtifacts: ["relay cleanup appendix"],
+        transcriptHighlights: [
+          {
+            role: "Assistant",
+            content: "relay cleanup was mentioned again in a long transcript block."
+          }
+        ],
+        todoItems: [{ content: "relay cleanup follow-up", completed: false }]
+      })
+    ];
+
+    const results = searchSessions(sessions, "\"relay cleanup\"");
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.session.sessionId).toBe("s1");
+    expect(results[0]?.matchReasons).toContain("title");
+  });
 });
 
 function buildSession(

@@ -69,7 +69,7 @@
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
 | `SRCH-01` | P0 | partial | 大历史索引层 | 10k+ session fixture 下可复用索引，CLI snapshot 不做全量全文扫盘 |
-| `SRCH-02` | P0 | todo | BM25 排序 | 搜索结果测试验证 BM25 排名稳定 |
+| `SRCH-02` | P0 | done | BM25 排序 | 搜索结果测试已验证 BM25 风格 lexical 排名稳定，标题中的精确短语命中不会再被低信号字段堆分数反超 |
 | `SRCH-03` | P1 | todo | semantic search | 引入向量索引或嵌入后，语义检索测试通过 |
 | `SRCH-04` | P1 | todo | hybrid ranking | lexical + semantic 混合排序测试通过 |
 | `SRCH-05` | P0 | partial | snippet preview 深化 | 命中片段支持 transcript 内定位和高亮测试 |

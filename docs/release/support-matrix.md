@@ -41,7 +41,7 @@
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
 | Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总 |
-| 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地加权 lexical 搜索、命中片段和来源标签 |
+| 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、命中片段和来源标签 |
 | upstream intake pipeline | 已实现 | 支持 catalog、研究索引、发布致谢和镜像规划产物 |
 
 ## 平台支持

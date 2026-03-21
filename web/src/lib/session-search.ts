@@ -30,6 +30,19 @@ type SearchField = {
   text: string;
   originalText: string;
   weight: number;
+  tokens: string[];
+};
+
+type IndexedSession = {
+  session: SessionDetailRecord;
+  fields: SearchField[];
+  originalIndex: number;
+};
+
+type QueryStats = {
+  documentCount: number;
+  averageFieldLengths: Record<SessionSearchReason, number>;
+  documentFrequency: Map<string, number>;
 };
 
 const FIELD_WEIGHTS: Readonly<Record<SessionSearchReason, number>> = {
@@ -60,6 +73,10 @@ const FIELD_ORDER: readonly SessionSearchReason[] = [
   "source"
 ];
 
+const BM25_K1 = 1.2;
+const BM25_B = 0.75;
+const EXACT_TITLE_PHRASE_BONUS = FIELD_WEIGHTS.title * 3;
+
 export function searchSessions(
   sessions: SessionDetailRecord[],
   query: string
@@ -73,8 +90,17 @@ export function searchSessions(
     }));
   }
 
-  return sessions
-    .map((session, index) => scoreSession(session, terms, index))
+  const indexedSessions = sessions.map((session, index) => ({
+    session,
+    fields: buildFields(session),
+    originalIndex: index
+  }));
+  const stats = buildQueryStats(indexedSessions, terms);
+
+  return indexedSessions
+    .map(({ session, fields, originalIndex }) =>
+      scoreSession(session, fields, terms, stats, originalIndex)
+    )
     .filter((result): result is SessionSearchResult & { originalIndex: number } => {
       return result !== null;
     })
@@ -91,10 +117,11 @@ export function searchSessions(
 
 function scoreSession(
   session: SessionDetailRecord,
+  fields: SearchField[],
   terms: SearchTerm[],
+  stats: QueryStats,
   originalIndex: number
 ): (SessionSearchResult & { originalIndex: number }) | null {
-  const fields = buildFields(session);
   const matchedReasons = new Set<SessionSearchReason>();
   let score = 0;
 
@@ -108,7 +135,7 @@ function scoreSession(
 
       matched = true;
       matchedReasons.add(field.reason);
-      score += scoreMatch(field, term);
+      score += scoreMatch(field, term, stats);
     }
 
     if (!matched) {
@@ -162,11 +189,13 @@ function buildFields(session: SessionDetailRecord): SearchField[] {
 }
 
 function buildField(reason: SessionSearchReason, originalText: string): SearchField {
+  const text = normalizeSearchText(originalText);
   return {
     reason,
     originalText,
-    text: normalizeSearchText(originalText),
-    weight: FIELD_WEIGHTS[reason]
+    text,
+    weight: FIELD_WEIGHTS[reason],
+    tokens: tokenize(text)
   };
 }
 
@@ -206,11 +235,29 @@ function matchesTerm(text: string, term: SearchTerm) {
   return tokenize(text).some((token) => token.startsWith(term.value));
 }
 
-function scoreMatch(field: SearchField, term: SearchTerm) {
-  const occurrences = countOccurrences(field.text, term.value);
-  const phraseBonus = term.phrase ? 18 : 0;
-  const occurrenceBonus = Math.min(occurrences, 3) * 4;
-  return field.weight + phraseBonus + occurrenceBonus;
+function scoreMatch(field: SearchField, term: SearchTerm, stats: QueryStats) {
+  const termFrequency = countTermFrequency(field, term);
+  if (termFrequency === 0) {
+    return 0;
+  }
+
+  const documentFrequency = Math.max(stats.documentFrequency.get(buildTermKey(term)) ?? 0, 1);
+  const averageFieldLength = stats.averageFieldLengths[field.reason] || 1;
+  const lengthRatio = field.tokens.length / averageFieldLength;
+  const inverseDocumentFrequency = Math.log(
+    1 + (stats.documentCount - documentFrequency + 0.5) / (documentFrequency + 0.5)
+  );
+  const normalizedFrequency =
+    (termFrequency * (BM25_K1 + 1)) /
+    (termFrequency + BM25_K1 * (1 - BM25_B + BM25_B * lengthRatio));
+  const fieldScore = (field.weight / 10) * inverseDocumentFrequency * normalizedFrequency * 100;
+  const phraseBonus = term.phrase ? field.weight * 0.2 : 0;
+  const exactTitleBonus =
+    term.phrase && field.reason === "title" && field.text === term.value
+      ? EXACT_TITLE_PHRASE_BONUS
+      : 0;
+
+  return fieldScore + phraseBonus + exactTitleBonus;
 }
 
 function countOccurrences(text: string, term: string) {
@@ -232,6 +279,14 @@ function countOccurrences(text: string, term: string) {
   }
 
   return count;
+}
+
+function countTermFrequency(field: SearchField, term: SearchTerm) {
+  if (term.phrase) {
+    return countOccurrences(field.text, term.value);
+  }
+
+  return field.tokens.filter((token) => token.startsWith(term.value)).length;
 }
 
 function pickSnippetField(
@@ -320,6 +375,48 @@ function buildSnippetProfile(field: SearchField, terms: SearchTerm[]) {
 
 function tokenize(text: string) {
   return text.split(/\s+/).filter(Boolean);
+}
+
+function buildQueryStats(
+  sessions: IndexedSession[],
+  terms: SearchTerm[]
+): QueryStats {
+  const totals = new Map<SessionSearchReason, { totalLength: number; count: number }>();
+  const documentFrequency = new Map<string, number>();
+
+  for (const indexed of sessions) {
+    for (const field of indexed.fields) {
+      const current = totals.get(field.reason) ?? { totalLength: 0, count: 0 };
+      current.totalLength += Math.max(field.tokens.length, 1);
+      current.count += 1;
+      totals.set(field.reason, current);
+    }
+
+    for (const term of terms) {
+      if (!indexed.fields.some((field) => matchesTerm(field.text, term))) {
+        continue;
+      }
+
+      const termKey = buildTermKey(term);
+      documentFrequency.set(termKey, (documentFrequency.get(termKey) ?? 0) + 1);
+    }
+  }
+
+  const averageFieldLengths = FIELD_ORDER.reduce((accumulator, reason) => {
+    const total = totals.get(reason);
+    accumulator[reason] = total ? total.totalLength / total.count : 1;
+    return accumulator;
+  }, {} as Record<SessionSearchReason, number>);
+
+  return {
+    documentCount: Math.max(sessions.length, 1),
+    averageFieldLengths,
+    documentFrequency
+  };
+}
+
+function buildTermKey(term: SearchTerm) {
+  return `${term.phrase ? "phrase" : "term"}:${term.value}`;
 }
 
 function normalizeSearchText(value: string) {
