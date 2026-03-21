@@ -37,6 +37,14 @@ Push-Location $repoRoot
 try {
   Invoke-Step "Upstream intake tests" { node --test tests/upstream-intake/upstream-intake.test.mjs }
   Invoke-Step "Upstream intake dry run" { node scripts/intake-upstreams.mjs --dry-run }
+  Invoke-Step "Git workflow tooling tests" { node --test tests/git-workflow/git-workflow.test.mjs }
+  Invoke-Step "Git review snapshot dry run" {
+    $reviewPath = Join-Path ([System.IO.Path]::GetTempPath()) "osm-git-review-smoke.md"
+    node scripts/git-review-snapshot.mjs --item TOOL-01 --phase review --note "verify smoke test" --command "node --test tests/git-workflow/git-workflow.test.mjs" --output $reviewPath
+  }
+  Invoke-Step "Git checkpoint dry run" {
+    node scripts/git-tdd-checkpoint.mjs --item TOOL-01 --phase verify --note "verify smoke test" --command "node --test tests/git-workflow/git-workflow.test.mjs" --dry-run
+  }
   Invoke-Step "Rust tests" { & $cargo test }
   Invoke-Step "Web unit tests" { npm --prefix web run test }
   Invoke-Step "Web build" { npm --prefix web run build }
