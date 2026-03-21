@@ -17,6 +17,7 @@ export function SessionDetail({
   onSoftDelete
 }: SessionDetailProps) {
   const { copy, translateProgressState, translateRiskFlag } = useI18n();
+  const unknownValue = copy.data.unknownValue;
 
   if (!session) {
     return (
@@ -127,7 +128,7 @@ export function SessionDetail({
           {session.usage ? (
             <ul className="detail-list">
               <li>
-                {copy.sessionDetail.fields.model}: {session.usage.model ?? "unknown"}
+                {copy.sessionDetail.fields.model}: {session.usage.model ?? unknownValue}
               </li>
               <li>
                 {copy.sessionDetail.fields.inputTokens}: {formatCount(session.usage.inputTokens)}
@@ -151,7 +152,8 @@ export function SessionDetail({
                 {copy.sessionDetail.fields.totalTokens}: {formatCount(session.usage.totalTokens)}
               </li>
               <li>
-                {copy.sessionDetail.fields.costUsd}: {formatUsd(session.usage.costUsd)}
+                {copy.sessionDetail.fields.costUsd}:{" "}
+                {formatUsd(session.usage.costUsd, unknownValue)}
               </li>
             </ul>
           ) : (
@@ -251,7 +253,11 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function formatUsd(value: number) {
+function formatUsd(value: number | undefined, unknownValue: string) {
+  if (typeof value !== "number") {
+    return unknownValue;
+  }
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

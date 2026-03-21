@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+  });
+});
+
 test("indexes fixtures, exports, soft-deletes, and shows risky masked config entries", async ({
   page
 }) => {
@@ -120,4 +126,27 @@ test("supports system light-dark switching from the shell controls", async ({ pa
 
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("keeps the overview page scroll position stable when selecting an embedded session", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1320, height: 920 });
+  await page.goto("/");
+
+  const targetButton = page.getByRole("button", {
+    name: /audit anthropic relay settings/i
+  });
+  await targetButton.scrollIntoViewIfNeeded();
+  const beforeScrollY = await page.evaluate(() => window.scrollY);
+
+  await targetButton.click();
+
+  await expect(
+    page.getByRole("heading", { name: /audit anthropic relay settings/i }).last()
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+
+  const afterScrollY = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(afterScrollY - beforeScrollY)).toBeLessThan(32);
 });

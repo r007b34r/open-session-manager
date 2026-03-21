@@ -7,6 +7,7 @@ type UsagePanelProps = {
 
 export function UsagePanel({ usageOverview }: UsagePanelProps) {
   const { copy } = useI18n();
+  const unknownValue = copy.data.unknownValue;
 
   return (
     <section className="panel usage-panel">
@@ -32,7 +33,7 @@ export function UsagePanel({ usageOverview }: UsagePanelProps) {
             </article>
             <article className="usage-total-stat">
               <span>{copy.overview.usageFields.totalCost}</span>
-              <strong>{formatUsd(usageOverview.totals.costUsd)}</strong>
+              <strong>{formatUsd(usageOverview.totals.costUsd, unknownValue)}</strong>
             </article>
             <article className="usage-total-stat">
               <span>{copy.overview.usageFields.cacheRead}</span>
@@ -58,7 +59,7 @@ export function UsagePanel({ usageOverview }: UsagePanelProps) {
                 </div>
                 <div className="usage-inline">
                   <span>{copy.overview.usageFields.totalCost}</span>
-                  <strong>{formatUsd(assistant.costUsd)}</strong>
+                  <strong>{formatUsd(assistant.costUsd, unknownValue)}</strong>
                 </div>
               </article>
             ))}
@@ -73,7 +74,11 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function formatUsd(value: number) {
+function formatUsd(value: number | undefined, unknownValue: string) {
+  if (typeof value !== "number") {
+    return unknownValue;
+  }
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

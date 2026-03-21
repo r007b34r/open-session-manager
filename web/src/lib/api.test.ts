@@ -146,6 +146,99 @@ describe("fetchDashboardSnapshot", () => {
     expect(invokeMock).toHaveBeenCalledWith("load_dashboard_snapshot", {});
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("保留未知成本的 usage 记录，并把不可靠汇总成本标记为未知", async () => {
+    const realSnapshot = {
+      metrics: [],
+      sessions: [
+        {
+          sessionId: "real-usage-unknown",
+          title: "Unknown cost session",
+          assistant: "Codex",
+          progressState: "completed",
+          progressPercent: 100,
+          lastActivityAt: "2026-03-15T10:00:00Z",
+          environment: "windows",
+          valueScore: 95,
+          summary: "Usage exists, but the upstream format did not expose cost.",
+          projectPath: "C:/Projects/demo",
+          sourcePath: "C:/Users/Max/.codex/sessions/demo.jsonl",
+          tags: ["real"],
+          riskFlags: [],
+          keyArtifacts: ["artifact"],
+          usage: {
+            model: "gpt-5-codex",
+            inputTokens: 120,
+            outputTokens: 80,
+            cacheReadTokens: 40,
+            cacheWriteTokens: 0,
+            reasoningTokens: 0,
+            totalTokens: 240
+          }
+        },
+        {
+          sessionId: "real-usage-zero",
+          title: "Known zero cost session",
+          assistant: "OpenCode",
+          progressState: "completed",
+          progressPercent: 100,
+          lastActivityAt: "2026-03-15T09:00:00Z",
+          environment: "linux",
+          valueScore: 85,
+          summary: "Usage exists and the provider explicitly reported zero cost.",
+          projectPath: "/home/max/demo",
+          sourcePath: "/home/max/.local/share/opencode/demo.json",
+          tags: ["real"],
+          riskFlags: [],
+          keyArtifacts: ["artifact"],
+          usage: {
+            model: "gpt-5",
+            inputTokens: 30,
+            outputTokens: 10,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            reasoningTokens: 0,
+            totalTokens: 40,
+            costUsd: 0
+          }
+        }
+      ],
+      configs: [],
+      auditEvents: [],
+      runtime: buildRuntime()
+    };
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => realSnapshot
+    }));
+
+    const snapshot = await fetchDashboardSnapshot();
+    const unknownCostSession = snapshot.sessions.find(
+      (session) => session.sessionId === "real-usage-unknown"
+    );
+    const zeroCostSession = snapshot.sessions.find(
+      (session) => session.sessionId === "real-usage-zero"
+    );
+    const codexUsage = snapshot.usageOverview.assistants.find(
+      (assistant) => assistant.assistant === "Codex"
+    );
+    const openCodeUsage = snapshot.usageOverview.assistants.find(
+      (assistant) => assistant.assistant === "OpenCode"
+    );
+
+    expect(unknownCostSession?.usage).toMatchObject({
+      model: "gpt-5-codex",
+      totalTokens: 240
+    });
+    expect(unknownCostSession?.usage?.costUsd).toBeUndefined();
+    expect(zeroCostSession?.usage?.costUsd).toBe(0);
+    expect(snapshot.usageOverview.totals.sessionsWithUsage).toBe(2);
+    expect(snapshot.usageOverview.totals.totalTokens).toBe(280);
+    expect(snapshot.usageOverview.totals.costUsd).toBeUndefined();
+    expect(codexUsage?.costUsd).toBeUndefined();
+    expect(openCodeUsage?.costUsd).toBe(0);
+  });
 });
 
 function buildRuntime() {

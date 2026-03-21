@@ -27,7 +27,7 @@ export type SessionUsageRecord = {
   cacheWriteTokens: number;
   reasoningTokens: number;
   totalTokens: number;
-  costUsd: number;
+  costUsd?: number;
 };
 
 export type SessionDetailRecord = SessionListItem & {
@@ -91,7 +91,7 @@ export type UsageTotalsRecord = {
   cacheWriteTokens: number;
   reasoningTokens: number;
   totalTokens: number;
-  costUsd: number;
+  costUsd?: number;
 };
 
 export type AssistantUsageRecord = {
@@ -103,7 +103,7 @@ export type AssistantUsageRecord = {
   cacheWriteTokens: number;
   reasoningTokens: number;
   totalTokens: number;
-  costUsd: number;
+  costUsd?: number;
 };
 
 export type UsageOverviewRecord = {
@@ -226,8 +226,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 256,
         cacheWriteTokens: 0,
         reasoningTokens: 0,
-        totalTokens: 1024,
-        costUsd: 0
+        totalTokens: 1024
       }
     },
     {
@@ -279,8 +278,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 890,
         cacheWriteTokens: 144,
         reasoningTokens: 0,
-        totalTokens: 2835,
-        costUsd: 0
+        totalTokens: 2835
       }
     },
     {
@@ -442,8 +440,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       cacheReadTokens: 1146,
       cacheWriteTokens: 144,
       reasoningTokens: 10,
-      totalTokens: 4069,
-      costUsd: 0.02
+      totalTokens: 4069
     },
     assistants: [
       {
@@ -454,8 +451,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 890,
         cacheWriteTokens: 144,
         reasoningTokens: 0,
-        totalTokens: 2835,
-        costUsd: 0
+        totalTokens: 2835
       },
       {
         assistant: "Codex",
@@ -465,8 +461,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 256,
         cacheWriteTokens: 0,
         reasoningTokens: 0,
-        totalTokens: 1024,
-        costUsd: 0
+        totalTokens: 1024
       },
       {
         assistant: "OpenCode",
@@ -758,7 +753,9 @@ function normalizeSessionDetailRecord(
     todoItems: Array.isArray(session.todoItems)
       ? session.todoItems.filter(isTranscriptTodo)
       : [],
-    usage: isSessionUsageRecord(session.usage) ? session.usage : undefined
+    usage: isSessionUsageRecord(session.usage)
+      ? normalizeSessionUsageRecord(session.usage)
+      : undefined
   };
 }
 
@@ -834,7 +831,7 @@ function isSessionUsageRecord(value: unknown): value is SessionUsageRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    typeof value.costUsd === "number"
+    hasOptionalCostValue(value.costUsd)
   );
 }
 
@@ -844,8 +841,10 @@ function normalizeUsageOverview(
 ): UsageOverviewRecord {
   if (isUsageOverviewRecord(usageOverview)) {
     return {
-      totals: usageOverview.totals,
-      assistants: [...usageOverview.assistants].sort(compareAssistantUsage)
+      totals: normalizeUsageTotalsRecord(usageOverview.totals),
+      assistants: usageOverview.assistants
+        .map(normalizeAssistantUsageRecord)
+        .sort(compareAssistantUsage)
     };
   }
 
@@ -871,7 +870,7 @@ function isUsageTotalsRecord(value: unknown): value is UsageTotalsRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    typeof value.costUsd === "number"
+    hasOptionalCostValue(value.costUsd)
   );
 }
 
@@ -886,7 +885,7 @@ function isAssistantUsageRecord(value: unknown): value is AssistantUsageRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    typeof value.costUsd === "number"
+    hasOptionalCostValue(value.costUsd)
   );
 }
 
@@ -917,7 +916,7 @@ function deriveUsageOverviewFromSessions(
     totals.cacheWriteTokens += session.usage.cacheWriteTokens;
     totals.reasoningTokens += session.usage.reasoningTokens;
     totals.totalTokens += session.usage.totalTokens;
-    totals.costUsd = roundCost(totals.costUsd + session.usage.costUsd);
+    totals.costUsd = accumulateCost(totals.costUsd, session.usage.costUsd);
 
     const entry =
       assistants.get(session.assistant) ??
@@ -939,7 +938,7 @@ function deriveUsageOverviewFromSessions(
     entry.cacheWriteTokens += session.usage.cacheWriteTokens;
     entry.reasoningTokens += session.usage.reasoningTokens;
     entry.totalTokens += session.usage.totalTokens;
-    entry.costUsd = roundCost(entry.costUsd + session.usage.costUsd);
+    entry.costUsd = accumulateCost(entry.costUsd, session.usage.costUsd);
     assistants.set(session.assistant, entry);
   }
 
@@ -963,6 +962,52 @@ function compareAssistantUsage(
 
 function roundCost(value: number) {
   return Math.round(value * 100000) / 100000;
+}
+
+function hasOptionalCostValue(value: unknown) {
+  return typeof value === "number" || typeof value === "undefined";
+}
+
+function normalizeOptionalCost(value: unknown) {
+  return typeof value === "number" ? value : undefined;
+}
+
+function normalizeSessionUsageRecord(usage: SessionUsageRecord): SessionUsageRecord {
+  return {
+    ...usage,
+    costUsd: normalizeOptionalCost(usage.costUsd)
+  };
+}
+
+function normalizeUsageTotalsRecord(usage: UsageTotalsRecord): UsageTotalsRecord {
+  return {
+    ...usage,
+    costUsd: normalizeOptionalCost(usage.costUsd)
+  };
+}
+
+function normalizeAssistantUsageRecord(
+  usage: AssistantUsageRecord
+): AssistantUsageRecord {
+  return {
+    ...usage,
+    costUsd: normalizeOptionalCost(usage.costUsd)
+  };
+}
+
+function accumulateCost(
+  current: number | undefined,
+  next: number | undefined
+) {
+  if (typeof current !== "number") {
+    return undefined;
+  }
+
+  if (typeof next !== "number") {
+    return undefined;
+  }
+
+  return roundCost(current + next);
 }
 
 function buildEmptyDashboardSnapshot(): DashboardSnapshot {

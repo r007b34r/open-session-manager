@@ -287,6 +287,23 @@ describe("App", () => {
     expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
   });
 
+  it("在首页嵌入式会话区切换详情时不应强制跳转到 sessions 路由", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /open session manager/i });
+    await screen.findByRole("button", { name: /audit anthropic relay settings/i });
+    await user.click(
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+    );
+
+    expect(window.location.hash).toBe("");
+    expect(
+      await screen.findAllByRole("heading", { name: /audit anthropic relay settings/i })
+    ).not.toHaveLength(0);
+  });
+
   it("浏览器模式拿不到真实快照时不应展示不存在的示例配置", async () => {
     window.localStorage.removeItem("open-session-manager.enable-demo-data");
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));

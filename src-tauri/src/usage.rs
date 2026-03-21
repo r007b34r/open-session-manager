@@ -27,7 +27,8 @@ pub struct SessionUsageRecord {
     pub cache_write_tokens: u64,
     pub reasoning_tokens: u64,
     pub total_tokens: u64,
-    pub cost_usd: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_usd: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -40,7 +41,8 @@ pub struct UsageTotalsRecord {
     pub cache_write_tokens: u64,
     pub reasoning_tokens: u64,
     pub total_tokens: u64,
-    pub cost_usd: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_usd: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -54,7 +56,8 @@ pub struct AssistantUsageRecord {
     pub cache_write_tokens: u64,
     pub reasoning_tokens: u64,
     pub total_tokens: u64,
-    pub cost_usd: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_usd: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -73,6 +76,8 @@ struct UsageAccumulator {
     cache_write_tokens: u64,
     reasoning_tokens: u64,
     cost_usd: f64,
+    has_cost_data: bool,
+    missing_cost_data: bool,
 }
 
 impl UsageAccumulator {
@@ -83,14 +88,34 @@ impl UsageAccumulator {
         cache_read_tokens: u64,
         cache_write_tokens: u64,
         reasoning_tokens: u64,
-        cost_usd: f64,
+        cost_usd: Option<f64>,
     ) {
+        let has_usage_signal = input_tokens > 0
+            || output_tokens > 0
+            || cache_read_tokens > 0
+            || cache_write_tokens > 0
+            || reasoning_tokens > 0
+            || cost_usd.is_some();
+        if !has_usage_signal {
+            return;
+        }
+
         self.input_tokens += input_tokens;
         self.output_tokens += output_tokens;
         self.cache_read_tokens += cache_read_tokens;
         self.cache_write_tokens += cache_write_tokens;
         self.reasoning_tokens += reasoning_tokens;
-        self.cost_usd = round_cost(self.cost_usd + cost_usd);
+        match cost_usd {
+            Some(value) => {
+                self.has_cost_data = true;
+                if !self.missing_cost_data {
+                    self.cost_usd = round_cost(self.cost_usd + value);
+                }
+            }
+            None => {
+                self.missing_cost_data = true;
+            }
+        }
     }
 
     fn total_tokens(&self) -> u64 {
@@ -102,11 +127,20 @@ impl UsageAccumulator {
     }
 
     fn has_usage(&self) -> bool {
-        self.total_tokens() > 0 || self.cost_usd > 0.0
+        self.total_tokens() > 0 || self.has_cost_data || self.missing_cost_data
+    }
+
+    fn resolved_cost(&self) -> Option<f64> {
+        if !self.has_usage() || self.missing_cost_data {
+            return None;
+        }
+
+        self.has_cost_data.then(|| round_cost(self.cost_usd))
     }
 
     fn into_session_usage(self) -> Option<SessionUsageRecord> {
         let total_tokens = self.total_tokens();
+        let cost_usd = self.resolved_cost();
         self.has_usage().then(|| SessionUsageRecord {
             model: self.model,
             input_tokens: self.input_tokens,
@@ -115,7 +149,7 @@ impl UsageAccumulator {
             cache_write_tokens: self.cache_write_tokens,
             reasoning_tokens: self.reasoning_tokens,
             total_tokens,
-            cost_usd: round_cost(self.cost_usd),
+            cost_usd,
         })
     }
 }
@@ -134,7 +168,16 @@ pub fn extract_session_usage(session: &SessionRecord) -> Option<SessionUsageReco
 pub fn build_usage_overview(
     usage_by_session: impl IntoIterator<Item = (String, Option<SessionUsageRecord>)>,
 ) -> UsageOverviewRecord {
-    let mut totals = UsageTotalsRecord::default();
+    let mut totals = UsageTotalsRecord {
+        sessions_with_usage: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+        reasoning_tokens: 0,
+        total_tokens: 0,
+        cost_usd: Some(0.0),
+    };
     let mut assistants = std::collections::BTreeMap::<String, AssistantUsageRecord>::new();
 
     for (assistant, usage) in usage_by_session {
@@ -149,12 +192,13 @@ pub fn build_usage_overview(
         totals.cache_write_tokens += usage.cache_write_tokens;
         totals.reasoning_tokens += usage.reasoning_tokens;
         totals.total_tokens += usage.total_tokens;
-        totals.cost_usd = round_cost(totals.cost_usd + usage.cost_usd);
+        accumulate_cost(&mut totals.cost_usd, usage.cost_usd);
 
         let entry = assistants
             .entry(assistant.clone())
             .or_insert_with(|| AssistantUsageRecord {
                 assistant,
+                cost_usd: Some(0.0),
                 ..AssistantUsageRecord::default()
             });
         entry.session_count += 1;
@@ -164,7 +208,7 @@ pub fn build_usage_overview(
         entry.cache_write_tokens += usage.cache_write_tokens;
         entry.reasoning_tokens += usage.reasoning_tokens;
         entry.total_tokens += usage.total_tokens;
-        entry.cost_usd = round_cost(entry.cost_usd + usage.cost_usd);
+        accumulate_cost(&mut entry.cost_usd, usage.cost_usd);
     }
 
     let mut assistants = assistants.into_values().collect::<Vec<_>>();
@@ -289,7 +333,7 @@ fn extract_opencode_usage(source: &Path) -> Option<SessionUsageRecord> {
             read_u64(cache_usage, &["read"]),
             read_u64(cache_usage, &["write"]),
             read_u64(token_usage, &["reasoning"]),
-            message.get("cost").and_then(Value::as_f64).unwrap_or(0.0),
+            message.get("cost").and_then(Value::as_f64).map(round_cost),
         );
     }
 
@@ -383,10 +427,10 @@ fn read_u64(value: &Value, keys: &[&str]) -> u64 {
         .unwrap_or(0)
 }
 
-fn read_cost(value: &Value) -> f64 {
+fn read_cost(value: &Value) -> Option<f64> {
     if let Some(cost) = value.get("cost") {
         if let Some(number) = cost.as_f64() {
-            return round_cost(number);
+            return Some(round_cost(number));
         }
 
         if let Some(number) = cost
@@ -394,11 +438,23 @@ fn read_cost(value: &Value) -> f64 {
             .and_then(Value::as_f64)
             .or_else(|| cost.get("usd").and_then(Value::as_f64))
         {
-            return round_cost(number);
+            return Some(round_cost(number));
         }
     }
 
-    0.0
+    None
+}
+
+fn accumulate_cost(current: &mut Option<f64>, next: Option<f64>) {
+    match (current.as_mut(), next) {
+        (Some(total), Some(value)) => {
+            *total = round_cost(*total + value);
+        }
+        (_, None) => {
+            *current = None;
+        }
+        (None, Some(_)) => {}
+    }
 }
 
 fn round_cost(value: f64) -> f64 {
@@ -408,6 +464,8 @@ fn round_cost(value: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use serde_json::Value;
 
     use crate::{
         adapters::{
@@ -438,7 +496,7 @@ mod tests {
         assert_eq!(claude_usage.cache_write_tokens, 144);
         assert_eq!(codex_usage.cache_read_tokens, 256);
         assert_eq!(gemini_usage.reasoning_tokens, 45);
-        assert_eq!(openclaw_usage.cost_usd, 0.02);
+        assert_eq!(openclaw_usage.cost_usd, Some(0.02));
     }
 
     #[test]
@@ -454,7 +512,7 @@ mod tests {
                     cache_write_tokens: 0,
                     reasoning_tokens: 10,
                     total_tokens: 210,
-                    cost_usd: 0.02,
+                    cost_usd: Some(0.02),
                 }),
             ),
             (
@@ -467,7 +525,7 @@ mod tests {
                     cache_write_tokens: 0,
                     reasoning_tokens: 0,
                     total_tokens: 16,
-                    cost_usd: 0.01,
+                    cost_usd: Some(0.01),
                 }),
             ),
             ("codex".to_string(), None),
@@ -475,10 +533,66 @@ mod tests {
 
         assert_eq!(overview.totals.sessions_with_usage, 2);
         assert_eq!(overview.totals.total_tokens, 226);
-        assert_eq!(overview.totals.cost_usd, 0.03);
+        assert_eq!(overview.totals.cost_usd, Some(0.03));
         assert_eq!(overview.assistants.len(), 1);
         assert_eq!(overview.assistants[0].assistant, "opencode");
         assert_eq!(overview.assistants[0].session_count, 2);
+    }
+
+    #[test]
+    fn omits_unknown_cost_from_serialized_session_usage() {
+        let codex = parse_fixture(CodexAdapter, fixtures_root().join("codex"));
+        let codex_usage = extract_session_usage(&codex).expect("codex usage exists");
+        let serialized = serde_json::to_value(&codex_usage).expect("usage serializes");
+
+        assert!(serialized.get("costUsd").is_none());
+        assert_eq!(
+            serialized.get("totalTokens").and_then(Value::as_u64),
+            Some(codex_usage.total_tokens)
+        );
+    }
+
+    #[test]
+    fn omits_aggregate_cost_when_any_session_lacks_reliable_cost() {
+        let codex = parse_fixture(CodexAdapter, fixtures_root().join("codex"));
+        let openclaw = parse_fixture(OpenClawAdapter, fixtures_root().join("openclaw"));
+        let overview = build_usage_overview([
+            (
+                "codex".to_string(),
+                extract_session_usage(&codex),
+            ),
+            (
+                "openclaw".to_string(),
+                extract_session_usage(&openclaw),
+            ),
+        ]);
+        let serialized = serde_json::to_value(&overview).expect("overview serializes");
+        let assistants = serialized
+            .get("assistants")
+            .and_then(Value::as_array)
+            .expect("assistants array exists");
+        let codex_assistant = assistants
+            .iter()
+            .find(|assistant| assistant.get("assistant").and_then(Value::as_str) == Some("codex"))
+            .expect("codex assistant exists");
+        let openclaw_assistant = assistants
+            .iter()
+            .find(|assistant| {
+                assistant.get("assistant").and_then(Value::as_str) == Some("openclaw")
+            })
+            .expect("openclaw assistant exists");
+
+        assert!(
+            serialized
+                .get("totals")
+                .and_then(|totals| totals.get("costUsd"))
+                .is_none()
+        );
+        assert!(codex_assistant.get("costUsd").is_none());
+        assert_eq!(
+            openclaw_assistant.get("costUsd").and_then(Value::as_f64),
+            Some(0.02)
+        );
     }
 
     fn parse_fixture(adapter: impl SessionAdapter, root: PathBuf) -> SessionRecord {

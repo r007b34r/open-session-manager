@@ -34,6 +34,9 @@ export function App() {
     getInitialThemePreference()
   );
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(() =>
+    getSelectedSessionId(getCurrentPath())
+  );
   const copy = getMessages(language);
 
   useEffect(() => {
@@ -56,8 +59,12 @@ export function App() {
 
   useEffect(() => {
     const handleHashChange = () => {
+      const nextPath = getCurrentPath();
+      const nextSelectedSessionId = getSelectedSessionId(nextPath);
+
       startTransition(() => {
-        setCurrentPath(getCurrentPath());
+        setCurrentPath(nextPath);
+        setSelectedSessionId(nextSelectedSessionId);
       });
     };
 
@@ -148,6 +155,14 @@ export function App() {
   };
 
   const handleSelectSession = (sessionId: string) => {
+    startTransition(() => {
+      setSelectedSessionId(sessionId);
+    });
+
+    if (!currentPath.startsWith("/sessions")) {
+      return;
+    }
+
     const nextPath = `/sessions/${encodeURIComponent(sessionId)}`;
 
     startTransition(() => {
@@ -155,7 +170,7 @@ export function App() {
     });
 
     if (window.location.hash !== `#${nextPath}`) {
-      window.location.hash = nextPath;
+      window.history.replaceState(null, "", `#${nextPath}`);
     }
   };
 
@@ -171,6 +186,7 @@ export function App() {
             renderRoute(
               snapshot,
               normalizePath(currentPath),
+              selectedSessionId,
               handleSelectSession,
               handleSaveExportRoot,
               handleResetExportRoot,
@@ -193,6 +209,7 @@ export function App() {
 function renderRoute(
   snapshot: DashboardSnapshot,
   path: string,
+  selectedSessionId: string | undefined,
   onSelectSession: (sessionId: string) => void,
   onSaveExportRoot: (exportRoot: string) => void,
   onResetExportRoot: () => void,
@@ -215,8 +232,6 @@ function renderRoute(
   }
 
   if (path === "/sessions" || path.startsWith("/sessions/")) {
-    const selectedSessionId = getSelectedSessionId(path);
-
     return (
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
@@ -245,7 +260,7 @@ function renderRoute(
         onSelectSession={onSelectSession}
         onSoftDelete={onSoftDelete}
         runtime={snapshot.runtime}
-        selectedSessionId={snapshot.sessions[0]?.sessionId}
+        selectedSessionId={selectedSessionId ?? snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}
       />
       <ConfigsRoute configs={snapshot.configs} />

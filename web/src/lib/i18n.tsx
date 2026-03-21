@@ -158,6 +158,7 @@ type Messages = {
     description: string;
   };
   data: {
+    unknownValue: string;
     metricLabels: Record<string, string>;
     metricNotes: Record<string, string>;
     progressStates: Record<string, string>;
@@ -357,6 +358,7 @@ const messages: Record<Language, Messages> = {
         "Export, quarantine, and restore actions stay attached to an actor, timestamp, and target."
     },
     data: {
+      unknownValue: "Unknown",
       metricLabels: {
         indexed_sessions: "Indexed Sessions",
         high_value_candidates: "High-Value Candidates",
@@ -575,6 +577,7 @@ const messages: Record<Language, Messages> = {
       description: "导出、隔离和恢复动作都绑定到操作者、时间戳和目标。"
     },
     data: {
+      unknownValue: "未知",
       metricLabels: {
         indexed_sessions: "已索引会话",
         high_value_candidates: "高价值候选",
