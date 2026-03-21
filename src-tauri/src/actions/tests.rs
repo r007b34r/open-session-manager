@@ -8,12 +8,20 @@ use rusqlite::Connection;
 use serde_json::to_string_pretty;
 
 use crate::{
+    audit::{
+        config_audit::{ConfigAuditTarget, audit_config},
+        credential_audit::build_credential_artifacts,
+    },
     domain::session::{SessionInsight, SessionRecord},
     storage::sqlite::bootstrap_database,
 };
 
 use super::{
     ActionError, QuarantineManifest,
+    config_writeback::{
+        ConfigRollbackRequest, ConfigWritebackRequest, ConfigWritebackUpdate,
+        rollback_config_writeback, write_config,
+    },
     delete::{SoftDeleteRequest, soft_delete_session},
     export::{ExportRequest, export_session_markdown},
     restore::restore_session,
@@ -98,7 +106,7 @@ fn exports_soft_deletes_restores_and_audits_session() {
         "r007b34r",
         &connection,
     )
-        .expect("restore session");
+    .expect("restore session");
 
     assert!(source_path.exists());
     assert!(!manifest.quarantined_path.exists());
@@ -260,8 +268,11 @@ fn refuses_restore_when_manifest_is_outside_the_managed_quarantine_root() {
         deleted_at: "2026-03-15T10:00:00Z".to_string(),
         related_assets: Vec::new(),
     };
-    fs::write(&manifest_path, to_string_pretty(&manifest).expect("serialize manifest"))
-        .expect("write rogue manifest");
+    fs::write(
+        &manifest_path,
+        to_string_pretty(&manifest).expect("serialize manifest"),
+    )
+    .expect("write rogue manifest");
 
     let connection = Connection::open_in_memory().expect("open sqlite");
     bootstrap_database(&connection).expect("bootstrap schema");
@@ -273,7 +284,7 @@ fn refuses_restore_when_manifest_is_outside_the_managed_quarantine_root() {
         "r007b34r",
         &connection,
     )
-        .expect_err("restore should reject manifests outside the managed root");
+    .expect_err("restore should reject manifests outside the managed root");
 
     match error {
         ActionError::Precondition(message) => {
@@ -304,8 +315,11 @@ fn refuses_restore_when_original_path_is_outside_allowed_session_roots() {
         deleted_at: "2026-03-15T11:00:00Z".to_string(),
         related_assets: Vec::new(),
     };
-    fs::write(&manifest_path, to_string_pretty(&manifest).expect("serialize manifest"))
-        .expect("write manifest");
+    fs::write(
+        &manifest_path,
+        to_string_pretty(&manifest).expect("serialize manifest"),
+    )
+    .expect("write manifest");
 
     let connection = Connection::open_in_memory().expect("open sqlite");
     bootstrap_database(&connection).expect("bootstrap schema");
@@ -331,8 +345,14 @@ fn refuses_restore_when_original_path_is_outside_allowed_session_roots() {
 fn soft_delete_and_restore_opencode_session_bundle() {
     let sandbox = temp_root();
     let storage_root = sandbox.join("storage");
-    let info_path = storage_root.join("session").join("info").join("ses-demo.json");
-    let message_dir = storage_root.join("session").join("message").join("ses-demo");
+    let info_path = storage_root
+        .join("session")
+        .join("info")
+        .join("ses-demo.json");
+    let message_dir = storage_root
+        .join("session")
+        .join("message")
+        .join("ses-demo");
     let part_dir = storage_root.join("session").join("part").join("ses-demo");
     let message_path = message_dir.join("msg-user.json");
     let part_path = part_dir.join("prt-user.json");
@@ -699,7 +719,9 @@ fn exports_markdown_without_todos_still_builds_session_handoff() {
         session_id: session.session_id.clone(),
         title: "Audit stale cleanup queue".to_string(),
         topic_labels_json: r#"["cleanup","queue"]"#.to_string(),
-        summary: "Scope the stale-session filter to the active discovery root before deleting anything.".to_string(),
+        summary:
+            "Scope the stale-session filter to the active discovery root before deleting anything."
+                .to_string(),
         progress_state: "in_progress".to_string(),
         progress_percent: Some(45),
         value_score: 76,
@@ -730,6 +752,309 @@ fn exports_markdown_without_todos_still_builds_session_handoff() {
     ));
 }
 
+#[test]
+fn writes_back_and_rolls_back_copilot_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join(".copilot");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "github-copilot-cli",
+        "user",
+        "global",
+        config_root.join("config.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("copilot").join("config.json"),
+        config_root.join("config.json"),
+    )
+    .expect("copy copilot config");
+    fs::copy(
+        fixtures_root.join("copilot").join("mcp-config.json"),
+        config_root.join("mcp-config.json"),
+    )
+    .expect("copy copilot mcp config");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("github".to_string()),
+            model: Some("gpt-5-mini".to_string()),
+            base_url: Some("https://github.com/api/copilot".to_string()),
+            secret: Some("ghu_new_secret_123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write copilot config");
+
+    let after = audit_config(&target).expect("re-audit copilot config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(after.config.model.as_deref(), Some("gpt-5-mini"));
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://github.com/api/copilot")
+    );
+    assert!(!has_flag(&after.risk_flags, "third_party_base_url"));
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback copilot config");
+
+    let restored = audit_config(&target).expect("restore copilot config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+    let event_types = query_event_types(&connection);
+
+    assert_eq!(restored.config.model.as_deref(), Some("gpt-5"));
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://copilot.enterprise-relay.example")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***7890");
+    assert!(event_types.contains(&"config_writeback".to_string()));
+    assert!(event_types.contains(&"config_rollback".to_string()));
+}
+
+#[test]
+fn writes_back_and_rolls_back_factory_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join(".factory");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "factory-droid",
+        "user",
+        "global",
+        config_root.join("settings.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("factory").join("settings.json"),
+        config_root.join("settings.json"),
+    )
+    .expect("copy factory config");
+    fs::copy(
+        fixtures_root.join("factory").join("settings.local.json"),
+        config_root.join("settings.local.json"),
+    )
+    .expect("copy factory local config");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("openai".to_string()),
+            model: Some("gpt-5-mini".to_string()),
+            base_url: Some("https://api.openai.com/v1".to_string()),
+            secret: Some("sk-factory-new-123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write factory config");
+
+    let after = audit_config(&target).expect("re-audit factory config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(after.config.provider.as_deref(), Some("openai"));
+    assert_eq!(after.config.model.as_deref(), Some("gpt-5-mini"));
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://api.openai.com/v1")
+    );
+    assert!(!has_flag(&after.risk_flags, "third_party_provider"));
+    assert!(!has_flag(&after.risk_flags, "third_party_base_url"));
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback factory config");
+
+    let restored = audit_config(&target).expect("restore factory config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+
+    assert_eq!(restored.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://factory-relay.example/v1")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***7890");
+}
+
+#[test]
+fn writes_back_and_rolls_back_gemini_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join(".gemini");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "gemini-cli",
+        "user",
+        "global",
+        config_root.join("settings.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("gemini").join("settings.json"),
+        config_root.join("settings.json"),
+    )
+    .expect("copy gemini config");
+    fs::copy(
+        fixtures_root.join("gemini").join(".env"),
+        config_root.join(".env"),
+    )
+    .expect("copy gemini env");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("google".to_string()),
+            model: Some("gemini-2.5-pro".to_string()),
+            base_url: Some("https://generativelanguage.googleapis.com/v1beta".to_string()),
+            secret: Some("AIzaSyNewGemini123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write gemini config");
+
+    let after = audit_config(&target).expect("re-audit gemini config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(after.config.model.as_deref(), Some("gemini-2.5-pro"));
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://generativelanguage.googleapis.com/v1beta")
+    );
+    assert!(!has_flag(&after.risk_flags, "third_party_base_url"));
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback gemini config");
+
+    let restored = audit_config(&target).expect("restore gemini config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+
+    assert_eq!(
+        restored.config.model.as_deref(),
+        Some("gemini-2.5-pro-preview-06-05")
+    );
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://gateway.gemini-proxy.example/v1beta")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***4321");
+}
+
+#[test]
+fn writes_back_and_rolls_back_openclaw_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join(".openclaw");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "openclaw",
+        "user",
+        "global",
+        config_root.join("openclaw.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("openclaw").join("openclaw.json"),
+        config_root.join("openclaw.json"),
+    )
+    .expect("copy openclaw config");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("openrouter".to_string()),
+            model: Some("openrouter/openai/gpt-5-mini".to_string()),
+            base_url: Some("https://openrouter.ai/api/v1".to_string()),
+            secret: Some("sk-openclaw-new-123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write openclaw config");
+
+    let after = audit_config(&target).expect("re-audit openclaw config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(
+        after.config.model.as_deref(),
+        Some("openrouter/openai/gpt-5-mini")
+    );
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback openclaw config");
+
+    let restored = audit_config(&target).expect("restore openclaw config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+
+    assert_eq!(
+        restored.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***7890");
+}
+
+fn config_fixtures_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../tests/fixtures/configs")
+        .canonicalize()
+        .expect("config fixtures root resolves")
+}
+
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!(
@@ -755,4 +1080,11 @@ fn query_event_types(connection: &Connection) -> Vec<String> {
 
     rows.collect::<Result<Vec<_>, _>>()
         .expect("collect event types")
+}
+
+fn has_flag<T>(flags: &[T], code: &str) -> bool
+where
+    T: std::borrow::Borrow<crate::audit::RiskFlag>,
+{
+    flags.iter().any(|flag| flag.borrow().code == code)
 }

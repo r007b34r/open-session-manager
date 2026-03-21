@@ -1,10 +1,13 @@
 import { startTransition, useEffect, useState } from "react";
 
 import {
+  applyConfigWriteback,
   applyDashboardPreferences,
   applyMarkdownExport,
   applySoftDelete,
   fetchDashboardSnapshot,
+  isConfigWritebackAvailable,
+  type ConfigWritebackInput,
   type DashboardSnapshot
 } from "./lib/api";
 import {
@@ -154,6 +157,18 @@ export function App() {
     );
   };
 
+  const handleSaveConfig = (input: ConfigWritebackInput) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyConfigWriteback(snapshot, input).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
   const handleSelectSession = (sessionId: string) => {
     startTransition(() => {
       setSelectedSessionId(sessionId);
@@ -191,7 +206,8 @@ export function App() {
               handleSaveExportRoot,
               handleResetExportRoot,
               handleExportMarkdown,
-              handleSoftDelete
+              handleSoftDelete,
+              handleSaveConfig
             )
           ) : (
             <section className="panel empty-state">
@@ -214,8 +230,10 @@ function renderRoute(
   onSaveExportRoot: (exportRoot: string) => void,
   onResetExportRoot: () => void,
   onExportMarkdown: (sessionId: string) => void,
-  onSoftDelete: (sessionId: string) => void
+  onSoftDelete: (sessionId: string) => void,
+  onSaveConfig: (input: ConfigWritebackInput) => void
 ) {
+  const canEditConfigs = isConfigWritebackAvailable();
   const exportedSessionIds = new Set(
     snapshot.auditEvents
       .filter((event) => event.type === "export_markdown" && event.result === "success")
@@ -224,7 +242,13 @@ function renderRoute(
   const latestMarkdownExportPaths = buildLatestMarkdownExportPaths(snapshot);
 
   if (path === "/configs") {
-    return <ConfigsRoute configs={snapshot.configs} />;
+    return (
+      <ConfigsRoute
+        canEditConfigs={canEditConfigs}
+        configs={snapshot.configs}
+        onSaveConfig={onSaveConfig}
+      />
+    );
   }
 
   if (path === "/audit") {
@@ -263,7 +287,11 @@ function renderRoute(
         selectedSessionId={selectedSessionId ?? snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}
       />
-      <ConfigsRoute configs={snapshot.configs} />
+      <ConfigsRoute
+        canEditConfigs={canEditConfigs}
+        configs={snapshot.configs}
+        onSaveConfig={onSaveConfig}
+      />
     </>
   );
 }

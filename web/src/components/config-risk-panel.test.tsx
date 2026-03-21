@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 describe("ConfigRiskPanel", () => {
   it("renders masked values and risk badges for risky config entries", async () => {
@@ -72,5 +73,57 @@ describe("ConfigRiskPanel", () => {
     expect(screen.getByText("gpt-5")).toBeInTheDocument();
     expect(screen.getAllByText(/third_party_base_url/i)).toHaveLength(2);
     expect(screen.getByText(/dangerous_sandbox/i)).toBeInTheDocument();
+  });
+
+  it("allows editing a supported config card and submits the writeback payload", async () => {
+    const user = userEvent.setup();
+    const onSaveConfig = vi.fn();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-003",
+            assistant: "GitHub Copilot CLI",
+            scope: "Global",
+            path: "~/.copilot/config.json",
+            provider: "github",
+            model: "gpt-5",
+            baseUrl: "https://copilot.enterprise-relay.example",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_base_url", "dangerous_permissions"]
+          }
+        ]}
+        onSaveConfig={onSaveConfig}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    await user.clear(screen.getByLabelText(/^model$/i));
+    await user.type(screen.getByLabelText(/^model$/i), "gpt-5-mini");
+    await user.clear(screen.getByLabelText(/endpoint/i));
+    await user.type(
+      screen.getByLabelText(/endpoint/i),
+      "https://github.com/api/copilot"
+    );
+    await user.type(
+      screen.getByLabelText(/new key/i),
+      "ghu_new_secret_123454321"
+    );
+    await user.click(screen.getByRole("button", { name: /save config/i }));
+
+    expect(onSaveConfig).toHaveBeenCalledWith({
+      artifactId: "cfg-003",
+      assistant: "GitHub Copilot CLI",
+      scope: "Global",
+      path: "~/.copilot/config.json",
+      provider: "github",
+      model: "gpt-5-mini",
+      baseUrl: "https://github.com/api/copilot",
+      secret: "ghu_new_secret_123454321"
+    });
   });
 });

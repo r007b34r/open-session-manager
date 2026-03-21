@@ -4,10 +4,14 @@ use rusqlite::Connection;
 
 use crate::{
     actions::{
+        config_writeback::{
+            ConfigWritebackRequest, ConfigWritebackResult, ConfigWritebackUpdate, write_config,
+        },
         delete::{SoftDeleteRequest, soft_delete_session},
         export::{ExportRequest, ExportResult, export_session_markdown},
         restore::restore_session,
     },
+    audit::config_audit::ConfigAuditTarget,
     domain::session::{SessionInsight, SessionRecord},
 };
 
@@ -36,6 +40,22 @@ pub fn delete_session(
     soft_delete_session(&SoftDeleteRequest {
         session,
         quarantine_root,
+        actor,
+        connection,
+    })
+}
+
+pub fn write_config_artifact(
+    target: &ConfigAuditTarget,
+    update: &ConfigWritebackUpdate,
+    backup_root: &Path,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<ConfigWritebackResult> {
+    write_config(&ConfigWritebackRequest {
+        target,
+        update,
+        backup_root,
         actor,
         connection,
     })

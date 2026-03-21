@@ -321,6 +321,49 @@ describe("App", () => {
     expect(screen.queryByText(/factory-relay\.example/i)).not.toBeInTheDocument();
   });
 
+  it("在 Configs 页允许编辑支持的配置并把结果回写到当前视图", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/configs";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /config risk center/i });
+    const configHeading = await screen.findByRole("heading", {
+      name: /~\/\.copilot\/config\.json/i
+    });
+    const card = configHeading.closest("article");
+
+    expect(card).not.toBeNull();
+    await user.click(
+      within(card as HTMLElement).getByRole("button", { name: /edit config/i })
+    );
+    await user.clear(within(card as HTMLElement).getByLabelText(/^model$/i));
+    await user.type(
+      within(card as HTMLElement).getByLabelText(/^model$/i),
+      "gpt-5-mini"
+    );
+    await user.clear(within(card as HTMLElement).getByLabelText(/endpoint/i));
+    await user.type(
+      within(card as HTMLElement).getByLabelText(/endpoint/i),
+      "https://github.com/api/copilot"
+    );
+    await user.type(
+      within(card as HTMLElement).getByLabelText(/new key/i),
+      "ghu_new_secret_123454321"
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", { name: /save config/i })
+    );
+
+    await waitFor(() => {
+      expect(
+        within(card as HTMLElement).getByText("https://github.com/api/copilot")
+      ).toBeInTheDocument();
+    });
+    expect(within(card as HTMLElement).getByText("gpt-5-mini")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("***4321")).toBeInTheDocument();
+  });
+
   it("在会话详情里展示 token 和成本细节", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/sessions";

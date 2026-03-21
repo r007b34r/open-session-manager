@@ -7,6 +7,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 import {
+  applyConfigWriteback,
   applyMarkdownExport,
   applySoftDelete,
   fetchDashboardSnapshot,
@@ -342,6 +343,67 @@ describe("desktop actions", () => {
     );
     expect(invokeMock).toHaveBeenCalledWith("soft_delete_session", {
       sessionId: "ses-003"
+    });
+  });
+
+  it("桌面模式下配置写回动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const nativeSnapshot: DashboardSnapshot = {
+      ...current,
+      configs: current.configs.map((config) =>
+        config.artifactId === "cfg-004"
+          ? {
+              ...config,
+              model: "gpt-5-mini",
+              baseUrl: "https://github.com/api/copilot",
+              maskedSecret: "***4321",
+              officialOrProxy: "Official",
+              risks: ["dangerous_permissions"]
+            }
+          : config
+      ),
+      auditEvents: [
+        {
+          eventId: "evt-native-config-writeback",
+          type: "config_writeback",
+          target: "cfg-004",
+          actor: "r007b34r",
+          createdAt: "2026-03-15 15:32",
+          result: "success",
+          detail: "Updated config from native runtime."
+        },
+        ...current.auditEvents
+      ]
+    };
+
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {}
+    });
+    invokeMock.mockResolvedValueOnce(nativeSnapshot);
+
+    await expect(
+      applyConfigWriteback(current, {
+        artifactId: "cfg-004",
+        assistant: "GitHub Copilot CLI",
+        scope: "Global",
+        path: "~/.copilot/config.json",
+        provider: "github",
+        model: "gpt-5-mini",
+        baseUrl: "https://github.com/api/copilot",
+        secret: "ghu_new_secret_123454321"
+      })
+    ).resolves.toEqual(nativeSnapshot);
+    expect(invokeMock).toHaveBeenCalledWith("write_config_artifact", {
+      artifactId: "cfg-004",
+      assistant: "GitHub Copilot CLI",
+      scope: "Global",
+      path: "~/.copilot/config.json",
+      provider: "github",
+      model: "gpt-5-mini",
+      baseUrl: "https://github.com/api/copilot",
+      secret: "ghu_new_secret_123454321"
     });
   });
 });

@@ -36,6 +36,7 @@
 
 - `todo`：还没开始做
 - `partial`：已有局部能力，但离竞品级完成度还差关键链路
+- `done`：本地功能、测试、验证和 Git 证据链已齐
 - `blocked`：依赖真实样本、许可证边界或外部接口
 
 ## 4. 全量未完成事项
@@ -132,10 +133,10 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `CFG-01` | P0 | partial | `GitHub Copilot CLI` 安全写回 | 配置编辑、校验、备份、回滚测试通过 |
-| `CFG-02` | P0 | partial | `Factory Droid` 安全写回 | 配置编辑、校验、备份、回滚测试通过 |
-| `CFG-03` | P0 | partial | `Gemini CLI` 安全写回 | 写回 `.env/settings.json` 的风险保护测试通过 |
-| `CFG-04` | P0 | partial | `OpenClaw` 安全写回 | 写回保护和 masked diff 测试通过 |
+| `CFG-01` | P0 | done | `GitHub Copilot CLI` 安全写回 | 配置编辑、校验、备份、回滚测试通过 |
+| `CFG-02` | P0 | done | `Factory Droid` 安全写回 | 配置编辑、校验、备份、回滚测试通过 |
+| `CFG-03` | P0 | done | `Gemini CLI` 安全写回 | 写回 `.env/settings.json` 的风险保护测试通过 |
+| `CFG-04` | P0 | done | `OpenClaw` 安全写回 | 写回保护和 masked diff 测试通过 |
 | `CFG-05` | P0 | todo | 统一 provider presets | 预设导入、应用、回滚测试通过 |
 | `CFG-06` | P1 | todo | provider import / export | 导入导出 schema 测试通过 |
 | `CFG-07` | P1 | todo | provider health monitor | provider 连通性与健康状态探测测试通过 |

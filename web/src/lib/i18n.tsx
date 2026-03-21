@@ -126,12 +126,18 @@ type Messages = {
     kicker: string;
     title: string;
     description: string;
+    actions: {
+      editConfig: string;
+      saveConfig: string;
+      cancelEdit: string;
+    };
     fields: {
       scope: string;
       provider: string;
       model: string;
       endpoint: string;
       maskedKey: string;
+      newKey: string;
     };
   };
   runtimePanel: {
@@ -324,12 +330,18 @@ const messages: Record<Language, Messages> = {
       title: "Config Risk Center",
       description:
         "Secrets stay masked by default while endpoints, providers, and risk posture remain visible.",
+      actions: {
+        editConfig: "Edit Config",
+        saveConfig: "Save Config",
+        cancelEdit: "Cancel"
+      },
       fields: {
         scope: "Scope",
         provider: "Provider",
         model: "Model",
         endpoint: "Endpoint",
-        maskedKey: "Masked Key"
+        maskedKey: "Masked Key",
+        newKey: "New Key"
       }
     },
     runtimePanel: {
@@ -545,12 +557,18 @@ const messages: Record<Language, Messages> = {
       kicker: "配置中心",
       title: "配置风险中心",
       description: "默认隐藏密钥明文，同时保留端点、提供商和风险态势可见。",
+      actions: {
+        editConfig: "编辑配置",
+        saveConfig: "保存配置",
+        cancelEdit: "取消"
+      },
       fields: {
         scope: "范围",
         provider: "提供商",
         model: "模型",
         endpoint: "端点",
-        maskedKey: "脱敏密钥"
+        maskedKey: "脱敏密钥",
+        newKey: "新密钥"
       }
     },
     runtimePanel: {

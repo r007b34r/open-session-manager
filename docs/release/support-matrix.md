@@ -71,8 +71,7 @@
 | BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
 | 会话恢复 / attach / process control | 未纳入本版承诺 | 当前还没有真实会话进程控制层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 仍在研究与规格阶段 |
-| `GitHub Copilot CLI / Factory Droid` 安全写回 | 未纳入本版承诺 | 当前已完成用户级与项目级读取和风险预览，还没做可视化编辑与安全写回 |
-| `Gemini / OpenClaw` 配置写回与可视化修改 | 未纳入本版承诺 | 当前先完成读取、预览与风险审计，尚未做安全写回链路 |
+| provider presets / 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回，但还没有预设编排和健康切换 |
 | pricing lookup / usage 趋势图 / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地 usage 面板，但还没有价格同步和长期趋势分析 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |

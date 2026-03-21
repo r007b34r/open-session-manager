@@ -124,6 +124,17 @@ export type DashboardPreferencesUpdate = {
   exportRoot: string | null;
 };
 
+export type ConfigWritebackInput = {
+  artifactId: string;
+  assistant: string;
+  scope: string;
+  path: string;
+  provider: string;
+  model?: string;
+  baseUrl: string;
+  secret?: string;
+};
+
 const DEMO_DATA_STORAGE_KEY = "open-session-manager.enable-demo-data";
 const EMPTY_USAGE_OVERVIEW: UsageOverviewRecord = {
   totals: {
@@ -506,6 +517,10 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   return applyBrowserRuntimePreferences(browserSnapshot);
 }
 
+export function isConfigWritebackAvailable() {
+  return isTauriRuntime() || shouldUseDemoData();
+}
+
 export function recordMarkdownExport(
   current: DashboardSnapshot,
   sessionId: string
@@ -552,6 +567,43 @@ export function recordSoftDelete(
         "soft_delete",
         session.sessionId,
         `Moved ${session.title} into the quarantine queue.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
+export function recordConfigWriteback(
+  current: DashboardSnapshot,
+  input: ConfigWritebackInput
+): DashboardSnapshot {
+  const nextConfigs = current.configs.map((config) => {
+    if (config.artifactId !== input.artifactId) {
+      return config;
+    }
+
+    return {
+      ...config,
+      assistant: input.assistant,
+      scope: input.scope,
+      path: input.path,
+      provider: input.provider,
+      model: normalizeOptionalText(input.model),
+      baseUrl: input.baseUrl,
+      maskedSecret: input.secret ? maskSecret(input.secret) : config.maskedSecret,
+      officialOrProxy: inferProxyModeFromEndpoint(input.provider, input.baseUrl),
+      risks: reconcileConfigRisks(config.risks, input.provider, input.baseUrl)
+    };
+  });
+
+  return {
+    ...current,
+    configs: nextConfigs,
+    auditEvents: [
+      createAuditEvent(
+        "config_writeback",
+        input.artifactId,
+        `Updated config fields for ${input.assistant}.`
       ),
       ...current.auditEvents
     ]
@@ -610,6 +662,35 @@ export async function applySoftDelete(
   }
 
   return normalizeDashboardSnapshot(recordSoftDelete(current, sessionId));
+}
+
+export async function applyConfigWriteback(
+  current: DashboardSnapshot,
+  input: ConfigWritebackInput
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "write_config_artifact",
+    {
+      artifactId: input.artifactId,
+      assistant: input.assistant,
+      scope: input.scope,
+      path: input.path,
+      provider: input.provider,
+      model: normalizeOptionalText(input.model),
+      baseUrl: input.baseUrl,
+      secret: normalizeOptionalText(input.secret)
+    }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordConfigWriteback(current, input));
+  }
+
+  return current;
 }
 
 export function hasSuccessfulMarkdownExport(
@@ -1058,6 +1139,11 @@ function normalizeDashboardPreferencePath(value: string | null) {
   return normalized ? normalized : null;
 }
 
+function normalizeOptionalText(value: string | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+}
+
 function updateDashboardRuntime(
   current: DashboardSnapshot,
   update: DashboardPreferencesUpdate
@@ -1111,4 +1197,77 @@ function persistBrowserRuntimePreferences(runtime: DashboardRuntime) {
   } catch {
     // Ignore storage failures in browser fallback mode.
   }
+}
+
+function maskSecret(value: string) {
+  const normalized = value.trim();
+  if (normalized.length <= 4) {
+    return "***";
+  }
+
+  return `***${normalized.slice(-4)}`;
+}
+
+function reconcileConfigRisks(
+  currentRisks: string[],
+  provider: string,
+  baseUrl: string
+) {
+  const nextRisks = currentRisks.filter(
+    (risk) => risk !== "third_party_provider" && risk !== "third_party_base_url"
+  );
+
+  if (!isOfficialProvider(provider)) {
+    nextRisks.push("third_party_provider");
+  }
+
+  if (!isOfficialBaseUrl(provider, baseUrl)) {
+    nextRisks.push("third_party_base_url");
+  }
+
+  return [...new Set(nextRisks)];
+}
+
+function inferProxyModeFromEndpoint(provider: string, baseUrl: string) {
+  return isOfficialProvider(provider) && isOfficialBaseUrl(provider, baseUrl)
+    ? "Official"
+    : "Proxy";
+}
+
+function isOfficialProvider(provider: string) {
+  return ["openai", "anthropic", "opencode", "google", "github"].includes(
+    provider.trim().toLowerCase()
+  );
+}
+
+function isOfficialBaseUrl(provider: string, baseUrl: string) {
+  const host = extractHost(baseUrl);
+  if (!host) {
+    return false;
+  }
+
+  switch (provider.trim().toLowerCase()) {
+    case "openai":
+      return host.endsWith("openai.com");
+    case "anthropic":
+      return host.endsWith("anthropic.com");
+    case "google":
+      return host.endsWith("googleapis.com") || host.endsWith("google.com");
+    case "github":
+      return host.endsWith("github.com");
+    case "opencode":
+      return host.endsWith("opencode.ai");
+    case "openrouter":
+      return host.endsWith("openrouter.ai");
+    default:
+      return false;
+  }
+}
+
+function extractHost(baseUrl: string) {
+  const withoutScheme = baseUrl.split("://")[1] ?? baseUrl;
+  const hostPort = withoutScheme.split(/[/?#]/)[0] ?? withoutScheme;
+  const host = hostPort.split(":")[0]?.trim();
+
+  return host || null;
 }

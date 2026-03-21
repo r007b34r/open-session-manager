@@ -1,13 +1,22 @@
-import type { ConfigRiskRecord } from "../lib/api";
+import { useState } from "react";
+
+import type { ConfigRiskRecord, ConfigWritebackInput } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
 type ConfigRiskPanelProps = {
   configs: ConfigRiskRecord[];
+  canEditConfigs?: boolean;
+  onSaveConfig?: (input: ConfigWritebackInput) => void;
 };
 
-export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
+export function ConfigRiskPanel({
+  configs,
+  canEditConfigs = false,
+  onSaveConfig
+}: ConfigRiskPanelProps) {
   const { copy, translateProxyMode, translateRiskFlag, translateScope } =
     useI18n();
+  const [draft, setDraft] = useState<ConfigWritebackInput | null>(null);
 
   return (
     <section className="panel">
@@ -53,6 +62,134 @@ export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
                 <dd>{config.maskedSecret}</dd>
               </div>
             </dl>
+            {canEditConfigs && isEditableAssistant(config.assistant) ? (
+              <div className="action-row">
+                {draft?.artifactId === config.artifactId ? (
+                  <>
+                    <button
+                      className="action-button action-button-primary"
+                      onClick={() => {
+                        if (!draft) {
+                          return;
+                        }
+
+                        onSaveConfig?.({
+                          ...draft,
+                          model: normalizeOptionalValue(draft.model),
+                          secret: normalizeOptionalValue(draft.secret)
+                        });
+                        setDraft(null);
+                      }}
+                      type="button"
+                    >
+                      {copy.configRisk.actions.saveConfig}
+                    </button>
+                    <button
+                      className="action-button"
+                      onClick={() => setDraft(null)}
+                      type="button"
+                    >
+                      {copy.configRisk.actions.cancelEdit}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="action-button action-button-primary"
+                    onClick={() =>
+                      setDraft({
+                        artifactId: config.artifactId,
+                        assistant: config.assistant,
+                        scope: config.scope,
+                        path: config.path,
+                        provider: config.provider,
+                        model: config.model,
+                        baseUrl: config.baseUrl,
+                        secret: ""
+                      })
+                    }
+                    type="button"
+                  >
+                    {copy.configRisk.actions.editConfig}
+                  </button>
+                )}
+              </div>
+            ) : null}
+            {draft?.artifactId === config.artifactId ? (
+              <form
+                className="config-meta"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onSaveConfig?.({
+                    ...draft,
+                    model: normalizeOptionalValue(draft.model),
+                    secret: normalizeOptionalValue(draft.secret)
+                  });
+                  setDraft(null);
+                }}
+              >
+                <div>
+                  <label>
+                    {copy.configRisk.fields.provider}
+                    <input
+                      disabled={!isProviderEditable(config.assistant)}
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current
+                            ? { ...current, provider: event.target.value }
+                            : current
+                        )
+                      }
+                      type="text"
+                      value={draft.provider}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    {copy.configRisk.fields.model}
+                    <input
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current ? { ...current, model: event.target.value } : current
+                        )
+                      }
+                      type="text"
+                      value={draft.model ?? ""}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    {copy.configRisk.fields.endpoint}
+                    <input
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current
+                            ? { ...current, baseUrl: event.target.value }
+                            : current
+                        )
+                      }
+                      type="text"
+                      value={draft.baseUrl}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    {copy.configRisk.fields.newKey}
+                    <input
+                      onChange={(event) =>
+                        setDraft((current) =>
+                          current ? { ...current, secret: event.target.value } : current
+                        )
+                      }
+                      type="password"
+                      value={draft.secret ?? ""}
+                    />
+                  </label>
+                </div>
+              </form>
+            ) : null}
             <div className="badge-row">
               {config.risks.map((risk) => (
                 <span className="badge badge-risk" key={risk}>
@@ -65,4 +202,28 @@ export function ConfigRiskPanel({ configs }: ConfigRiskPanelProps) {
       </div>
     </section>
   );
+}
+
+function isEditableAssistant(assistant: string) {
+  return [
+    "github-copilot-cli",
+    "github copilot cli",
+    "factory-droid",
+    "factory droid",
+    "gemini-cli",
+    "gemini cli",
+    "openclaw",
+    "open claw"
+  ].includes(assistant.trim().toLowerCase());
+}
+
+function isProviderEditable(assistant: string) {
+  return ["factory-droid", "factory droid"].includes(
+    assistant.trim().toLowerCase()
+  );
+}
+
+function normalizeOptionalValue(value: string | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
 }

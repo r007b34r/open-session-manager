@@ -1,3 +1,4 @@
+pub mod config_writeback;
 pub mod delete;
 pub mod export;
 pub mod restore;
@@ -12,7 +13,7 @@ use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::domain::audit::AuditEvent;
+use crate::{audit::config_audit::AuditError, domain::audit::AuditEvent};
 
 pub type ActionResult<T> = Result<T, ActionError>;
 
@@ -21,6 +22,7 @@ pub enum ActionError {
     Io(io::Error),
     Sql(rusqlite::Error),
     Json(serde_json::Error),
+    Audit(AuditError),
     Precondition(String),
 }
 
@@ -30,6 +32,7 @@ impl fmt::Display for ActionError {
             Self::Io(error) => write!(f, "io error: {error}"),
             Self::Sql(error) => write!(f, "sqlite error: {error}"),
             Self::Json(error) => write!(f, "json error: {error}"),
+            Self::Audit(error) => write!(f, "audit error: {error}"),
             Self::Precondition(message) => write!(f, "precondition failed: {message}"),
         }
     }
@@ -52,6 +55,12 @@ impl From<rusqlite::Error> for ActionError {
 impl From<serde_json::Error> for ActionError {
     fn from(value: serde_json::Error) -> Self {
         Self::Json(value)
+    }
+}
+
+impl From<AuditError> for ActionError {
+    fn from(value: AuditError) -> Self {
+        Self::Audit(value)
     }
 }
 

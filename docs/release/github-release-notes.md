@@ -111,8 +111,7 @@
 - 大历史索引、BM25、语义搜索、hybrid ranking
 - 会话恢复 / attach / pause / process control
 - worktree 编排、多项目调度、容器隔离执行
-- `GitHub Copilot CLI / Factory Droid` 配置写回与更完整的项目级编辑
-- `Gemini / OpenClaw / GitHub Copilot CLI / Factory Droid` 配置写回与可视化修改
+- provider presets、共享配置片段、健康探测和自动切换
 - pricing lookup、usage 趋势图、更多助手连接器
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归

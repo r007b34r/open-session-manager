@@ -11,10 +11,14 @@ use serde_json::Value;
 use crate::{
     adapters::{
         claude_code::ClaudeCodeAdapter,
-        copilot_cli::CopilotCliAdapter,
         codex::CodexAdapter,
-        factory_droid::{DroidDialect, FactoryDroidAdapter, detect_droid_dialect, normalize_droid_kind},
-        gemini_cli::{GeminiCliAdapter, gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
+        copilot_cli::CopilotCliAdapter,
+        factory_droid::{
+            DroidDialect, FactoryDroidAdapter, detect_droid_dialect, normalize_droid_kind,
+        },
+        gemini_cli::{
+            GeminiCliAdapter, gemini_messages, gemini_role, gemini_text, gemini_tool_calls,
+        },
         openclaw::{OpenClawAdapter, openclaw_kind, openclaw_role, openclaw_text},
         opencode::OpenCodeAdapter,
         traits::{AdapterError, SessionAdapter, collect_files},
@@ -23,10 +27,7 @@ use crate::{
         config_audit::{AuditError, ConfigAuditTarget, audit_config},
         credential_audit::build_credential_artifacts,
     },
-    commands::{
-        configs::discover_known_config_targets,
-        discovery::discover_known_session_roots,
-    },
+    commands::{configs::discover_known_config_targets, discovery::discover_known_session_roots},
     discovery::{DiscoveryContext, KnownPath},
     domain::{
         audit::AuditEvent,
@@ -207,7 +208,12 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             "windows",
             fixtures_root.join("claude"),
         ),
-        KnownPath::new("opencode", "session", "linux", fixtures_root.join("opencode")),
+        KnownPath::new(
+            "opencode",
+            "session",
+            "linux",
+            fixtures_root.join("opencode"),
+        ),
         KnownPath::new(
             "gemini-cli",
             "session",
@@ -239,43 +245,64 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             "codex",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("codex").join("config.toml"),
+            fixtures_root
+                .join("configs")
+                .join("codex")
+                .join("config.toml"),
         ),
         ConfigAuditTarget::new(
             "claude-code",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("claude").join("settings.json"),
+            fixtures_root
+                .join("configs")
+                .join("claude")
+                .join("settings.json"),
         ),
         ConfigAuditTarget::new(
             "opencode",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("opencode").join("opencode.json"),
+            fixtures_root
+                .join("configs")
+                .join("opencode")
+                .join("opencode.json"),
         ),
         ConfigAuditTarget::new(
             "gemini-cli",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("gemini").join("settings.json"),
+            fixtures_root
+                .join("configs")
+                .join("gemini")
+                .join("settings.json"),
         ),
         ConfigAuditTarget::new(
             "github-copilot-cli",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("copilot").join("config.json"),
+            fixtures_root
+                .join("configs")
+                .join("copilot")
+                .join("config.json"),
         ),
         ConfigAuditTarget::new(
             "factory-droid",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("factory").join("settings.json"),
+            fixtures_root
+                .join("configs")
+                .join("factory")
+                .join("settings.json"),
         ),
         ConfigAuditTarget::new(
             "openclaw",
             "global",
             "fixtures",
-            fixtures_root.join("configs").join("openclaw").join("openclaw.json"),
+            fixtures_root
+                .join("configs")
+                .join("openclaw")
+                .join("openclaw.json"),
         ),
     ];
 
@@ -305,6 +332,32 @@ pub fn build_local_indexed_sessions(
     build_indexed_sessions(discover_known_session_roots(context))
 }
 
+pub fn find_local_config_target(
+    context: &DiscoveryContext,
+    artifact_id: &str,
+) -> SnapshotResult<Option<ConfigAuditTarget>> {
+    let session_roots = discover_known_session_roots(context);
+    let sessions = build_session_records(&session_roots)?;
+    let derived_project_targets = derive_project_config_targets(&sessions);
+    let merged_config_targets = merge_config_targets(
+        discover_known_config_targets(context),
+        derived_project_targets,
+    );
+
+    for target in merged_config_targets {
+        if !target.path.exists() {
+            continue;
+        }
+
+        let audit = audit_config(&target)?;
+        if audit.config.artifact_id == artifact_id {
+            return Ok(Some(target));
+        }
+    }
+
+    Ok(None)
+}
+
 fn build_snapshot(
     session_roots: Vec<KnownPath>,
     config_targets: Vec<ConfigAuditTarget>,
@@ -312,8 +365,7 @@ fn build_snapshot(
 ) -> SnapshotResult<DashboardSnapshot> {
     let sessions = build_session_records(&session_roots)?;
     let derived_project_targets = derive_project_config_targets(&sessions);
-    let merged_config_targets =
-        merge_config_targets(config_targets, derived_project_targets);
+    let merged_config_targets = merge_config_targets(config_targets, derived_project_targets);
     let configs = build_config_records(&merged_config_targets)?;
     let audit_events = build_audit_records(audit_db_path)?;
     let usage_overview = build_usage_overview(
@@ -605,9 +657,7 @@ fn build_config_records(
     Ok(configs)
 }
 
-fn derive_project_config_targets(
-    sessions: &[SessionDetailRecord],
-) -> Vec<ConfigAuditTarget> {
+fn derive_project_config_targets(sessions: &[SessionDetailRecord]) -> Vec<ConfigAuditTarget> {
     let mut targets = Vec::new();
 
     for session in sessions {
@@ -621,7 +671,11 @@ fn derive_project_config_targets(
                 let copilot_dir = project_path.join(".github").join("copilot");
                 let local_path = copilot_dir.join("settings.local.json");
                 let base_path = copilot_dir.join("settings.json");
-                let target_path = if local_path.exists() { local_path } else { base_path };
+                let target_path = if local_path.exists() {
+                    local_path
+                } else {
+                    base_path
+                };
                 targets.push(ConfigAuditTarget::new(
                     "github-copilot-cli",
                     "project",
@@ -633,7 +687,11 @@ fn derive_project_config_targets(
                 let factory_dir = project_path.join(".factory");
                 let local_path = factory_dir.join("settings.local.json");
                 let base_path = factory_dir.join("settings.json");
-                let target_path = if local_path.exists() { local_path } else { base_path };
+                let target_path = if local_path.exists() {
+                    local_path
+                } else {
+                    base_path
+                };
                 targets.push(ConfigAuditTarget::new(
                     "factory-droid",
                     "project",
@@ -675,14 +733,22 @@ fn build_metrics(
     sessions: &[SessionDetailRecord],
     configs: &[ConfigRiskRecord],
 ) -> Vec<DashboardMetric> {
-    let high_value_count = sessions.iter().filter(|session| session.value_score >= 70).count();
+    let high_value_count = sessions
+        .iter()
+        .filter(|session| session.value_score >= 70)
+        .count();
     let risky_config_count = configs
         .iter()
         .filter(|config| config.official_or_proxy == "proxy" || !config.risks.is_empty())
         .count();
     let reclaim_bytes = sessions
         .iter()
-        .filter(|session| session.risk_flags.iter().any(|flag| flag == "likely_garbage"))
+        .filter(|session| {
+            session
+                .risk_flags
+                .iter()
+                .any(|flag| flag == "likely_garbage")
+        })
         .filter_map(|session| fs::metadata(&session.source_path).ok())
         .map(|metadata| metadata.len())
         .sum::<u64>();
@@ -1042,12 +1108,18 @@ fn extract_factory_droid_narrative(source: &Path) -> SnapshotResult<SessionNarra
     }
 }
 
-fn extract_factory_droid_session_store_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+fn extract_factory_droid_session_store_narrative(
+    source: &Path,
+) -> SnapshotResult<SessionNarrative> {
     let lines = read_jsonl(source)?;
     let mut narrative = SessionNarrative::default();
 
     for line in lines {
-        if line.get("type").and_then(Value::as_str).map(normalize_droid_kind).as_deref()
+        if line
+            .get("type")
+            .and_then(Value::as_str)
+            .map(normalize_droid_kind)
+            .as_deref()
             != Some("message")
         {
             continue;
@@ -1056,7 +1128,10 @@ fn extract_factory_droid_session_store_narrative(source: &Path) -> SnapshotResul
         let Some(message) = line.get("message") else {
             continue;
         };
-        let role = message.get("role").and_then(Value::as_str).unwrap_or_default();
+        let role = message
+            .get("role")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         let parts = message
             .get("content")
             .and_then(Value::as_array)
@@ -1255,7 +1330,8 @@ fn extract_text_array(value: Option<&Value>) -> Option<String> {
     value
         .and_then(Value::as_array)
         .map(|parts| {
-            parts.iter()
+            parts
+                .iter()
                 .filter_map(|part| part.get("text").and_then(Value::as_str))
                 .collect::<Vec<_>>()
                 .join(" ")
@@ -1269,13 +1345,11 @@ fn extract_claude_message_text(content: &Value) -> Option<String> {
         Value::Array(parts) => {
             let joined = parts
                 .iter()
-                .filter_map(|part| {
-                    match part.get("type").and_then(Value::as_str) {
-                        Some("text" | "input_text" | "output_text") => {
-                            part.get("text").and_then(Value::as_str)
-                        }
-                        _ => None,
+                .filter_map(|part| match part.get("type").and_then(Value::as_str) {
+                    Some("text" | "input_text" | "output_text") => {
+                        part.get("text").and_then(Value::as_str)
                     }
+                    _ => None,
                 })
                 .collect::<Vec<_>>()
                 .join(" ");
@@ -1415,8 +1489,9 @@ mod tests {
         fs::create_dir_all(&codex_root).expect("create codex root");
         fs::create_dir_all(&claude_root).expect("create claude root");
 
-        let codex_fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../tests/fixtures/codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl");
+        let codex_fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
+            "../tests/fixtures/codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+        );
         fs::copy(&codex_fixture, codex_root.join("rollout-2026-03-15.jsonl"))
             .expect("copy codex fixture");
 
@@ -1444,8 +1519,8 @@ mod tests {
 
     #[test]
     fn fixture_snapshot_includes_transcript_digest() {
-        let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
-            .expect("fixture snapshot builds");
+        let snapshot =
+            build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
 
         let claude_session = snapshot
             .sessions
@@ -1502,31 +1577,48 @@ mod tests {
         assert_eq!(claude_session.todo_items.len(), 2);
         assert!(claude_session.todo_items[0].completed);
         assert_eq!(opencode_session.transcript_highlights[1].role, "Assistant");
-        assert!(gemini_session.transcript_highlights.iter().any(|highlight| {
-            highlight.content.contains("Audit Gemini session retention")
-        }));
-        assert!(copilot_session.transcript_highlights.iter().any(|highlight| {
-            highlight.content.contains("stale branch")
-        }));
-        assert!(droid_session.transcript_highlights.iter().any(|highlight| {
-            highlight.content.contains("stale session")
-        }));
-        assert!(droid_stream.transcript_highlights.iter().any(|highlight| {
-            highlight.content.contains("No dirty files were detected")
-        }));
-        assert!(openclaw_session.transcript_highlights.iter().any(|highlight| {
-            highlight
-                .content
-                .contains("Review OpenClaw transcripts and flag cleanup candidates")
-        }));
+        assert!(
+            gemini_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("Audit Gemini session retention") })
+        );
+        assert!(
+            copilot_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("stale branch") })
+        );
+        assert!(
+            droid_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("stale session") })
+        );
+        assert!(
+            droid_stream
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("No dirty files were detected") })
+        );
+        assert!(
+            openclaw_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| {
+                    highlight
+                        .content
+                        .contains("Review OpenClaw transcripts and flag cleanup candidates")
+                })
+        );
         assert_eq!(gemini_config.provider, "google");
         assert_eq!(openclaw_config.provider, "openrouter");
     }
 
     #[test]
     fn fixture_snapshot_includes_usage_analytics() {
-        let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
-            .expect("fixture snapshot builds");
+        let snapshot =
+            build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
         let serialized = serde_json::to_value(&snapshot).expect("snapshot serializes");
         let usage_overview = serialized
             .get("usageOverview")
@@ -1538,7 +1630,10 @@ mod tests {
         let opencode_usage = assistants
             .iter()
             .find(|assistant| {
-                assistant.get("assistant").and_then(serde_json::Value::as_str) == Some("opencode")
+                assistant
+                    .get("assistant")
+                    .and_then(serde_json::Value::as_str)
+                    == Some("opencode")
             })
             .expect("opencode usage aggregate exists");
         let session_usage = serialized
@@ -1595,7 +1690,12 @@ mod tests {
     fn local_snapshot_ignores_codex_scaffolding_when_deriving_title_and_highlights() {
         let sandbox = temp_root();
         let home_dir = sandbox.join("home");
-        let codex_dir = home_dir.join(".codex").join("sessions").join("2026").join("03").join("16");
+        let codex_dir = home_dir
+            .join(".codex")
+            .join("sessions")
+            .join("2026")
+            .join("03")
+            .join("16");
 
         fs::create_dir_all(&codex_dir).expect("create codex dir");
         fs::write(
@@ -1628,10 +1728,16 @@ mod tests {
         .expect("snapshot should build");
 
         assert_eq!(snapshot.sessions.len(), 1);
-        assert!(snapshot.sessions[0].title.starts_with(
-            "Fix why the session list keeps showing the first row"
-        ));
-        assert!(!snapshot.sessions[0].title.contains("AGENTS.md instructions"));
+        assert!(
+            snapshot.sessions[0]
+                .title
+                .starts_with("Fix why the session list keeps showing the first row")
+        );
+        assert!(
+            !snapshot.sessions[0]
+                .title
+                .contains("AGENTS.md instructions")
+        );
         assert_eq!(
             snapshot.sessions[0].transcript_highlights[0].content,
             "Fix why the session list keeps showing the first row and won't surface the real topic."
@@ -1695,7 +1801,12 @@ mod tests {
             .expect("factory config should be discovered");
 
         assert_eq!(copilot_config.model.as_deref(), Some("gpt-5"));
-        assert!(copilot_config.risks.iter().any(|risk| risk == "dangerous_permissions"));
+        assert!(
+            copilot_config
+                .risks
+                .iter()
+                .any(|risk| risk == "dangerous_permissions")
+        );
         assert_eq!(
             factory_config.model.as_deref(),
             Some("openrouter/anthropic/claude-sonnet-4")
@@ -1724,26 +1835,22 @@ mod tests {
         fs::create_dir_all(&factory_config_dir).expect("create factory config dir");
 
         fs::copy(
-            fixtures_root()
-                .join("configs/copilot/project/.github/copilot/settings.json"),
+            fixtures_root().join("configs/copilot/project/.github/copilot/settings.json"),
             copilot_config_dir.join("settings.json"),
         )
         .expect("copy copilot project settings");
         fs::copy(
-            fixtures_root()
-                .join("configs/copilot/project/.github/copilot/settings.local.json"),
+            fixtures_root().join("configs/copilot/project/.github/copilot/settings.local.json"),
             copilot_config_dir.join("settings.local.json"),
         )
         .expect("copy copilot project local settings");
         fs::copy(
-            fixtures_root()
-                .join("configs/factory/project/.factory/settings.json"),
+            fixtures_root().join("configs/factory/project/.factory/settings.json"),
             factory_config_dir.join("settings.json"),
         )
         .expect("copy factory project settings");
         fs::copy(
-            fixtures_root()
-                .join("configs/factory/project/.factory/settings.local.json"),
+            fixtures_root().join("configs/factory/project/.factory/settings.local.json"),
             factory_config_dir.join("settings.local.json"),
         )
         .expect("copy factory project local settings");
@@ -1791,9 +1898,7 @@ mod tests {
         let copilot_config = snapshot
             .configs
             .iter()
-            .find(|config| {
-                config.assistant == "github-copilot-cli" && config.scope == "project"
-            })
+            .find(|config| config.assistant == "github-copilot-cli" && config.scope == "project")
             .expect("copilot project config should be discovered");
         let factory_config = snapshot
             .configs
@@ -1803,7 +1908,12 @@ mod tests {
 
         assert!(copilot_config.path.ends_with("settings.local.json"));
         assert_eq!(copilot_config.model.as_deref(), Some("gpt-5"));
-        assert!(copilot_config.risks.iter().any(|risk| risk == "dangerous_permissions"));
+        assert!(
+            copilot_config
+                .risks
+                .iter()
+                .any(|risk| risk == "dangerous_permissions")
+        );
         assert!(factory_config.path.ends_with("settings.local.json"));
         assert_eq!(
             factory_config.model.as_deref(),
