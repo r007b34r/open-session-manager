@@ -5,14 +5,9 @@ use std::{
 };
 
 use super::{
-    claude_code::ClaudeCodeAdapter,
-    codex::CodexAdapter,
-    copilot_cli::CopilotCliAdapter,
-    factory_droid::FactoryDroidAdapter,
-    gemini_cli::GeminiCliAdapter,
-    openclaw::OpenClawAdapter,
-    opencode::OpenCodeAdapter,
-    traits::SessionAdapter,
+    claude_code::ClaudeCodeAdapter, codex::CodexAdapter, copilot_cli::CopilotCliAdapter,
+    factory_droid::FactoryDroidAdapter, gemini_cli::GeminiCliAdapter, openclaw::OpenClawAdapter,
+    opencode::OpenCodeAdapter, traits::SessionAdapter,
 };
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
@@ -132,6 +127,37 @@ fn claude_adapter_discovery_skips_file_history_only_jsonl() {
 }
 
 #[test]
+fn claude_adapter_recovers_session_id_from_filename_when_payload_is_missing_it() {
+    let adapter = ClaudeCodeAdapter;
+    let root = temp_root();
+    let session_path = root.join("e64bead8-be17-43ce-8d26-1c9e1e5cbd6e.jsonl");
+
+    fs::write(
+        &session_path,
+        concat!(
+            "{\"type\":\"user\",\"cwd\":\"C:/Projects/claude-real\",",
+            "\"timestamp\":\"2026-03-16T12:00:01Z\",",
+            "\"message\":{\"content\":\"Investigate the real cleanup candidates.\"}}\n",
+            "{\"type\":\"assistant\",\"cwd\":\"C:/Projects/claude-real\",",
+            "\"timestamp\":\"2026-03-16T12:00:03Z\",",
+            "\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Mapped the stale sessions and exports.\"}]}}\n"
+        ),
+    )
+    .expect("write claude session without embedded session id");
+
+    let session = adapter
+        .parse_session(&session_path)
+        .expect("claude adapter should recover session id from filename");
+
+    assert_eq!(session.session_id, "e64bead8-be17-43ce-8d26-1c9e1e5cbd6e");
+    assert_eq!(
+        session.project_path.as_deref(),
+        Some("C:/Projects/claude-real")
+    );
+    assert_eq!(session.message_count, 2);
+}
+
+#[test]
 fn opencode_adapter_discovers_and_parses_fixture() {
     let adapter = OpenCodeAdapter;
     let root = fixtures_root().join("opencode");
@@ -172,7 +198,10 @@ fn gemini_adapter_discovers_and_parses_fixture() {
 
     assert_eq!(session.assistant, "gemini-cli");
     assert_eq!(session.session_id, "gemini-ses-1");
-    assert_eq!(session.project_path.as_deref(), Some(r"C:\Projects\gemini-demo"));
+    assert_eq!(
+        session.project_path.as_deref(),
+        Some(r"C:\Projects\gemini-demo")
+    );
     assert_eq!(session.message_count, 2);
     assert_eq!(session.tool_count, 1);
     assert_eq!(session.raw_format, "gemini-cli-json");
@@ -196,7 +225,10 @@ fn copilot_adapter_discovers_and_parses_fixture() {
 
     assert_eq!(session.assistant, "github-copilot-cli");
     assert_eq!(session.session_id, "copilot-ses-1");
-    assert_eq!(session.project_path.as_deref(), Some(r"C:\Projects\copilot-demo"));
+    assert_eq!(
+        session.project_path.as_deref(),
+        Some(r"C:\Projects\copilot-demo")
+    );
     assert_eq!(session.message_count, 2);
     assert_eq!(session.tool_count, 1);
     assert_eq!(session.raw_format, "github-copilot-cli-jsonl");

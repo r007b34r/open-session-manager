@@ -8,7 +8,7 @@
 | 维度 | 当前状态 | 说明 |
 | --- | --- | --- |
 | `Codex` 会话解析 | 已实现 | 支持 JSONL rollout，且已修复脚手架标题污染 |
-| `Claude Code` 会话解析 | 已实现 | 支持 `~/.claude/projects/**/*.jsonl`，已跳过纯 `file-history-snapshot` |
+| `Claude Code` 会话解析 | 已实现 | 支持 `~/.claude/projects/**/*.jsonl`，已跳过纯 `file-history-snapshot`，并可按 UUID 文件名自愈缺失 `sessionId` 的历史 JSONL |
 | `OpenCode` 会话解析 | 已实现 | 支持本地 storage 结构 |
 | `Gemini CLI` 会话解析 | 已实现 | 支持 `~/.gemini/tmp/**/session-*.json` |
 | `GitHub Copilot CLI` 会话解析 | 已实现 | 支持 `~/.copilot/session-state/*.jsonl` |
@@ -28,6 +28,7 @@
 | 软删除 / 恢复 | 已实现 | Rust actions 已有测试覆盖，恢复边界已加固 |
 | 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
 | Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件 |
+| Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
 | Web / Tauri UI | 已实现 | 桌面端与浏览器端共用同一套 React UI |
 | 中英文切换 | 已实现 | 默认按系统或浏览器语言自动切换 |
 | 浅色 / 深色 / 跟随系统主题 | 已实现 | 支持手动覆盖并持久化主题选择 |

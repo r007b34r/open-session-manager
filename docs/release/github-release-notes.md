@@ -98,6 +98,7 @@
 - transcript highlights 与 Claude todo snapshot
 - Sessions 页加权搜索、命中片段和来源标签
 - `doctor` CLI 与总览环境诊断面板，可显示被跳过的 malformed session 文件
+- `Claude Code` 历史 JSONL 如果正文缺失 `sessionId`，但文件名本身是 UUID，OSM 现在会自动恢复会话 ID，而不是一律丢弃
 - `Session Handoff` Markdown 导出
 - Markdown 导出、软删除、恢复、审计历史
 - 中英文切换与跟随系统语言

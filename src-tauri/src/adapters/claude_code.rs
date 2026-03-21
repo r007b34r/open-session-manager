@@ -68,9 +68,11 @@ impl SessionAdapter for ClaudeCodeAdapter {
             }
         }
 
-        let session_id = session_id.ok_or_else(|| {
-            AdapterError::InvalidSession(format!("missing session id in {}", source.display()))
-        })?;
+        let session_id = session_id
+            .or_else(|| fallback_session_id_from_filename(source))
+            .ok_or_else(|| {
+                AdapterError::InvalidSession(format!("missing session id in {}", source.display()))
+            })?;
 
         Ok(SessionRecord {
             session_id,
@@ -91,6 +93,22 @@ impl SessionAdapter for ClaudeCodeAdapter {
     }
 }
 
+fn fallback_session_id_from_filename(source: &Path) -> Option<String> {
+    let file_stem = source.file_stem()?.to_str()?.trim();
+    is_uuid_like(file_stem).then(|| file_stem.to_string())
+}
+
+fn is_uuid_like(value: &str) -> bool {
+    if value.len() != 36 {
+        return false;
+    }
+
+    value.chars().enumerate().all(|(index, character)| match index {
+        8 | 13 | 18 | 23 => character == '-',
+        _ => character.is_ascii_hexdigit(),
+    })
+}
+
 fn looks_like_claude_session_candidate(path: &Path) -> Result<bool, std::io::Error> {
     let reader = BufReader::new(File::open(path)?);
     let mut only_file_history = true;
@@ -103,7 +121,10 @@ fn looks_like_claude_session_candidate(path: &Path) -> Result<bool, std::io::Err
 
         let entry_type = parsed.get("type").and_then(Value::as_str);
         if parsed.get("sessionId").and_then(Value::as_str).is_some()
-            || matches!(entry_type, Some("user" | "assistant" | "system" | "progress"))
+            || matches!(
+                entry_type,
+                Some("user" | "assistant" | "system" | "progress")
+            )
         {
             return Ok(true);
         }

@@ -189,7 +189,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `QLT-01` | P0 | todo | metadata repair / self-healing | 修复策略测试覆盖 malformed session |
+| `QLT-01` | P0 | done | metadata repair / self-healing | `Claude Code` 缺失 `sessionId` 的历史 JSONL 可按 UUID 文件名自愈，并有回归测试与全量验证 |
 | `QLT-02` | P0 | todo | unknown session diagnostics | 未识别目录和格式有明确诊断输出 |
 | `QLT-03` | P0 | todo | fixture drift ledger | fixture 版本、来源和失败记录可追踪 |
 | `QLT-04` | P1 | todo | screenshot automation | UI 回归截图脚本和对比测试通过 |
