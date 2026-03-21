@@ -28,6 +28,7 @@
 - Sessions 搜索现在会做本地加权排序，展示命中片段和命中来源标签
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
+- Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地
 - 新增三条本地镜像研究并纳入治理目录：
   - `ChristopherA/claude_code_tools`
   - `ssdeanx/Gemini-CLI-Web`
@@ -44,7 +45,7 @@
 - `d-kimuson/claude-code-viewer`
   - 延续 viewer 风格详情面板和 todo evidence 呈现思路
 - `ChristopherA/claude_code_tools`
-  - 吸收 session closure / resume 的 brief 思路，补到 OSM 的 `Session Handoff` Markdown 导出
+  - 吸收 session closure / resume brief、cleanup checklist、session-end hook 这条会话收尾链路，补到 OSM 的导出和软删除守卫
 - `farion1231/cc-switch`
   - clean-room 吸收统一 provider/config 治理方向，以及 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模
 - `endorhq/rover`
@@ -104,6 +105,7 @@
 - fixtures 现在有版本/来源/hash ledger，`verify.ps1` 会强制跑 drift 检查，fixture 漂移不再靠人工记忆
 - fixtures snapshot 现在有规范化 golden 基线；一旦输出漂移，校验会直接报出具体 JSON 路径差异
 - `Session Handoff` Markdown 导出
+- cleanup checklist / session-end hook 导出链路
 - Markdown 导出、软删除、恢复、审计历史
 - 中英文切换与跟随系统语言
 - 浅色 / 深色 / 跟随系统主题

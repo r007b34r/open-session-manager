@@ -226,20 +226,41 @@ pub fn has_successful_markdown_export(
     connection: &Connection,
     session_id: &str,
 ) -> ActionResult<bool> {
-    let exists = connection.query_row(
-        "SELECT EXISTS(
-            SELECT 1
-            FROM audit_events
-            WHERE event_type = 'export_markdown'
-              AND target_type = 'session'
-              AND target_id = ?1
-              AND result = 'success'
-        )",
-        [session_id],
-        |row| row.get::<_, i64>(0),
-    )?;
+    let exists = has_successful_session_event(connection, session_id, "export_markdown")?;
 
     Ok(exists != 0)
+}
+
+pub fn has_successful_cleanup_checklist(
+    connection: &Connection,
+    session_id: &str,
+) -> ActionResult<bool> {
+    let exists = has_successful_session_event(connection, session_id, "cleanup_checklist")?;
+
+    Ok(exists != 0)
+}
+
+pub fn latest_session_end_hook_failed(
+    connection: &Connection,
+    session_id: &str,
+) -> ActionResult<bool> {
+    let latest_result = connection.query_row(
+        "SELECT result
+         FROM audit_events
+         WHERE event_type = 'session_end_hook'
+           AND target_type = 'session'
+           AND target_id = ?1
+         ORDER BY created_at DESC
+         LIMIT 1",
+        [session_id],
+        |row| row.get::<_, String>(0),
+    );
+
+    match latest_result {
+        Ok(result) => Ok(result == "failed"),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
+        Err(error) => Err(ActionError::Sql(error)),
+    }
 }
 
 pub fn move_path(source: &Path, destination: &Path) -> ActionResult<()> {
@@ -330,6 +351,27 @@ fn normalize_lexical_path(path: &Path) -> PathBuf {
     }
 
     normalized
+}
+
+fn has_successful_session_event(
+    connection: &Connection,
+    session_id: &str,
+    event_type: &str,
+) -> ActionResult<i64> {
+    connection
+        .query_row(
+            "SELECT EXISTS(
+                SELECT 1
+                FROM audit_events
+                WHERE event_type = ?1
+                  AND target_type = 'session'
+                  AND target_id = ?2
+                  AND result = 'success'
+            )",
+            params![event_type, session_id],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

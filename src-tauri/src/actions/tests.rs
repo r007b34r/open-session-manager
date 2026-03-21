@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::{
-    ActionError, QuarantineManifest,
+    ActionError, AuditWriteRequest, QuarantineManifest, write_audit_event,
     config_writeback::{
         ConfigRollbackRequest, ConfigWritebackRequest, ConfigWritebackUpdate,
         rollback_config_writeback, write_config,
@@ -114,10 +114,11 @@ fn exports_soft_deletes_restores_and_audits_session() {
     let event_count: i64 = connection
         .query_row("SELECT COUNT(*) FROM audit_events", [], |row| row.get(0))
         .expect("count audit events");
-    assert_eq!(event_count, 3);
+    assert_eq!(event_count, 4);
 
     let event_types = query_event_types(&connection);
     assert!(event_types.contains(&"export_markdown".to_string()));
+    assert!(event_types.contains(&"cleanup_checklist".to_string()));
     assert!(event_types.contains(&"soft_delete".to_string()));
     assert!(event_types.contains(&"restore".to_string()));
 
@@ -753,6 +754,173 @@ fn exports_markdown_without_todos_still_builds_session_handoff() {
 }
 
 #[test]
+fn exports_cleanup_checklist_and_runs_session_end_hook_when_present() {
+    let sandbox = temp_root();
+    let source_path = sandbox.join("sessions").join("codex-ses-cleanup.jsonl");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+
+    let project_root = sandbox.join("project");
+    let hook_path = write_session_end_hook(&project_root);
+    let export_root = sandbox.join("exports");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-cleanup-hook".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-16T06:00:00Z".to_string()),
+        ended_at: Some("2026-03-16T06:02:00Z".to_string()),
+        last_activity_at: Some("2026-03-16T06:02:00Z".to_string()),
+        message_count: 2,
+        tool_count: 0,
+        status: "completed".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "cleanup-hook-123".to_string(),
+    };
+
+    let insight = SessionInsight {
+        session_id: session.session_id.clone(),
+        title: "Prepare cleanup checklist".to_string(),
+        topic_labels_json: r#"["cleanup","hook"]"#.to_string(),
+        summary: "Export the session, run the end hook, and persist the cleanup checklist."
+            .to_string(),
+        progress_state: "completed".to_string(),
+        progress_percent: Some(100),
+        value_score: 82,
+        stale_score: 8,
+        garbage_score: 20,
+        risk_flags_json: r#"["review_before_cleanup"]"#.to_string(),
+        confidence: 0.91,
+    };
+
+    let export_result = export_session_markdown(&ExportRequest {
+        session: &session,
+        insight: &insight,
+        output_root: &export_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("export markdown");
+
+    let checklist_path = export_root.join("cleanup-codex-cleanup-hook.json");
+    let hook_report_path = export_root.join("session-end-codex-cleanup-hook.log");
+
+    assert!(export_result.output_path.exists());
+    assert!(checklist_path.exists());
+    assert!(hook_report_path.exists());
+
+    let checklist = serde_json::from_str::<serde_json::Value>(
+        &fs::read_to_string(&checklist_path).expect("read cleanup checklist"),
+    )
+    .expect("parse cleanup checklist");
+
+    assert_eq!(
+        checklist.get("sessionId").and_then(serde_json::Value::as_str),
+        Some("codex-cleanup-hook")
+    );
+    assert_eq!(
+        checklist
+            .get("exportPath")
+            .and_then(serde_json::Value::as_str),
+        Some(export_result.output_path.display().to_string().as_str())
+    );
+    assert_eq!(
+        checklist
+            .get("sessionEndHook")
+            .and_then(|value| value.get("status"))
+            .and_then(serde_json::Value::as_str),
+        Some("success")
+    );
+    assert_eq!(
+        checklist
+            .get("sessionEndHook")
+            .and_then(|value| value.get("scriptPath"))
+            .and_then(serde_json::Value::as_str),
+        Some(hook_path.display().to_string().as_str())
+    );
+
+    let hook_report = fs::read_to_string(&hook_report_path).expect("read hook report");
+    assert!(hook_report.contains("hook saw session codex-cleanup-hook"));
+    assert!(hook_report.contains(checklist_path.display().to_string().as_str()));
+    assert!(hook_report.contains(export_result.output_path.display().to_string().as_str()));
+
+    let event_types = query_event_types(&connection);
+    assert!(event_types.contains(&"export_markdown".to_string()));
+    assert!(event_types.contains(&"cleanup_checklist".to_string()));
+    assert!(event_types.contains(&"session_end_hook".to_string()));
+}
+
+#[test]
+fn soft_delete_requires_cleanup_checklist_before_quarantine() {
+    let sandbox = temp_root();
+    let source_path = sandbox.join("sessions").join("rollout-2026-03-16.jsonl");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+
+    let export_root = sandbox.join("exports");
+    let quarantine_root = sandbox.join("quarantine");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "ses-cleanup-precondition".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(r"C:\Projects\demo".to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-16T05:00:00Z".to_string()),
+        ended_at: Some("2026-03-16T05:15:00Z".to_string()),
+        last_activity_at: Some("2026-03-16T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "completed".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "cleanup-precondition-123".to_string(),
+    };
+
+    let export_path = export_root.join("session-ses-cleanup-precondition.md");
+    write_audit_event(
+        &connection,
+        AuditWriteRequest {
+            event_type: "export_markdown",
+            target_type: "session",
+            target_id: &session.session_id,
+            actor: "r007b34r",
+            before_state: Some(
+                serde_json::json!({ "source_path": session.source_path.clone() }).to_string(),
+            ),
+            after_state: Some(serde_json::json!({ "output_path": export_path }).to_string()),
+            result: "success",
+        },
+    )
+    .expect("record export event");
+
+    let error = soft_delete_session(&SoftDeleteRequest {
+        session: &session,
+        quarantine_root: &quarantine_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect_err("soft delete should require a cleanup checklist first");
+
+    match error {
+        ActionError::Precondition(message) => {
+            assert!(message.contains("cleanup checklist"));
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+
+    assert!(source_path.exists());
+    assert!(!quarantine_root.exists());
+}
+
+#[test]
 fn writes_back_and_rolls_back_copilot_config_with_backup_and_audit() {
     let sandbox = temp_root();
     let fixtures_root = config_fixtures_root();
@@ -1087,4 +1255,46 @@ where
     T: std::borrow::Borrow<crate::audit::RiskFlag>,
 {
     flags.iter().any(|flag| flag.borrow().code == code)
+}
+
+fn write_session_end_hook(project_root: &Path) -> PathBuf {
+    let hooks_dir = project_root.join(".open-session-manager").join("hooks");
+    fs::create_dir_all(&hooks_dir).expect("create session-end hooks dir");
+
+    if cfg!(windows) {
+        let hook_path = hooks_dir.join("session-end.ps1");
+        fs::write(
+            &hook_path,
+            concat!(
+                "param([string]$ChecklistPath, [string]$ExportPath)\n",
+                "Write-Output \"hook saw session $env:OSM_SESSION_ID\"\n",
+                "Write-Output \"checklist=$ChecklistPath\"\n",
+                "Write-Output \"export=$ExportPath\"\n",
+            ),
+        )
+        .expect("write powershell session-end hook");
+        return hook_path;
+    }
+
+    let hook_path = hooks_dir.join("session-end.sh");
+    fs::write(
+        &hook_path,
+        concat!(
+            "#!/bin/sh\n",
+            "printf 'hook saw session %s\\n' \"$OSM_SESSION_ID\"\n",
+            "printf 'checklist=%s\\n' \"$1\"\n",
+            "printf 'export=%s\\n' \"$2\"\n",
+        ),
+    )
+    .expect("write shell session-end hook");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&hook_path, fs::Permissions::from_mode(0o755))
+            .expect("mark shell hook executable");
+    }
+
+    hook_path
 }

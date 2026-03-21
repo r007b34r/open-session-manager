@@ -331,21 +331,17 @@ fn snapshot_command_includes_persisted_audit_history() {
         .and_then(Value::as_array)
         .expect("audit events array exists");
 
-    assert_eq!(audit_events.len(), 3);
-    assert_eq!(
-        audit_events[0]
-            .get("type")
-            .and_then(Value::as_str)
-            .expect("event type exists"),
-        "restore"
-    );
-    assert_eq!(
-        audit_events[2]
-            .get("type")
-            .and_then(Value::as_str)
-            .expect("event type exists"),
-        "export_markdown"
-    );
+    assert_eq!(audit_events.len(), 4);
+
+    let audit_types = audit_events
+        .iter()
+        .filter_map(|event| event.get("type").and_then(Value::as_str))
+        .collect::<Vec<_>>();
+
+    assert!(audit_types.contains(&"restore"));
+    assert!(audit_types.contains(&"soft_delete"));
+    assert!(audit_types.contains(&"cleanup_checklist"));
+    assert!(audit_types.contains(&"export_markdown"));
 }
 
 #[test]

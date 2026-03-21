@@ -159,7 +159,7 @@
 | `MCP-06` | P2 | todo | skills marketplace | 仓库索引、许可提示和安装流程测试通过 |
 | `MCP-07` | P1 | todo | prompt / rule cross-app sync | 多助手规则同步测试通过 |
 | `MCP-08` | P0 | todo | 会话知识提炼成技能或规则 | Markdown handoff 可转结构化 rule/skill |
-| `MCP-09` | P0 | todo | cleanup checklist / session-end hooks | 删除前检查表与 hook 测试通过 |
+| `MCP-09` | P0 | done | cleanup checklist / session-end hooks | 导出会生成结构化 cleanup checklist，并在项目内存在 `session-end` hook 时执行；软删除前要求 checklist 成功且最近一次 hook 未失败 |
 
 ### 4.9 分析与可视化
 

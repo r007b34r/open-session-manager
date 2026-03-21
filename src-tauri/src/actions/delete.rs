@@ -7,7 +7,8 @@ use crate::domain::session::SessionRecord;
 
 use super::{
     ActionError, ActionResult, AuditWriteRequest, QuarantineAsset, QuarantineManifest,
-    has_successful_markdown_export, move_path, safe_managed_name, write_audit_event,
+    has_successful_cleanup_checklist, has_successful_markdown_export,
+    latest_session_end_hook_failed, move_path, safe_managed_name, write_audit_event,
 };
 
 pub struct SoftDeleteRequest<'a> {
@@ -21,6 +22,18 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
     if !has_successful_markdown_export(request.connection, &request.session.session_id)? {
         return Err(ActionError::Precondition(
             "soft delete requires a successful Markdown export first".to_string(),
+        ));
+    }
+
+    if !has_successful_cleanup_checklist(request.connection, &request.session.session_id)? {
+        return Err(ActionError::Precondition(
+            "soft delete requires a successful cleanup checklist first".to_string(),
+        ));
+    }
+
+    if latest_session_end_hook_failed(request.connection, &request.session.session_id)? {
+        return Err(ActionError::Precondition(
+            "soft delete is blocked because the latest session-end hook failed".to_string(),
         ));
     }
 
@@ -95,7 +108,10 @@ fn collect_related_assets(session: &SessionRecord, session_root: &Path) -> Vec<Q
     let safe_session_id = safe_managed_name(&session.session_id);
     let candidates = [
         (
-            storage_root.join("session").join("message").join(&session.session_id),
+            storage_root
+                .join("session")
+                .join("message")
+                .join(&session.session_id),
             session_root
                 .join("payload")
                 .join("related")
@@ -103,7 +119,10 @@ fn collect_related_assets(session: &SessionRecord, session_root: &Path) -> Vec<Q
                 .join(&safe_session_id),
         ),
         (
-            storage_root.join("session").join("part").join(&session.session_id),
+            storage_root
+                .join("session")
+                .join("part")
+                .join(&session.session_id),
             session_root
                 .join("payload")
                 .join("related")

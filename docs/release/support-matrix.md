@@ -25,8 +25,9 @@
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
+| Cleanup checklist / session-end hooks | 已实现 | 导出会同步生成 `cleanup-<session>.json`，并在项目内存在 `session-end.ps1/.sh` 时执行 hook；软删除前要求 checklist 已成功落地且 hook 未失败 |
 | 软删除 / 恢复 | 已实现 | Rust actions 已有测试覆盖，恢复边界已加固 |
-| 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
+| 审计事件写入 | 已实现 | 当前覆盖导出、cleanup checklist、session-end hook、软删除、恢复 |
 | Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件，以及已知根目录下被静默过滤的未知 session-like 文件 |
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
 | Fixture drift ledger | 已实现 | `tests/fixtures/fixture-ledger.json` 记录 fixture 版本、来源和文件 hash，`scripts/fixture-ledger.mjs --check` 已进入统一 verify |
@@ -58,7 +59,7 @@
 | `jazzyalex/agent-sessions` | 已吸收 | `Gemini CLI`、`GitHub Copilot CLI`、`Factory Droid`、`OpenClaw` 会话适配器已落进 OSM clean-room 实现 |
 | `daaain/claude-code-log` | 已吸收 | 更丰富的 Markdown 导出分节、transcript highlights、Claude todo snapshot |
 | `d-kimuson/claude-code-viewer` | 已吸收 | viewer 风格 transcript detail 面板、session todo evidence 展示 |
-| `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief 思路已落进 OSM 的 Markdown 导出 |
+| `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief、cleanup checklist、session-end hook 这条会话收尾链路已落进 OSM 的导出与软删除守卫 |
 | `kbwo/ccmanager` | 已研究 | worktree / 多项目调度方向 |
 | `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
