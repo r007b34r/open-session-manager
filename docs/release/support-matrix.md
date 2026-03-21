@@ -29,6 +29,7 @@
 | 审计事件写入 | 已实现 | 当前覆盖导出、软删除、恢复 |
 | Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件，以及已知根目录下被静默过滤的未知 session-like 文件 |
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
+| Fixture drift ledger | 已实现 | `tests/fixtures/fixture-ledger.json` 记录 fixture 版本、来源和文件 hash，`scripts/fixture-ledger.mjs --check` 已进入统一 verify |
 | Responsive detail panes | 已实现 | 会话详情改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI、窄窗和嵌入式选中场景 |
 | Web / Tauri UI | 已实现 | 桌面端与浏览器端共用同一套 React UI |
 | 中英文切换 | 已实现 | 默认按系统或浏览器语言自动切换 |

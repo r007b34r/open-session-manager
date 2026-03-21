@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "generatedAt": "2026-03-21T21:46:43.198Z",
+  "fixtures": [
+    {
+      "id": "codex-session",
+      "assistant": "codex",
+      "kind": "session",
+      "relativePath": "codex",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "jazzyalex/agent-sessions"
+      ],
+      "contentHash": "d3759c0a8e1114a75a1bcfb4e8caf750c3dbefdb13eda146b4c9905c0e41e42f",
+      "fileCount": 1,
+      "files": [
+        {
+          "relativePath": "codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+          "contentHash": "a8c751a45644f819b9952bb6c609c2355d01dac3c6f799dca216a4cf15390558"
+        }
+      ]
+    },
+    {
+      "id": "claude-session",
+      "assistant": "claude-code",
+      "kind": "session",
+      "relativePath": "claude",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "daaain/claude-code-log",
+        "d-kimuson/claude-code-viewer"
+      ],
+      "contentHash": "2890fd7bda9357f682987937c443c11808460d97bc469220841773b1c211e93d",
+      "fileCount": 1,
+      "files": [
+        {
+          "relativePath": "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+          "contentHash": "79881b5ecc3c9a2dab3e7290ca88e4c9d14286270dbfeaebe7b02f002b2e0e94"
+        }
+      ]
+    },
+    {
+      "id": "opencode-session",
+      "assistant": "opencode",
+      "kind": "session",
+      "relativePath": "opencode",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "daaain/claude-code-log"
+      ],
+      "contentHash": "cdabd9909717e287d5d3b20dc51802545bb27a7ab425132dcce949fa117779e8",
+      "fileCount": 6,
+      "files": [
+        {
+          "relativePath": "opencode/storage/session/info/ses_demo.json",
+          "contentHash": "fc59c8487d6b764c704522d06233dc2a4a07a546a4980b3a98d30041270d54ab"
+        },
+        {
+          "relativePath": "opencode/storage/session/message/ses_demo/msg_assistant.json",
+          "contentHash": "2c6272ea1a3dc5abf865e019c9e98a02d6a8fcb0256eec82b50212c11fca152c"
+        },
+        {
+          "relativePath": "opencode/storage/session/message/ses_demo/msg_user.json",
+          "contentHash": "6d11a65a2f92c9a803c20838ec92e5311e827b0ccf30c862f643925a2ea2eecd"
+        },
+        {
+          "relativePath": "opencode/storage/session/part/ses_demo/msg_assistant/prt_assistant_text.json",
+          "contentHash": "0a49623430a08e34077531c2bf203a9671643881ab71ac6066eaa3e94959a52a"
+        },
+        {
+          "relativePath": "opencode/storage/session/part/ses_demo/msg_assistant/prt_assistant_tool.json",
+          "contentHash": "13205223990e067a16ae88a68d2f08be93e409ecf05423e4ffaca723ae32cfb8"
+        },
+        {
+          "relativePath": "opencode/storage/session/part/ses_demo/msg_user/prt_user.json",
+          "contentHash": "4fe84edcd236f7e28f241a391439e0ee5b56b453d5ae87cef77986e75e26b22f"
+        }
+      ]
+    },
+    {
+      "id": "gemini-session",
+      "assistant": "gemini-cli",
+      "kind": "session",
+      "relativePath": "gemini",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "jazzyalex/agent-sessions"
+      ],
+      "contentHash": "3a611f25515fe767a65c1f8bf38fa0f3e69aa23e615e75c62e63239c702ee6bd",
+      "fileCount": 1,
+      "files": [
+        {
+          "relativePath": "gemini/tmp/project_hash_a/chats/session-gemini-demo.json",
+          "contentHash": "3faac545a7316b80a94ebe4642f7a5ee47968e123535bc1ab2043bfbb133db63"
+        }
+      ]
+    },
+    {
+      "id": "copilot-session",
+      "assistant": "github-copilot-cli",
+      "kind": "session",
+      "relativePath": "copilot",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "jazzyalex/agent-sessions",
+        "endorhq/rover"
+      ],
+      "contentHash": "8e017fb009495fad185d8677f8e14e375802be5b306e7c799ffa8fc886d95b2c",
+      "fileCount": 1,
+      "files": [
+        {
+          "relativePath": "copilot/session-state/copilot-ses-1.jsonl",
+          "contentHash": "ca8afeb50da17a0223c1b158928726343c67059ea2597103f493c7b0a1e73ad6"
+        }
+      ]
+    },
+    {
+      "id": "factory-session",
+      "assistant": "factory-droid",
+      "kind": "session",
+      "relativePath": "factory",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "jazzyalex/agent-sessions"
+      ],
+      "contentHash": "5625f89da7c6ce6606a645c64e8276ea2211fc04b6dba0f480a00ede00e0a5c9",
+      "fileCount": 2,
+      "files": [
+        {
+          "relativePath": "factory/projects/project-a/stream-session-1.jsonl",
+          "contentHash": "706aff9b3bc901984b25f9f8c502586be7118847c504e6ec7aa17a4a57234cc4"
+        },
+        {
+          "relativePath": "factory/sessions/project-a/droid-session-1.jsonl",
+          "contentHash": "2f9d5faba51e4fa62b8b56b9d0d386c29df5195a5e317be3f102c09b86ff42d2"
+        }
+      ]
+    },
+    {
+      "id": "openclaw-session",
+      "assistant": "openclaw",
+      "kind": "session",
+      "relativePath": "openclaw",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "jazzyalex/agent-sessions",
+        "farion1231/cc-switch"
+      ],
+      "contentHash": "54cb8d51f58b1b1b659319476205213698b314f021964f455994ac5580830285",
+      "fileCount": 1,
+      "files": [
+        {
+          "relativePath": "openclaw/agents/agent-main/sessions/openclaw-ses-1.jsonl",
+          "contentHash": "5d870ab5dbc9012274d1ffab1b37c15143982ac897a9b36a9f2e5001b9001e02"
+        }
+      ]
+    },
+    {
+      "id": "config-artifacts",
+      "assistant": "multiple",
+      "kind": "config",
+      "relativePath": "configs",
+      "fixtureVersion": "2026-03-16",
+      "source": "clean-room synthetic",
+      "upstreams": [
+        "farion1231/cc-switch",
+        "endorhq/rover"
+      ],
+      "contentHash": "73e870dea67cb9adf840e6d790558079aced060ba89535f54d4b10532f9bfe08",
+      "fileCount": 14,
+      "files": [
+        {
+          "relativePath": "configs/claude/settings.json",
+          "contentHash": "f9b093fd9f06b598e8a3f83c87b307bdfa99d14a583be4514bdb2bef8e891e5b"
+        },
+        {
+          "relativePath": "configs/codex/config.toml",
+          "contentHash": "608b47abb4c02f214c7e2fd88a0798162747bf43b554be3f70e6bca98a806404"
+        },
+        {
+          "relativePath": "configs/copilot/config.json",
+          "contentHash": "3a10f3e7d6a79713738382dae639a9f87f5ada53532c19ca14a376056034a93f"
+        },
+        {
+          "relativePath": "configs/copilot/mcp-config.json",
+          "contentHash": "245e27e02ffe11aded8312ff6e9f96c60be9dfdd766e4e799295ba09be61ca9e"
+        },
+        {
+          "relativePath": "configs/copilot/project/.github/copilot/settings.json",
+          "contentHash": "3f4bddc9554b55233246a26795351eb987284514404c4fae4c3a499d13d64b43"
+        },
+        {
+          "relativePath": "configs/copilot/project/.github/copilot/settings.local.json",
+          "contentHash": "2b87a4d1fb003057f0528f544cdf6864e28bd4f293175c0dee730fcecb0230f8"
+        },
+        {
+          "relativePath": "configs/factory/project/.factory/settings.json",
+          "contentHash": "c0972234ce37556dfacd1921d1431b27a30dab552bbf42119eb626ece6d3bb51"
+        },
+        {
+          "relativePath": "configs/factory/project/.factory/settings.local.json",
+          "contentHash": "e8c43ea1099ed09bc4e54f08671471df1cbad823a240719047196a289c9632a1"
+        },
+        {
+          "relativePath": "configs/factory/settings.json",
+          "contentHash": "9e19418b54e50ea2125ffecb7810d37deb59aef23507479dd37f13a15fd9aa2f"
+        },
+        {
+          "relativePath": "configs/factory/settings.local.json",
+          "contentHash": "b193c0c167ec81da5e6d0e847c79b70202b59fabb19263d603dca46787a3218b"
+        },
+        {
+          "relativePath": "configs/gemini/.env",
+          "contentHash": "ec15d496f0cdf389c40d3f38e955ea342f26993c32361daa3c54856a13bb2620"
+        },
+        {
+          "relativePath": "configs/gemini/settings.json",
+          "contentHash": "6054f8fb1acf8d58f0bcaa9d5cb92c01dc1e0670b8365871c478e375fc780d6e"
+        },
+        {
+          "relativePath": "configs/openclaw/openclaw.json",
+          "contentHash": "d40def66386e5e28769a6d7ffb770f303e7c38ffc13bc827b333280e3007acb6"
+        },
+        {
+          "relativePath": "configs/opencode/opencode.json",
+          "contentHash": "e6a58069785485f70d68532b53a5e28dcd50ebb39248f52bdb74522843c89a8b"
+        }
+      ]
+    }
+  ]
+}
