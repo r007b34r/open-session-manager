@@ -124,6 +124,29 @@ export type DashboardPreferencesUpdate = {
   exportRoot: string | null;
 };
 
+const DEMO_DATA_STORAGE_KEY = "open-session-manager.enable-demo-data";
+const EMPTY_USAGE_OVERVIEW: UsageOverviewRecord = {
+  totals: {
+    sessionsWithUsage: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+    costUsd: 0
+  },
+  assistants: []
+};
+const EMPTY_RUNTIME: DashboardRuntime = {
+  auditDbPath: "",
+  exportRoot: "",
+  defaultExportRoot: "",
+  exportRootSource: "default",
+  quarantineRoot: "",
+  preferencesPath: ""
+};
+
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: unknown;
@@ -477,9 +500,15 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   }
 
   const realSnapshot = await tryFetchRealSnapshot();
-  return applyBrowserRuntimePreferences(
-    normalizeDashboardSnapshot(realSnapshot ?? fallbackSnapshot)
-  );
+  if (realSnapshot) {
+    return applyBrowserRuntimePreferences(normalizeDashboardSnapshot(realSnapshot));
+  }
+
+  const browserSnapshot = shouldUseDemoData()
+    ? normalizeDashboardSnapshot(fallbackSnapshot)
+    : buildEmptyDashboardSnapshot();
+
+  return applyBrowserRuntimePreferences(browserSnapshot);
 }
 
 export function recordMarkdownExport(
@@ -700,7 +729,7 @@ function normalizeDashboardRuntime(
   runtime?: Partial<DashboardRuntime>
 ): DashboardRuntime {
   return {
-    ...fallbackSnapshot.runtime,
+    ...EMPTY_RUNTIME,
     ...runtime,
     exportRootSource:
       runtime?.exportRootSource === "custom" ? "custom" : "default"
@@ -934,6 +963,29 @@ function compareAssistantUsage(
 
 function roundCost(value: number) {
   return Math.round(value * 100000) / 100000;
+}
+
+function buildEmptyDashboardSnapshot(): DashboardSnapshot {
+  return normalizeDashboardSnapshot({
+    metrics: [],
+    sessions: [],
+    configs: [],
+    auditEvents: [],
+    usageOverview: EMPTY_USAGE_OVERVIEW,
+    runtime: EMPTY_RUNTIME
+  });
+}
+
+function shouldUseDemoData() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(DEMO_DATA_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 function buildMarkdownOutputPath(exportRoot: string, sessionId: string) {

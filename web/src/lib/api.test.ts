@@ -94,13 +94,27 @@ describe("fetchDashboardSnapshot", () => {
     });
   });
 
-  it("真实快照不可用时退回到内置 fixture", async () => {
+  it("浏览器模式下真实快照不可用时默认不展示内置 fixture", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
     const snapshot = await fetchDashboardSnapshot();
 
+    expect(snapshot.sessions).toHaveLength(0);
+    expect(snapshot.configs).toHaveLength(0);
+    expect(snapshot.auditEvents).toHaveLength(0);
+    expect(snapshot.usageOverview).toEqual(buildEmptyUsageOverview());
+    expect(snapshot.runtime.auditDbPath).toBe("");
+    expect(snapshot.runtime.quarantineRoot).toBe("");
+    expect(snapshot.runtime.preferencesPath).toBe("");
+  });
+
+  it("只有显式开启 demo 模式时才允许回退到内置 fixture", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+
+    const snapshot = await fetchDashboardSnapshot();
+
     expect(snapshot.sessions).toHaveLength(3);
-    expect(snapshot.configs).toHaveLength(5);
     expect(snapshot.configs.map((config) => config.assistant)).toEqual(
       expect.arrayContaining(["GitHub Copilot CLI", "Factory Droid"])
     );
@@ -168,9 +182,11 @@ describe("desktop actions", () => {
     vi.unstubAllGlobals();
     invokeMock.mockReset();
     Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
   });
 
   it("桌面模式下导出动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
     const current = await fetchDashboardSnapshot();
     const nativeSnapshot: DashboardSnapshot = {
       ...current,
@@ -203,6 +219,7 @@ describe("desktop actions", () => {
   });
 
   it("桌面模式下隔离动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
     const current = await fetchDashboardSnapshot();
     const nativeSnapshot: DashboardSnapshot = {
       ...current,

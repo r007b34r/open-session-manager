@@ -8,6 +8,7 @@ import { THEME_STORAGE_KEY } from "./lib/theme";
 describe("App", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
     window.location.hash = "";
     mockNavigatorLanguage("en-US", ["en-US"]);
     mockMatchMedia(false);
@@ -284,6 +285,23 @@ describe("App", () => {
 
     expect(openCodeCard).not.toBeNull();
     expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
+  });
+
+  it("浏览器模式拿不到真实快照时不应展示不存在的示例配置", async () => {
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: /open session manager/i })
+    ).toBeInTheDocument();
+    await screen.findByRole("heading", { name: /config risk center/i });
+
+    expect(screen.queryByText(/github copilot cli/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/factory droid/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/copilot\.enterprise-relay\.example/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/factory-relay\.example/i)).not.toBeInTheDocument();
   });
 
   it("在会话详情里展示 token 和成本细节", async () => {
