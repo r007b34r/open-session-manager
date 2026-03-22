@@ -77,7 +77,7 @@
 | `SRCH-04` | P1 | todo | hybrid ranking | lexical + semantic 混合排序测试通过 |
 | `SRCH-05` | P0 | done | snippet preview 深化 | 搜索命中会保留 transcript focus，详情页可高亮对应命中的 transcript 条目 |
 | `SRCH-06` | P1 | done | search-as-you-type | 前端交互测试已验证防抖、取消旧查询和 pending 刷新提示 |
-| `SRCH-07` | P1 | todo | `list/search/get/view/expand` 统一 CLI | CLI 集成测试覆盖五类命令 |
+| `SRCH-07` | P1 | done | `list/search/get/view/expand` 统一 CLI | Rust CLI 已支持五类命令，`cli_snapshot` 集成测试覆盖 fixture 下的 list/search/get/view/expand 输出 |
 | `SRCH-08` | P1 | todo | 统一 search API | HTTP 或 Tauri command 测试验证分页、过滤和排序 |
 | `SRCH-09` | P0 | done | 大规模索引缓存与增量更新 | 单个 session 文件变化时只重建对应条目，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
 | `SRCH-10` | P0 | done | schema drift 监控 | fixture ledger 与 snapshot golden diff 已接入统一 verify，失败时会返回具体 JSON 路径差异 |

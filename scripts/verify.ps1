@@ -51,6 +51,7 @@ try {
   Invoke-Step "Git checkpoint dry run" {
     node scripts/git-tdd-checkpoint.mjs --item TOOL-01 --phase verify --note "verify smoke test" --command "node --test tests/git-workflow/git-workflow.test.mjs" --dry-run
   }
+  Invoke-Step "CLI snapshot tests" { & $cargo test --test cli_snapshot }
   Invoke-Step "Rust tests" { & $cargo test }
   Invoke-Step "Web unit tests" { npm --prefix web run test }
   Invoke-Step "Web build" { npm --prefix web run build }
