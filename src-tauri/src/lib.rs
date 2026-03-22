@@ -7,6 +7,7 @@ pub mod desktop;
 pub mod discovery;
 pub mod domain;
 pub mod insights;
+pub mod openapi;
 pub mod preferences;
 pub mod session_text;
 pub mod storage;

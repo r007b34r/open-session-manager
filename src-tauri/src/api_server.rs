@@ -23,6 +23,7 @@ use crate::{
         },
     },
     discovery::DiscoveryContext,
+    openapi::openapi_document,
     preferences::build_runtime_paths,
 };
 
@@ -104,11 +105,12 @@ pub fn run(args: &[String]) -> Result<(), String> {
 fn router(state: ApiState) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/openapi.json", get(openapi))
         .route("/api/v1/sessions", get(list_sessions))
         .route("/api/v1/sessions/search", get(search_sessions))
-        .route("/api/v1/sessions/{session_id}", get(get_session_detail))
-        .route("/api/v1/sessions/{session_id}/view", get(view_session_detail))
-        .route("/api/v1/sessions/{session_id}/expand", get(expand_session_detail))
+        .route("/api/v1/sessions/{sessionId}", get(get_session_detail))
+        .route("/api/v1/sessions/{sessionId}/view", get(view_session_detail))
+        .route("/api/v1/sessions/{sessionId}/expand", get(expand_session_detail))
         .with_state(state)
 }
 
@@ -118,6 +120,10 @@ async fn health(State(state): State<ApiState>) -> Json<HealthResponse> {
         app_name: state.app.app_name,
         version: state.app.version,
     })
+}
+
+async fn openapi(State(state): State<ApiState>) -> Json<Value> {
+    Json(openapi_document(&state.app))
 }
 
 async fn list_sessions(
