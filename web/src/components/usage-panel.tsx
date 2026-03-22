@@ -1,22 +1,34 @@
 import type {
+  ConfigRiskRecord,
   CostSource,
+  SessionDetailRecord,
   UsageOverviewRecord,
   UsageTimelineRecord
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { buildModelBreakdown, buildProviderBreakdown } from "../lib/usage-breakdown";
 
 type UsagePanelProps = {
+  sessions: SessionDetailRecord[];
+  configs: ConfigRiskRecord[];
   usageOverview: UsageOverviewRecord;
   usageTimeline: UsageTimelineRecord[];
 };
 
-export function UsagePanel({ usageOverview, usageTimeline }: UsagePanelProps) {
+export function UsagePanel({
+  sessions,
+  configs,
+  usageOverview,
+  usageTimeline
+}: UsagePanelProps) {
   const { copy } = useI18n();
   const unknownValue = copy.data.unknownValue;
   const maxTimelineTokens = usageTimeline.reduce(
     (max, entry) => Math.max(max, entry.totalTokens),
     0
   );
+  const modelBreakdown = buildModelBreakdown(sessions);
+  const providerBreakdown = buildProviderBreakdown(configs);
 
   return (
     <section className="panel usage-panel">
@@ -79,6 +91,65 @@ export function UsagePanel({ usageOverview, usageTimeline }: UsagePanelProps) {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="usage-card">
+          <h3>{copy.overview.breakdown.modelsTitle}</h3>
+          {modelBreakdown.length === 0 ? (
+            <p className="runtime-note">{copy.overview.breakdown.emptyModels}</p>
+          ) : (
+            <div className="usage-assistant-list">
+              {modelBreakdown.map((entry) => (
+                <article className="usage-assistant-card" key={entry.label}>
+                  <div className="config-card-topline">
+                    <strong>{entry.label}</strong>
+                    <span className="badge badge-neutral">
+                      {copy.overview.usageFields.sessionCount}: {entry.sessionCount}
+                    </span>
+                  </div>
+                  <div className="usage-inline">
+                    <span>{copy.overview.usageFields.totalTokens}</span>
+                    <strong>{formatCount(entry.totalTokens)}</strong>
+                  </div>
+                  <div className="usage-inline">
+                    <span>{copy.overview.usageFields.totalCost}</span>
+                    <strong>{formatUsd(entry.costUsd, unknownValue)}</strong>
+                  </div>
+                  <p className="usage-cost-note">
+                    {formatCostSource(copy, entry.costSource)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="usage-card">
+          <h3>{copy.overview.breakdown.platformsTitle}</h3>
+          {providerBreakdown.length === 0 ? (
+            <p className="runtime-note">{copy.overview.breakdown.emptyPlatforms}</p>
+          ) : (
+            <div className="usage-assistant-list">
+              {providerBreakdown.map((entry) => (
+                <article className="usage-assistant-card" key={entry.label}>
+                  <div className="config-card-topline">
+                    <strong>{entry.label}</strong>
+                    <span className="badge badge-neutral">
+                      {copy.overview.breakdown.fields.configCount}: {entry.configCount}
+                    </span>
+                  </div>
+                  <div className="usage-inline">
+                    <span>{copy.overview.breakdown.fields.assistantCount}</span>
+                    <strong>{entry.assistantCount}</strong>
+                  </div>
+                  <div className="usage-inline">
+                    <span>{copy.overview.breakdown.fields.proxyCount}</span>
+                    <strong>{entry.proxyCount}</strong>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="usage-card usage-card-wide">

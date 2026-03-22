@@ -56,6 +56,17 @@ type Messages = {
     usageAssistantsTitle: string;
     usageTimelineTitle: string;
     usageTimelineEmpty: string;
+    breakdown: {
+      modelsTitle: string;
+      platformsTitle: string;
+      emptyModels: string;
+      emptyPlatforms: string;
+      fields: {
+        configCount: string;
+        assistantCount: string;
+        proxyCount: string;
+      };
+    };
     costUnavailable: string;
     costSources: {
       reported: string;
@@ -347,6 +358,17 @@ const messages: Record<Language, Messages> = {
       usageAssistantsTitle: "By assistant",
       usageTimelineTitle: "Daily timeline",
       usageTimelineEmpty: "No usage timeline is available for the current snapshot.",
+      breakdown: {
+        modelsTitle: "Model breakdown",
+        platformsTitle: "Platform breakdown",
+        emptyModels: "No session models are available yet.",
+        emptyPlatforms: "No provider configuration footprint is available yet.",
+        fields: {
+          configCount: "Configs",
+          assistantCount: "Assistants",
+          proxyCount: "Proxy configs"
+        }
+      },
       costUnavailable: "Cost unavailable",
       costSources: {
         reported: "Reported by session log",
@@ -694,6 +716,17 @@ const messages: Record<Language, Messages> = {
       usageAssistantsTitle: "按助手汇总",
       usageTimelineTitle: "每日趋势",
       usageTimelineEmpty: "当前快照里还没有可展示的用量趋势。",
+      breakdown: {
+        modelsTitle: "模型拆分",
+        platformsTitle: "平台拆分",
+        emptyModels: "当前还没有可聚合的模型数据。",
+        emptyPlatforms: "当前还没有可聚合的 provider 配置分布。",
+        fields: {
+          configCount: "配置数",
+          assistantCount: "助手数",
+          proxyCount: "代理配置"
+        }
+      },
       costUnavailable: "成本不可用",
       costSources: {
         reported: "来自会话日志上报",

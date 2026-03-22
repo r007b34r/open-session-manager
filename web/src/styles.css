@@ -399,6 +399,10 @@ a {
   font-size: 0.9rem;
 }
 
+.usage-assistant-card strong {
+  overflow-wrap: anywhere;
+}
+
 .usage-inline {
   display: flex;
   justify-content: space-between;

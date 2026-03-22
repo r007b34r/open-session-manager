@@ -88,6 +88,8 @@ export function OverviewRoute({
       <DoctorPanel findings={snapshot.doctorFindings} />
 
       <UsagePanel
+        configs={snapshot.configs}
+        sessions={snapshot.sessions}
         usageOverview={snapshot.usageOverview}
         usageTimeline={snapshot.usageTimeline}
       />
