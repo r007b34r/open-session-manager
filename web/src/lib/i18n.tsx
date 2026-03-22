@@ -280,6 +280,7 @@ type Messages = {
       title: string;
       description: string;
       warningsTitle: string;
+      emptyState: string;
       confirmLabel: string;
       beforeLabel: string;
       afterLabel: string;
@@ -642,6 +643,7 @@ const messages: Record<Language, Messages> = {
         description:
           "Inspect the masked diff and risk prompts before any local config file is changed.",
         warningsTitle: "Risk prompts",
+        emptyState: "No field changes detected.",
         confirmLabel: "I reviewed the masked diff and want to apply it.",
         beforeLabel: "Before",
         afterLabel: "After",
@@ -1040,6 +1042,7 @@ const messages: Record<Language, Messages> = {
         title: "审查改动",
         description: "在真正修改本地配置文件前，先检查脱敏 diff 和风险提示。",
         warningsTitle: "风险提示",
+        emptyState: "当前没有检测到字段改动。",
         confirmLabel: "我已审查脱敏 diff，并确认应用这些改动。",
         beforeLabel: "修改前",
         afterLabel: "修改后",

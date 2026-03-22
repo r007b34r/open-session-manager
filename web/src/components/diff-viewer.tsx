@@ -8,6 +8,10 @@ type DiffViewerProps = {
 export function DiffViewer({ entries }: DiffViewerProps) {
   const { copy } = useI18n();
 
+  if (entries.length === 0) {
+    return <p className="detail-empty-copy">{copy.configRisk.review.emptyState}</p>;
+  }
+
   return (
     <div className="review-diff-list">
       {entries.map((entry) => (
