@@ -1,6 +1,6 @@
 # open Session Manager v0.3.0 Public Preview
 
-这次不是 `v0.2.x` 那种补丁修修补补，而是第一次把 OSM 真正推到多助手会话治理台的轨道上。
+这次把 OSM 往前推了一整段，不再只是“能看快照”，而是把搜索缓存、会话控制和 worktree 工具链接到了可验证的实现上。
 
 ## 本版重点
 
@@ -18,7 +18,10 @@
 - 修掉会直接影响可用性的会话质量问题：
   - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
   - `Claude Code` 不再把纯 `file-history-snapshot` JSONL 当候选会话
+- snapshot 现在会把 session index cache 持久化到 SQLite，并按文件变化做增量重建
 - Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
+- `Codex / Claude Code` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
+- Web 详情页补上了一键恢复、继续提示、最近控制结果和导出落盘路径提示
 - 支持 usage / cost analytics：
   - `Codex`
   - `Claude Code`
@@ -29,6 +32,7 @@
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地
+- 新增 `git-worktree-manager`，统一处理仓库内 `.worktrees/` 下的 `create / merge / delete / recycle`
 - 新增三条本地镜像研究并纳入治理目录：
   - `ChristopherA/claude_code_tools`
   - `ssdeanx/Gemini-CLI-Web`
@@ -48,12 +52,14 @@
   - 吸收 session closure / resume brief、cleanup checklist、session-end hook 这条会话收尾链路，补到 OSM 的导出和软删除守卫
 - `farion1231/cc-switch`
   - clean-room 吸收统一 provider/config 治理方向，以及 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模
+- `kbwo/ccmanager`
+  - clean-room 吸收 repo-local worktree 生命周期管理方向，补成 `git-worktree-manager` CLI
 - `endorhq/rover`
   - 吸收 `GitHub Copilot CLI` companion `mcp-config.json` 路径线索，补到 OSM 的 clean-room 配置审计里
 - `junhoyeo/tokscale`
   - clean-room 吸收 usage / token / cost 字段模型和本地聚合面板
 - `jazzyalex/agent-sessions`
-  - 吸收本地搜索结果呈现、命中来源可视化的工作台方向
+  - 吸收本地搜索结果呈现、命中来源可视化，以及本地优先索引这条工作台方向
 - `yoavf/ai-sessions-mcp`
   - 吸收本地 lexical ranking + snippet 的产品线索，先落到 Web 工作台
 
@@ -94,6 +100,8 @@
 - 7 个终端代码助手的配置审计读取与风险预览
 - `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、备份、回滚和审计事件
+- SQLite session index cache、增量重建和 index run 统计
+- `Codex / Claude Code` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
@@ -110,6 +118,7 @@
 - 中英文切换与跟随系统语言
 - 浅色 / 深色 / 跟随系统主题
 - Markdown 导出目录设置与导出路径显示
+- `node scripts/git-worktree-manager.mjs` 提供 `.worktrees/` 下的 create / recycle / merge / delete
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 
@@ -117,9 +126,9 @@
 
 以下内容不包含在 `v0.3.0 Public Preview` 承诺范围内：
 
-- 大历史索引、BM25、语义搜索、hybrid ranking
-- 会话恢复 / attach / pause / process control
-- worktree 编排、多项目调度、容器隔离执行
+- 语义搜索、hybrid ranking、统一 search API 和更大历史库压测
+- 除 `Codex / Claude Code` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
+- 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider presets、共享配置片段、健康探测和自动切换
 - pricing lookup、usage 趋势图、更多助手连接器
 - MCP / HTTP / headless 自动化接口
@@ -130,10 +139,13 @@
 
 本版发布前已通过：
 
-- `cargo test --lib`
+- `cargo test -- --test-threads=1`
 - `cargo test --test cli_snapshot`
+- `node --test tests/git-workflow/git-worktree-manager.test.mjs`
 - `npm --prefix web run test`
+- `npm --prefix web run e2e`
 - `npm --prefix web run build`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
 
 ## 开源致谢
 

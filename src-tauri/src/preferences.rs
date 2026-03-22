@@ -156,10 +156,7 @@ fn load_preferences(path: &Path) -> Result<StoredPreferences, PreferencesError> 
     serde_json::from_str(&content).map_err(Into::into)
 }
 
-fn write_preferences(
-    path: &Path,
-    preferences: &StoredPreferences,
-) -> Result<(), PreferencesError> {
+fn write_preferences(path: &Path, preferences: &StoredPreferences) -> Result<(), PreferencesError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -188,7 +185,10 @@ fn resolve_default_export_root(data_root: &Path, home_dir: &Path) -> PathBuf {
         return data_root.join("exports");
     }
 
-    home_dir.join("Documents").join("OpenSessionManager").join("exports")
+    home_dir
+        .join("Documents")
+        .join("OpenSessionManager")
+        .join("exports")
 }
 
 fn resolve_home_dir() -> PathBuf {
@@ -236,10 +236,19 @@ mod tests {
             &StoredPreferences::default(),
         );
 
-        assert_eq!(runtime.export_root, home_dir.join("Documents").join("OpenSessionManager").join("exports"));
+        assert_eq!(
+            runtime.export_root,
+            home_dir
+                .join("Documents")
+                .join("OpenSessionManager")
+                .join("exports")
+        );
         assert_eq!(runtime.export_root_source, ExportRootSource::Default);
         assert_eq!(runtime.preferences_path, preferences_path);
-        assert_eq!(runtime.audit_db_path, data_root.join("audit").join("audit.db"));
+        assert_eq!(
+            runtime.audit_db_path,
+            data_root.join("audit").join("audit.db")
+        );
     }
 
     #[test]

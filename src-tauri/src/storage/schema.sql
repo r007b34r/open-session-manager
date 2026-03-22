@@ -80,3 +80,56 @@ CREATE TABLE IF NOT EXISTS audit_events (
     result TEXT NOT NULL,
     error_message TEXT
 );
+
+CREATE TABLE IF NOT EXISTS session_index_cache (
+    source_path TEXT PRIMARY KEY,
+    assistant TEXT NOT NULL,
+    environment TEXT NOT NULL,
+    source_size INTEGER NOT NULL,
+    source_modified_at INTEGER NOT NULL,
+    session_id TEXT NOT NULL,
+    session_json TEXT NOT NULL,
+    insight_json TEXT NOT NULL,
+    detail_json TEXT NOT NULL,
+    indexed_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_index_cache_session_id
+ON session_index_cache(session_id);
+
+CREATE TABLE IF NOT EXISTS session_index_runs (
+    run_id TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    finished_at TEXT NOT NULL,
+    discovered_files INTEGER NOT NULL DEFAULT 0,
+    cache_hits INTEGER NOT NULL DEFAULT 0,
+    cache_misses INTEGER NOT NULL DEFAULT 0,
+    reindexed_files INTEGER NOT NULL DEFAULT 0,
+    stale_deleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS session_control_state (
+    session_id TEXT PRIMARY KEY,
+    assistant TEXT NOT NULL,
+    controller TEXT NOT NULL,
+    available INTEGER NOT NULL DEFAULT 0,
+    attached INTEGER NOT NULL DEFAULT 0,
+    last_command TEXT,
+    last_prompt TEXT,
+    last_response TEXT,
+    last_error TEXT,
+    last_resumed_at TEXT,
+    last_continued_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS session_control_events (
+    event_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    prompt TEXT,
+    response TEXT,
+    result TEXT NOT NULL,
+    error_message TEXT,
+    command TEXT
+);

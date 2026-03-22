@@ -1,8 +1,12 @@
 use std::{
+    env,
     fs,
     path::PathBuf,
     process::Command,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
 use open_session_manager_core::{
@@ -18,6 +22,7 @@ use rusqlite::Connection;
 use serde_json::Value;
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 fn fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -345,6 +350,58 @@ fn snapshot_command_includes_persisted_audit_history() {
 }
 
 #[test]
+fn snapshot_command_exposes_session_control_state() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let codex_root = home_dir.join(".codex").join("sessions");
+    let bin_dir = sandbox.join("bin");
+
+    fs::create_dir_all(&codex_root).expect("create codex root");
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    fs::copy(
+        fixtures_root().join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl"),
+        codex_root.join("rollout-2026-03-15.jsonl"),
+    )
+    .expect("copy codex fixture");
+    write_fake_codex_executable(&bin_dir);
+
+    let output = with_path_prefix(&bin_dir, || {
+        Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
+            .env("HOME", &home_dir)
+            .env("USERPROFILE", &home_dir)
+            .args(["snapshot"])
+            .output()
+            .expect("snapshot command runs")
+    });
+
+    assert!(
+        output.status.success(),
+        "snapshot command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let snapshot: Value =
+        serde_json::from_slice(&output.stdout).expect("snapshot command prints json");
+    let control = snapshot
+        .get("sessions")
+        .and_then(Value::as_array)
+        .and_then(|sessions| {
+            sessions.iter().find(|session| {
+                session.get("sessionId").and_then(Value::as_str) == Some("codex-ses-1")
+            })
+        })
+        .and_then(|session| session.get("sessionControl"))
+        .expect("snapshot should expose session control");
+
+    assert_eq!(control.get("supported").and_then(Value::as_bool), Some(true));
+    assert_eq!(control.get("available").and_then(Value::as_bool), Some(true));
+    assert_eq!(
+        control.get("controller").and_then(Value::as_str),
+        Some("codex")
+    );
+}
+
+#[test]
 fn doctor_command_reports_malformed_local_sessions() {
     let sandbox = temp_root();
     let home_dir = sandbox.join("home");
@@ -480,4 +537,56 @@ fn temp_root() -> PathBuf {
 
     fs::create_dir_all(&root).expect("create temp root");
     root
+}
+
+fn with_path_prefix<T>(bin_dir: &std::path::Path, action: impl FnOnce() -> T) -> T {
+    let _guard = ENV_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("lock env guard");
+
+    let original_path = env::var_os("PATH");
+    let joined = match &original_path {
+        Some(path) => env::join_paths([bin_dir.to_path_buf(), PathBuf::from(path)])
+            .expect("join PATH"),
+        None => env::join_paths([bin_dir.to_path_buf()]).expect("set PATH"),
+    };
+    unsafe {
+        env::set_var("PATH", joined);
+    }
+
+    let result = action();
+
+    match original_path {
+        Some(path) => unsafe {
+            env::set_var("PATH", path);
+        },
+        None => unsafe {
+            env::remove_var("PATH");
+        },
+    }
+
+    result
+}
+
+fn write_fake_codex_executable(bin_dir: &std::path::Path) {
+    if cfg!(windows) {
+        fs::write(
+            bin_dir.join("codex.cmd"),
+            "@echo off\r\necho ok\r\n",
+        )
+        .expect("write fake codex");
+        return;
+    }
+
+    let script_path = bin_dir.join("codex");
+    fs::write(&script_path, "#!/bin/sh\nprintf 'ok\\n'\n").expect("write fake codex");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake codex");
+    }
 }

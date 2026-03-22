@@ -74,16 +74,16 @@ pub(crate) fn detect_droid_dialect(source: &Path) -> AdapterResult<DroidDialect>
 }
 
 pub(crate) fn looks_like_droid_file(source: &Path) -> AdapterResult<bool> {
-    detect_droid_dialect(source).map(|_| true).or_else(|error| match error {
-        AdapterError::InvalidSession(_) => Ok(false),
-        other => Err(other),
-    })
+    detect_droid_dialect(source)
+        .map(|_| true)
+        .or_else(|error| match error {
+            AdapterError::InvalidSession(_) => Ok(false),
+            other => Err(other),
+        })
 }
 
 pub(crate) fn normalize_droid_kind(raw: &str) -> String {
-    raw.trim()
-        .to_ascii_lowercase()
-        .replace(['_', '-'], "")
+    raw.trim().to_ascii_lowercase().replace(['_', '-'], "")
 }
 
 fn parse_session_store(source: &Path, assistant: &str) -> AdapterResult<SessionRecord> {
@@ -113,8 +113,14 @@ fn parse_session_store(source: &Path, assistant: &str) -> AdapterResult<SessionR
         }
 
         if kind == "sessionstart" {
-            session_id = parsed.get("id").and_then(Value::as_str).map(ToOwned::to_owned);
-            project_path = parsed.get("cwd").and_then(Value::as_str).map(ToOwned::to_owned);
+            session_id = parsed
+                .get("id")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
+            project_path = parsed
+                .get("cwd")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
             continue;
         }
 
@@ -220,7 +226,10 @@ fn parse_stream_json(source: &Path, assistant: &str) -> AdapterResult<SessionRec
 
         match kind.as_str() {
             "message" => {
-                let role = parsed.get("role").and_then(Value::as_str).unwrap_or_default();
+                let role = parsed
+                    .get("role")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
                 let content = parsed
                     .get("content")
                     .or_else(|| parsed.get("text"))

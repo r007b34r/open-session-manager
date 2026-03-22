@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Installation {
     pub installation_id: String,
     pub assistant: String,
@@ -9,7 +11,7 @@ pub struct Installation {
     pub discovered_at: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SessionRecord {
     pub session_id: String,
     pub installation_id: Option<String>,
@@ -27,7 +29,7 @@ pub struct SessionRecord {
     pub content_hash: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct SessionInsight {
     pub session_id: String,
     pub title: String,

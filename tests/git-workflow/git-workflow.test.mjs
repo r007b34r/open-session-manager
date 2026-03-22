@@ -24,6 +24,10 @@ function createTempGitRepo() {
     cwd: tempRoot,
     encoding: "utf8"
   });
+  execFileSync("git", ["config", "core.autocrlf", "false"], {
+    cwd: tempRoot,
+    encoding: "utf8"
+  });
 
   writeFileSync(path.join(tempRoot, "README.md"), "# temp repo\n", "utf8");
   execFileSync("git", ["add", "README.md"], { cwd: tempRoot, encoding: "utf8" });
@@ -42,7 +46,7 @@ function createTempGitWorktree() {
   const worktreesRoot = path.join(tempRoot, ".worktrees");
   const worktreePath = path.join(worktreesRoot, "feature-a");
 
-  execFileSync("git", ["worktree", "add", worktreePath], {
+  execFileSync("git", ["worktree", "add", "--quiet", worktreePath], {
     cwd: tempRoot,
     encoding: "utf8"
   });

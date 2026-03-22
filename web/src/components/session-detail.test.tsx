@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 import { I18nProvider } from "../lib/i18n";
@@ -47,6 +48,42 @@ describe("SessionDetail", () => {
 
     expect(screen.getByText(/cost \(usd\): \$0\.00/i)).toBeInTheDocument();
   });
+
+  it("展示会话控制状态，并允许发送继续提示", async () => {
+    const user = userEvent.setup();
+    const onContinueSession = vi.fn();
+
+    renderWithI18n(
+      <SessionDetail
+        onContinueSession={onContinueSession}
+        onResumeSession={vi.fn()}
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: true,
+            lastResponse: "READY from previous run"
+          }
+        })}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: /session control/i })).toBeInTheDocument();
+    expect(screen.getByText(/ready from previous run/i)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue with validation"
+    );
+    await user.click(screen.getByRole("button", { name: /continue session/i }));
+
+    expect(onContinueSession).toHaveBeenCalledWith(
+      "ses-001",
+      "Continue with validation"
+    );
+  });
 });
 
 function renderWithI18n(node: ReactNode) {
@@ -77,6 +114,13 @@ function buildSessionDetailRecord(
     keyArtifacts: ["Defined distro handshake checkpoints"],
     transcriptHighlights: [],
     todoItems: [],
+    sessionControl: {
+      supported: true,
+      available: true,
+      controller: "codex",
+      command: "codex",
+      attached: false
+    },
     ...overrides
   } as SessionDetailRecord;
 }

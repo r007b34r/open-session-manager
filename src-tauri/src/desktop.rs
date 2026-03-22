@@ -6,7 +6,9 @@ use crate::{
     actions::config_writeback::ConfigWritebackUpdate,
     commands::{
         actions::{
-            delete_session, export_session, write_config_artifact as apply_config_writeback,
+            continue_existing_session as continue_existing_session_action, delete_session,
+            export_session, resume_existing_session as resume_existing_session_action,
+            write_config_artifact as apply_config_writeback,
         },
         dashboard::{
             DashboardSnapshot, IndexedSession, build_local_dashboard_snapshot_with_audit,
@@ -23,6 +25,8 @@ pub fn run() -> Result<(), String> {
         .invoke_handler(tauri::generate_handler![
             load_dashboard_snapshot,
             export_session_markdown,
+            resume_existing_session,
+            continue_existing_session,
             soft_delete_session,
             save_dashboard_preferences,
             write_config_artifact
@@ -96,6 +100,47 @@ pub async fn soft_delete_session(session_id: String) -> Result<DashboardSnapshot
             &connection,
         )
         .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn resume_existing_session(session_id: String) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        resume_existing_session_action(&indexed.session, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn continue_existing_session(
+    session_id: String,
+    prompt: String,
+) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        continue_existing_session_action(&indexed.session, &prompt, &actor, &connection)
+            .map_err(|error| error.to_string())?;
 
         build_snapshot_with_runtime(&context, &paths)
     })
@@ -208,8 +253,9 @@ mod tests {
     use std::future::Future;
 
     use super::{
-        ConfigWritebackPayload, export_session_markdown, load_dashboard_snapshot,
-        save_dashboard_preferences, soft_delete_session, write_config_artifact,
+        ConfigWritebackPayload, continue_existing_session, export_session_markdown,
+        load_dashboard_snapshot, resume_existing_session, save_dashboard_preferences,
+        soft_delete_session, write_config_artifact,
     };
 
     #[test]
@@ -224,6 +270,15 @@ mod tests {
 
         let delete = soft_delete_session("session-id".to_string());
         assert_future(&delete);
+
+        let resume = resume_existing_session("session-id".to_string());
+        assert_future(&resume);
+
+        let continue_session = continue_existing_session(
+            "session-id".to_string(),
+            "Continue with verification".to_string(),
+        );
+        assert_future(&continue_session);
 
         let save = save_dashboard_preferences(Some("D:/OSM/exports".to_string()));
         assert_future(&save);

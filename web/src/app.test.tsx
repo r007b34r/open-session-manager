@@ -392,6 +392,28 @@ describe("App", () => {
     expect(screen.getByText(/gpt-5/i)).toBeInTheDocument();
     expect(screen.getByText(/\$0\.02/i)).toBeInTheDocument();
   });
+
+  it("在会话详情里允许一键恢复并继续发送提示", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(screen.getByRole("button", { name: /resume session/i }));
+
+    expect(await screen.findByText(/ready from demo resume/i)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue with the next verification step."
+    );
+    await user.click(screen.getByRole("button", { name: /continue session/i }));
+
+    expect(
+      await screen.findByText(/ready from demo continue: continue with the next verification step\./i)
+    ).toBeInTheDocument();
+  });
 });
 
 function mockNavigatorLanguage(language: string, languages: string[]) {

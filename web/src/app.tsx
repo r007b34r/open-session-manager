@@ -4,6 +4,8 @@ import {
   applyConfigWriteback,
   applyDashboardPreferences,
   applyMarkdownExport,
+  applySessionContinue,
+  applySessionResume,
   applySoftDelete,
   fetchDashboardSnapshot,
   isConfigWritebackAvailable,
@@ -131,6 +133,30 @@ export function App() {
     });
   };
 
+  const handleSessionResume = (sessionId: string) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applySessionResume(snapshot, sessionId).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
+  const handleSessionContinue = (sessionId: string, prompt: string) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applySessionContinue(snapshot, { sessionId, prompt }).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
   const handleSaveExportRoot = (exportRoot: string) => {
     if (!snapshot) {
       return;
@@ -206,6 +232,8 @@ export function App() {
               handleSaveExportRoot,
               handleResetExportRoot,
               handleExportMarkdown,
+              handleSessionResume,
+              handleSessionContinue,
               handleSoftDelete,
               handleSaveConfig
             )
@@ -230,6 +258,8 @@ function renderRoute(
   onSaveExportRoot: (exportRoot: string) => void,
   onResetExportRoot: () => void,
   onExportMarkdown: (sessionId: string) => void,
+  onResumeSession: (sessionId: string) => void,
+  onContinueSession: (sessionId: string, prompt: string) => void,
   onSoftDelete: (sessionId: string) => void,
   onSaveConfig: (input: ConfigWritebackInput) => void
 ) {
@@ -264,7 +294,9 @@ function renderRoute(
         onResetExportRoot={onResetExportRoot}
         onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
+        onContinueSession={onContinueSession}
         onSoftDelete={onSoftDelete}
+        onResumeSession={onResumeSession}
         runtime={snapshot.runtime}
         selectedSessionId={selectedSessionId}
         sessions={snapshot.sessions}
@@ -282,7 +314,9 @@ function renderRoute(
         onResetExportRoot={onResetExportRoot}
         onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
+        onContinueSession={onContinueSession}
         onSoftDelete={onSoftDelete}
+        onResumeSession={onResumeSession}
         runtime={snapshot.runtime}
         selectedSessionId={selectedSessionId ?? snapshot.sessions[0]?.sessionId}
         sessions={snapshot.sessions}

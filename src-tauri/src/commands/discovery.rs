@@ -64,7 +64,9 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "claude-code",
             "config",
             "wsl",
-            PathBuf::from(wsl_home).join(".claude").join("settings.json"),
+            PathBuf::from(wsl_home)
+                .join(".claude")
+                .join("settings.json"),
         ));
         roots.push(KnownPath::new(
             "opencode",
@@ -76,7 +78,9 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "gemini-cli",
             "config",
             "wsl",
-            PathBuf::from(wsl_home).join(".gemini").join("settings.json"),
+            PathBuf::from(wsl_home)
+                .join(".gemini")
+                .join("settings.json"),
         ));
         roots.push(KnownPath::new(
             "github-copilot-cli",
@@ -88,13 +92,17 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "factory-droid",
             "config",
             "wsl",
-            PathBuf::from(wsl_home).join(".factory").join("settings.json"),
+            PathBuf::from(wsl_home)
+                .join(".factory")
+                .join("settings.json"),
         ));
         roots.push(KnownPath::new(
             "openclaw",
             "config",
             "wsl",
-            PathBuf::from(wsl_home).join(".openclaw").join("openclaw.json"),
+            PathBuf::from(wsl_home)
+                .join(".openclaw")
+                .join("openclaw.json"),
         ));
     }
 
@@ -195,7 +203,9 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             "github-copilot-cli",
             "session",
             "wsl",
-            PathBuf::from(wsl_home).join(".copilot").join("session-state"),
+            PathBuf::from(wsl_home)
+                .join(".copilot")
+                .join("session-state"),
         ));
         roots.push(KnownPath::new(
             "factory-droid",

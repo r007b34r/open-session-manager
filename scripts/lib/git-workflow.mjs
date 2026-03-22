@@ -44,7 +44,7 @@ function ensureCommands(value) {
 }
 
 function runGit(repoRoot, args) {
-  return execFileSync("git", args, {
+  return execFileSync("git", ["-c", "core.safecrlf=false", ...args], {
     cwd: repoRoot,
     encoding: "utf8"
   }).trimEnd();

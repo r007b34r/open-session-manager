@@ -10,6 +10,9 @@ use crate::{
         delete::{SoftDeleteRequest, soft_delete_session},
         export::{ExportRequest, ExportResult, export_session_markdown},
         restore::restore_session,
+        session_control::{
+            SessionControlRequest, SessionControlResult, continue_session, resume_session,
+        },
     },
     audit::config_audit::ConfigAuditTarget,
     domain::session::{SessionInsight, SessionRecord},
@@ -75,4 +78,31 @@ pub fn restore_deleted_session(
         actor,
         connection,
     )
+}
+
+pub fn resume_existing_session(
+    session: &SessionRecord,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<SessionControlResult> {
+    resume_session(&SessionControlRequest {
+        session,
+        actor,
+        connection,
+        prompt: None,
+    })
+}
+
+pub fn continue_existing_session(
+    session: &SessionRecord,
+    prompt: &str,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<SessionControlResult> {
+    continue_session(&SessionControlRequest {
+        session,
+        actor,
+        connection,
+        prompt: Some(prompt),
+    })
 }

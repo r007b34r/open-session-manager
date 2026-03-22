@@ -738,6 +738,22 @@ a {
   overflow-wrap: anywhere;
 }
 
+.detail-control-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-control-textarea {
+  min-height: 110px;
+  resize: vertical;
+  border: 1px solid rgba(31, 39, 34, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 14px 16px;
+  font: inherit;
+  color: var(--ink);
+}
+
 .detail-todo-list {
   padding-left: 0;
   list-style: none;

@@ -147,7 +147,12 @@ fn audits_openclaw_config_and_detects_proxy_risks() {
     );
     assert!(has_flag(&openclaw.risk_flags, "third_party_provider"));
     assert!(has_flag(&openclaw.risk_flags, "dangerous_permissions"));
-    assert!(openclaw.config.permissions_json.contains("\"profile\":\"full\""));
+    assert!(
+        openclaw
+            .config
+            .permissions_json
+            .contains("\"profile\":\"full\"")
+    );
 
     let credentials = build_credential_artifacts(&openclaw.secrets);
     assert_eq!(credentials.len(), 1);

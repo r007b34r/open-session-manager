@@ -1,6 +1,6 @@
 # 支持矩阵
 
-日期：2026-03-16
+日期：2026-03-22
 发布：`v0.3.0 Public Preview`
 
 ## 本次公开发布范围
@@ -30,6 +30,10 @@
 | 审计事件写入 | 已实现 | 当前覆盖导出、cleanup checklist、session-end hook、软删除、恢复 |
 | Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件，以及已知根目录下被静默过滤的未知 session-like 文件 |
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
+| Session index cache / incremental reindex | 已实现 | snapshot 会把索引结果落到 SQLite，按 `assistant + environment + source_path + size + modified_at` 复用缓存，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
+| Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
+| One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
+| Git worktree lifecycle CLI | 已实现 | `node scripts/git-worktree-manager.mjs` 支持在仓库内 `.worktrees/` 下执行 `create / merge / delete / recycle` |
 | Fixture drift ledger | 已实现 | `tests/fixtures/fixture-ledger.json` 记录 fixture 版本、来源和文件 hash，`scripts/fixture-ledger.mjs --check` 已进入统一 verify |
 | Fixture snapshot golden diff | 已实现 | `tests/fixtures/dashboard-snapshot.golden.json` 提供规范化 snapshot 基线，`scripts/check-fixture-snapshot.mjs` 会输出 JSON 路径级 diff |
 | Responsive detail panes | 已实现 | 会话详情改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI、窄窗和嵌入式选中场景 |
@@ -48,7 +52,7 @@
 
 | 平台 | 当前状态 | 说明 |
 | --- | --- | --- |
-| Windows 11 | 已验证 | `cargo test --lib`、`cargo test --test cli_snapshot`、`npm --prefix web run test`、`npm --prefix web run build` 已在当前环境通过 |
+| Windows 11 | 已验证 | `cargo test -- --test-threads=1`、`cargo test --test cli_snapshot`、`node --test tests/git-workflow/git-worktree-manager.test.mjs`、`npm --prefix web run test`、`npm --prefix web run e2e`、`npm --prefix web run build`、`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1` 已在当前环境通过 |
 | Linux | 核心能力预览 | 会话 / 配置路径模型与 fixtures 已覆盖，桌面构建尚未完成实机验证 |
 | WSL | 能力预览 | 当前有路径模型、发现表达和 UI 展示，尚未完成 companion collector |
 
@@ -60,7 +64,7 @@
 | `daaain/claude-code-log` | 已吸收 | 更丰富的 Markdown 导出分节、transcript highlights、Claude todo snapshot |
 | `d-kimuson/claude-code-viewer` | 已吸收 | viewer 风格 transcript detail 面板、session todo evidence 展示 |
 | `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief、cleanup checklist、session-end hook 这条会话收尾链路已落进 OSM 的导出与软删除守卫 |
-| `kbwo/ccmanager` | 已研究 | worktree / 多项目调度方向 |
+| `kbwo/ccmanager` | 已吸收 | repo-local worktree 生命周期管理方向，当前已落成 OSM 的 clean-room `git-worktree-manager` CLI |
 | `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
 | `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板与字段模型已落进 OSM clean-room 实现 |
@@ -76,8 +80,8 @@
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
 | BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
-| 会话恢复 / attach / process control | 未纳入本版承诺 | 当前还没有真实会话进程控制层 |
-| worktree 编排 / 多项目调度 | 未纳入本版承诺 | 仍在研究与规格阶段 |
+| 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
+| worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider presets / 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回，但还没有预设编排和健康切换 |
 | pricing lookup / usage 趋势图 / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地 usage 面板，但还没有价格同步和长期趋势分析 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |

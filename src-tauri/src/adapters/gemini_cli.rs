@@ -1,4 +1,7 @@
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde_json::Value;
 
@@ -48,7 +51,11 @@ impl SessionAdapter for GeminiCliAdapter {
             .get("startTime")
             .or_else(|| parsed.get("start_time"))
             .and_then(stringish)
-            .or_else(|| messages.iter().find_map(|message| gemini_timestamp(message)));
+            .or_else(|| {
+                messages
+                    .iter()
+                    .find_map(|message| gemini_timestamp(message))
+            });
         let last_activity_at = parsed
             .get("lastUpdated")
             .or_else(|| parsed.get("last_updated"))

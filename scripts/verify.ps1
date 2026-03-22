@@ -38,6 +38,7 @@ try {
   Invoke-Step "Upstream intake tests" { node --test tests/upstream-intake/upstream-intake.test.mjs }
   Invoke-Step "Upstream intake dry run" { node scripts/intake-upstreams.mjs --dry-run }
   Invoke-Step "Git workflow tooling tests" { node --test tests/git-workflow/git-workflow.test.mjs }
+  Invoke-Step "Git worktree manager tests" { node --test tests/git-workflow/git-worktree-manager.test.mjs }
   Invoke-Step "Fixture ledger tests" { node --test tests/fixture-ledger/fixture-ledger.test.mjs }
   Invoke-Step "Fixture snapshot tests" { node --test tests/fixture-ledger/fixture-snapshot.test.mjs }
   Invoke-Step "Fixture ledger check" { node scripts/fixture-ledger.mjs --check }

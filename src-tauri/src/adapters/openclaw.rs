@@ -25,7 +25,9 @@ impl SessionAdapter for OpenClawAdapter {
                     .file_name()
                     .and_then(|value| value.to_str())
                     .is_some_and(|name| name.ends_with(".jsonl.lock"))
-                && path.components().any(|component| component.as_os_str() == "agents")
+                && path
+                    .components()
+                    .any(|component| component.as_os_str() == "agents")
                 && path
                     .components()
                     .any(|component| component.as_os_str() == "sessions")
@@ -55,8 +57,14 @@ impl SessionAdapter for OpenClawAdapter {
 
             match openclaw_kind(&parsed) {
                 Some("session") => {
-                    session_id = parsed.get("id").and_then(Value::as_str).map(ToOwned::to_owned);
-                    project_path = parsed.get("cwd").and_then(Value::as_str).map(ToOwned::to_owned);
+                    session_id = parsed
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .map(ToOwned::to_owned);
+                    project_path = parsed
+                        .get("cwd")
+                        .and_then(Value::as_str)
+                        .map(ToOwned::to_owned);
                 }
                 Some("message") => {
                     let Some(message) = parsed.get("message") else {
@@ -117,11 +125,14 @@ impl SessionAdapter for OpenClawAdapter {
 }
 
 pub(crate) fn openclaw_kind(value: &Value) -> Option<&str> {
-    value.get("type").and_then(Value::as_str).map(|kind| match kind {
-        "model_change" => "modelchange",
-        "thinking_level_change" => "thinkinglevelchange",
-        other => other,
-    })
+    value
+        .get("type")
+        .and_then(Value::as_str)
+        .map(|kind| match kind {
+            "model_change" => "modelchange",
+            "thinking_level_change" => "thinkinglevelchange",
+            other => other,
+        })
 }
 
 pub(crate) fn openclaw_role(value: &Value) -> Option<&str> {
@@ -137,7 +148,11 @@ pub(crate) fn openclaw_role(value: &Value) -> Option<&str> {
 pub(crate) fn openclaw_text(value: &Value) -> Option<String> {
     let content = value.get("content")?;
 
-    if let Some(text) = content.as_str().map(str::trim).filter(|text| !text.is_empty()) {
+    if let Some(text) = content
+        .as_str()
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+    {
         return Some(text.to_string());
     }
 
@@ -146,9 +161,7 @@ pub(crate) fn openclaw_text(value: &Value) -> Option<String> {
         .map(|blocks| {
             blocks
                 .iter()
-                .filter(|block| {
-                    block.get("type").and_then(Value::as_str) == Some("text")
-                })
+                .filter(|block| block.get("type").and_then(Value::as_str) == Some("text"))
                 .filter_map(|block| block.get("text").and_then(Value::as_str))
                 .map(str::trim)
                 .filter(|text| !text.is_empty())

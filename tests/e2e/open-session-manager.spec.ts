@@ -4,6 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
   });
+  await page.route("**/dashboard-snapshot.json", (route) => route.abort());
 });
 
 test("indexes fixtures, exports, soft-deletes, and shows risky masked config entries", async ({
@@ -108,7 +109,7 @@ test("shows the markdown export location and lets the user override the export f
 
   await expect(
     page.getByLabel(/markdown export folder/i)
-  ).toHaveValue(/openSessionManager\/exports/i);
+  ).toHaveValue(/OpenSessionManager[\\/]+exports/i);
 
   await page.getByLabel(/markdown export folder/i).fill("D:/OSM/exports");
   await page.getByRole("button", { name: /save export folder/i }).click();
@@ -126,6 +127,20 @@ test("supports system light-dark switching from the shell controls", async ({ pa
 
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("supports one-click resume and continue actions in demo mode", async ({ page }) => {
+  await page.goto("/#/sessions");
+
+  await page.getByRole("button", { name: /resume session/i }).click();
+  await expect(page.getByText(/ready from demo resume/i)).toBeVisible();
+
+  await page.getByLabel(/continue prompt/i).fill("Continue with the next verification step.");
+  await page.getByRole("button", { name: /continue session/i }).click();
+
+  await expect(
+    page.getByText(/ready from demo continue: continue with the next verification step\./i)
+  ).toBeVisible();
 });
 
 test("keeps the overview page scroll position stable when selecting an embedded session", async ({

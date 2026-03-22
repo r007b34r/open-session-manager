@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
@@ -15,21 +15,21 @@ use crate::{
     session_text::normalize_session_text,
 };
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptDigest {
     pub highlights: Vec<TranscriptHighlight>,
     pub todos: Vec<TranscriptTodo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptHighlight {
     pub role: String,
     pub content: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptTodo {
     pub content: String,
@@ -160,7 +160,10 @@ fn build_opencode_transcript_digest(source: &Path) -> TranscriptDigest {
     else {
         return TranscriptDigest::default();
     };
-    let message_dir = storage_root.join("session").join("message").join(session_id);
+    let message_dir = storage_root
+        .join("session")
+        .join("message")
+        .join(session_id);
     let part_dir = storage_root.join("session").join("part").join(session_id);
     let Ok(mut message_files) = collect_files(&message_dir, &|path| {
         path.extension().and_then(|value| value.to_str()) == Some("json")
@@ -334,7 +337,11 @@ fn build_factory_droid_session_store_digest(source: &Path) -> TranscriptDigest {
 
     let mut digest = TranscriptDigest::default();
     for line in lines {
-        if line.get("type").and_then(Value::as_str).map(normalize_droid_kind).as_deref()
+        if line
+            .get("type")
+            .and_then(Value::as_str)
+            .map(normalize_droid_kind)
+            .as_deref()
             != Some("message")
         {
             continue;
@@ -343,7 +350,10 @@ fn build_factory_droid_session_store_digest(source: &Path) -> TranscriptDigest {
         let Some(message) = line.get("message") else {
             continue;
         };
-        let role = message.get("role").and_then(Value::as_str).unwrap_or_default();
+        let role = message
+            .get("role")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         let parts = message
             .get("content")
             .and_then(Value::as_array)
@@ -565,7 +575,11 @@ fn opencode_created_at(message: &Value) -> i64 {
 }
 
 fn parse_claude_todo(value: &Value) -> Option<TranscriptTodo> {
-    if let Some(content) = value.as_str().map(str::trim).filter(|content| !content.is_empty()) {
+    if let Some(content) = value
+        .as_str()
+        .map(str::trim)
+        .filter(|content| !content.is_empty())
+    {
         return Some(TranscriptTodo {
             content: content.to_string(),
             completed: false,
@@ -607,7 +621,12 @@ fn extract_claude_todowrite(parts: &[Value]) -> Option<Vec<TranscriptTodo>> {
             .get("input")
             .and_then(|input| input.get("todos"))
             .and_then(Value::as_array)
-            .map(|items| items.iter().filter_map(parse_claude_todo).collect::<Vec<_>>());
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(parse_claude_todo)
+                    .collect::<Vec<_>>()
+            });
 
         if let Some(todos) = todos {
             latest_todos = Some(todos);
@@ -625,7 +644,8 @@ fn collect_opencode_texts(part_dir: &Path) -> String {
     };
     files.sort();
 
-    files.into_iter()
+    files
+        .into_iter()
         .filter_map(|file| {
             fs::read(file)
                 .ok()
@@ -678,13 +698,11 @@ fn extract_claude_message_text(content: &Value) -> Option<String> {
         Value::Array(parts) => {
             let joined = parts
                 .iter()
-                .filter_map(|part| {
-                    match part.get("type").and_then(Value::as_str) {
-                        Some("text" | "input_text" | "output_text") => {
-                            part.get("text").and_then(Value::as_str)
-                        }
-                        _ => None,
+                .filter_map(|part| match part.get("type").and_then(Value::as_str) {
+                    Some("text" | "input_text" | "output_text") => {
+                        part.get("text").and_then(Value::as_str)
                     }
+                    _ => None,
                 })
                 .collect::<Vec<_>>()
                 .join(" ");

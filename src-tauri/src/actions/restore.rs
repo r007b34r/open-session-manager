@@ -21,7 +21,8 @@ pub fn restore_session(
 ) -> ActionResult<QuarantineManifest> {
     let manifest_text = fs::read_to_string(manifest_path)?;
     let manifest: QuarantineManifest = serde_json::from_str(&manifest_text)?;
-    let actual_manifest_path = ensure_managed_path(manifest_path, quarantine_root, "manifest path")?;
+    let actual_manifest_path =
+        ensure_managed_path(manifest_path, quarantine_root, "manifest path")?;
     let recorded_manifest_path =
         ensure_managed_path(&manifest.manifest_path, quarantine_root, "manifest path")?;
 
@@ -31,8 +32,11 @@ pub fn restore_session(
         ));
     }
 
-    let quarantined_path =
-        ensure_managed_path(&manifest.quarantined_path, quarantine_root, "quarantined payload path")?;
+    let quarantined_path = ensure_managed_path(
+        &manifest.quarantined_path,
+        quarantine_root,
+        "quarantined payload path",
+    )?;
     let original_path = ensure_allowed_restore_path(
         &manifest.original_path,
         allowed_restore_roots,

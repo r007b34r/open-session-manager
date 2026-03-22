@@ -66,6 +66,13 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 0,
         "totalTokens": 1024
+      },
+      "sessionControl": {
+        "supported": true,
+        "available": true,
+        "controller": "codex",
+        "command": "codex",
+        "attached": false
       }
     },
     {
@@ -122,6 +129,13 @@
         "cacheWriteTokens": 144,
         "reasoningTokens": 0,
         "totalTokens": 2835
+      },
+      "sessionControl": {
+        "supported": true,
+        "available": true,
+        "controller": "claude-code",
+        "command": "claude",
+        "attached": false
       }
     },
     {
@@ -173,6 +187,13 @@
         "reasoningTokens": 10,
         "totalTokens": 210,
         "costUsd": 0.02
+      },
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "opencode",
+        "command": "",
+        "attached": false
       }
     },
     {
@@ -225,6 +246,13 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 45,
         "totalTokens": 590
+      },
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "gemini-cli",
+        "command": "",
+        "attached": false
       }
     },
     {
@@ -272,7 +300,14 @@
           "content": "On branch main"
         }
       ],
-      "todoItems": []
+      "todoItems": [],
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "github-copilot-cli",
+        "command": "",
+        "attached": false
+      }
     },
     {
       "sessionId": "droid-stream-1",
@@ -319,7 +354,14 @@
           "content": "No dirty files were detected."
         }
       ],
-      "todoItems": []
+      "todoItems": [],
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "factory-droid",
+        "command": "",
+        "attached": false
+      }
     },
     {
       "sessionId": "droid-session-1",
@@ -366,7 +408,14 @@
           "content": "README.md\\nsrc-tauri/\\nweb/"
         }
       ],
-      "todoItems": []
+      "todoItems": [],
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "factory-droid",
+        "command": "",
+        "attached": false
+      }
     },
     {
       "sessionId": "openclaw-ses-1",
@@ -422,6 +471,13 @@
         "reasoningTokens": 0,
         "totalTokens": 110643,
         "costUsd": 0.02
+      },
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "openclaw",
+        "command": "",
+        "attached": false
       }
     }
   ],

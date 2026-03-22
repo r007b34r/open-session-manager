@@ -38,6 +38,7 @@ This file is generated from `third_party/upstreams/catalog.json`.
 - kbwo/ccmanager (MIT)
   Posture: candidate-absorb
   Why: Clarified the level of worktree and multi-project orchestration OSM still needs.
+  Adopted: Repo-local git worktree lifecycle CLI (`create / merge / delete / recycle`)
 - kevinelliott/agentpipe (MIT)
   Posture: candidate-absorb
   Why: Showed how OSM can grow toward multi-agent health checks, metrics, and richer export surfaces.

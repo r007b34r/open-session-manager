@@ -371,7 +371,8 @@ fn audit_gemini_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAu
                 source_type: "dotenv".to_string(),
                 value,
                 official_or_proxy: official_or_proxy.clone(),
-                last_modified_at: file_modified_at(&env_path).or_else(|| file_modified_at(&target.path)),
+                last_modified_at: file_modified_at(&env_path)
+                    .or_else(|| file_modified_at(&target.path)),
             })
             .collect(),
         risk_flags,
@@ -769,7 +770,10 @@ fn copilot_risk_flags(
             .get("allow")
             .and_then(Value::as_array)
             .map(|items| {
-                items.iter().filter_map(Value::as_str).any(is_dangerous_tool_name)
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(is_dangerous_tool_name)
             })
             .unwrap_or(false);
 
@@ -799,7 +803,10 @@ fn factory_risk_flags(
             .get("commandAllowlist")
             .and_then(Value::as_array)
             .map(|items| {
-                items.iter().filter_map(Value::as_str).any(is_dangerous_tool_name)
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(is_dangerous_tool_name)
             })
             .unwrap_or(false);
 
@@ -896,7 +903,10 @@ fn classify_endpoint(provider: Option<&str>, base_url: Option<&str>) -> String {
 }
 
 fn is_official_provider(provider: &str) -> bool {
-    matches!(provider, "openai" | "anthropic" | "opencode" | "google" | "github")
+    matches!(
+        provider,
+        "openai" | "anthropic" | "opencode" | "google" | "github"
+    )
 }
 
 fn is_official_base_url(provider: Option<&str>, base_url: &str) -> bool {

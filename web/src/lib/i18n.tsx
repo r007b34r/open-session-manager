@@ -89,42 +89,61 @@ type Messages = {
     emptyTitle: string;
     emptyBody: string;
     cleanupRequirement: string;
+    controlUnavailable: string;
+    continuePlaceholder: string;
     exportPathLabel: string;
     actions: {
       exportMarkdown: string;
       moveToQuarantine: string;
+      resumeSession: string;
+      continueSession: string;
     };
-      sections: {
-        context: string;
-        signals: string;
-        usage: string;
-        transcriptHighlights: string;
-        todoSnapshot: string;
-        keyArtifacts: string;
-        riskFlags: string;
-        topicLabels: string;
+    sections: {
+      sessionControl: string;
+      context: string;
+      signals: string;
+      usage: string;
+      transcriptHighlights: string;
+      todoSnapshot: string;
+      keyArtifacts: string;
+      riskFlags: string;
+      topicLabels: string;
     };
     fields: {
+      controller: string;
+      command: string;
+      controlStatus: string;
+      continuePrompt: string;
+      lastPrompt: string;
+      lastResponse: string;
+      lastError: string;
+      lastResumeAt: string;
+      lastContinueAt: string;
       assistant: string;
       environment: string;
       project: string;
       source: string;
-        progress: string;
-        completion: string;
-        valueScore: string;
-        lastActive: string;
-        model: string;
-        inputTokens: string;
-        outputTokens: string;
-        cacheReadTokens: string;
-        cacheWriteTokens: string;
-        reasoningTokens: string;
-        totalTokens: string;
-        costUsd: string;
-      };
+      progress: string;
+      completion: string;
+      valueScore: string;
+      lastActive: string;
+      model: string;
+      inputTokens: string;
+      outputTokens: string;
+      cacheReadTokens: string;
+      cacheWriteTokens: string;
+      reasoningTokens: string;
+      totalTokens: string;
+      costUsd: string;
+    };
+    statuses: {
+      attached: string;
+      detached: string;
+    };
     noRiskFlags: string;
     noTranscriptHighlights: string;
     noTodoItems: string;
+    noSessionControl: string;
   };
   configRisk: {
     kicker: string;
@@ -297,12 +316,18 @@ const messages: Record<Language, Messages> = {
         "Choose a row to inspect summary, evidence, and cleanup readiness.",
       cleanupRequirement:
         "Export Markdown first so the session can be reviewed before moving it into quarantine.",
+      controlUnavailable:
+        "Session control is only available when the matching assistant command is installed and reachable from the local runtime.",
+      continuePlaceholder: "Send a follow-up prompt back into this session",
       exportPathLabel: "Markdown saved to",
       actions: {
         exportMarkdown: "Export Markdown",
-        moveToQuarantine: "Move to Quarantine"
+        moveToQuarantine: "Move to Quarantine",
+        resumeSession: "Resume Session",
+        continueSession: "Continue Session"
       },
       sections: {
+        sessionControl: "Session Control",
         context: "Context",
         signals: "Signals",
         usage: "Usage",
@@ -313,6 +338,15 @@ const messages: Record<Language, Messages> = {
         topicLabels: "Topic Labels"
       },
       fields: {
+        controller: "Controller",
+        command: "Command",
+        controlStatus: "Control status",
+        continuePrompt: "Continue prompt",
+        lastPrompt: "Last prompt",
+        lastResponse: "Last response",
+        lastError: "Last error",
+        lastResumeAt: "Last resume",
+        lastContinueAt: "Last continue",
         assistant: "Assistant",
         environment: "Environment",
         project: "Project",
@@ -330,9 +364,14 @@ const messages: Record<Language, Messages> = {
         totalTokens: "Total tokens",
         costUsd: "Cost (USD)"
       },
+      statuses: {
+        attached: "Attached",
+        detached: "Detached"
+      },
       noRiskFlags: "no active risk flags",
       noTranscriptHighlights: "No transcript highlights were extracted for this session.",
-      noTodoItems: "No todo evidence was captured for this session."
+      noTodoItems: "No todo evidence was captured for this session.",
+      noSessionControl: "No session control adapter is available for this assistant."
     },
     configRisk: {
       kicker: "Config Center",
@@ -426,7 +465,9 @@ const messages: Record<Language, Messages> = {
       auditTypes: {
         export_markdown: "export_markdown",
         soft_delete: "soft_delete",
-        restore: "restore"
+        restore: "restore",
+        session_resume: "session_resume",
+        session_continue: "session_continue"
       },
       auditResults: {
         success: "success",
@@ -529,12 +570,18 @@ const messages: Record<Language, Messages> = {
       emptyTitle: "请选择一个会话",
       emptyBody: "选择左侧条目后，可查看摘要、证据和清理准备情况。",
       cleanupRequirement: "必须先导出 Markdown，确认核心内容已保留后才能移入隔离区。",
+      controlUnavailable:
+        "只有本机已安装且当前运行时能找到对应助手命令时，才允许执行会话恢复与继续运行。",
+      continuePlaceholder: "向当前会话继续发送一条跟进提示",
       exportPathLabel: "Markdown 已保存到",
       actions: {
         exportMarkdown: "导出为 Markdown",
-        moveToQuarantine: "移入隔离区"
+        moveToQuarantine: "移入隔离区",
+        resumeSession: "恢复会话",
+        continueSession: "继续运行"
       },
       sections: {
+        sessionControl: "会话控制",
         context: "上下文",
         signals: "信号",
         usage: "Usage",
@@ -545,6 +592,15 @@ const messages: Record<Language, Messages> = {
         topicLabels: "主题标签"
       },
       fields: {
+        controller: "控制器",
+        command: "命令",
+        controlStatus: "控制状态",
+        continuePrompt: "继续提示",
+        lastPrompt: "最近提示",
+        lastResponse: "最近响应",
+        lastError: "最近错误",
+        lastResumeAt: "最近恢复",
+        lastContinueAt: "最近继续运行",
         assistant: "助手",
         environment: "环境",
         project: "项目",
@@ -562,9 +618,14 @@ const messages: Record<Language, Messages> = {
         totalTokens: "总 Token",
         costUsd: "成本（USD）"
       },
+      statuses: {
+        attached: "已附着",
+        detached: "未附着"
+      },
       noRiskFlags: "当前没有风险标记",
       noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",
-      noTodoItems: "当前没有捕获到待办证据。"
+      noTodoItems: "当前没有捕获到待办证据。",
+      noSessionControl: "当前助手还没有接入会话控制适配器。"
     },
     configRisk: {
       kicker: "配置中心",
@@ -655,7 +716,9 @@ const messages: Record<Language, Messages> = {
       auditTypes: {
         export_markdown: "导出 Markdown",
         soft_delete: "软删除",
-        restore: "恢复"
+        restore: "恢复",
+        session_resume: "恢复会话",
+        session_continue: "继续运行"
       },
       auditResults: {
         success: "成功",

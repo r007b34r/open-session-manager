@@ -2,6 +2,7 @@ pub mod config_writeback;
 pub mod delete;
 pub mod export;
 pub mod restore;
+pub mod session_control;
 
 use std::{
     fmt, fs, io,
@@ -23,6 +24,7 @@ pub enum ActionError {
     Sql(rusqlite::Error),
     Json(serde_json::Error),
     Audit(AuditError),
+    Execution(String),
     Precondition(String),
 }
 
@@ -33,6 +35,7 @@ impl fmt::Display for ActionError {
             Self::Sql(error) => write!(f, "sqlite error: {error}"),
             Self::Json(error) => write!(f, "json error: {error}"),
             Self::Audit(error) => write!(f, "audit error: {error}"),
+            Self::Execution(message) => write!(f, "execution error: {message}"),
             Self::Precondition(message) => write!(f, "precondition failed: {message}"),
         }
     }

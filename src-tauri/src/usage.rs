@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
     domain::session::SessionRecord,
 };
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionUsageRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,7 +234,10 @@ fn extract_codex_usage(source: &Path) -> Option<SessionUsageRecord> {
             .get("payload")
             .filter(|payload| payload.get("type").and_then(Value::as_str) == Some("token_count"))
             .and_then(|payload| payload.get("info"))
-            .and_then(|info| info.get("last_token_usage").or_else(|| info.get("token_usage")));
+            .and_then(|info| {
+                info.get("last_token_usage")
+                    .or_else(|| info.get("token_usage"))
+            });
         let Some(info) = info else {
             continue;
         };
@@ -253,7 +256,11 @@ fn extract_codex_usage(source: &Path) -> Option<SessionUsageRecord> {
             ),
             read_u64(
                 info,
-                &["cache_creation_input_tokens", "input_cache_creation", "cache_write"],
+                &[
+                    "cache_creation_input_tokens",
+                    "input_cache_creation",
+                    "cache_write",
+                ],
             ),
             read_u64(info, &["reasoning_tokens", "reasoning"]),
             read_cost(info),
@@ -291,9 +298,16 @@ fn extract_claude_usage(source: &Path) -> Option<SessionUsageRecord> {
             read_u64(message_usage, &["output_tokens", "output"]),
             read_u64(
                 message_usage,
-                &["cache_read_input_tokens", "cached_input_tokens", "cache_read"],
+                &[
+                    "cache_read_input_tokens",
+                    "cached_input_tokens",
+                    "cache_read",
+                ],
             ),
-            read_u64(message_usage, &["cache_creation_input_tokens", "cache_write"]),
+            read_u64(
+                message_usage,
+                &["cache_creation_input_tokens", "cache_write"],
+            ),
             read_u64(message_usage, &["reasoning_tokens", "reasoning"]),
             read_cost(message_usage),
         );
@@ -306,7 +320,10 @@ fn extract_opencode_usage(source: &Path) -> Option<SessionUsageRecord> {
     let session_info: Value = serde_json::from_slice(&fs::read(source).ok()?).ok()?;
     let session_id = session_info.get("id").and_then(Value::as_str)?;
     let storage_root = source.parent()?.parent()?.parent()?;
-    let message_dir = storage_root.join("session").join("message").join(session_id);
+    let message_dir = storage_root
+        .join("session")
+        .join("message")
+        .join(session_id);
     let message_files = collect_files(&message_dir, &|path| {
         path.extension().and_then(|value| value.to_str()) == Some("json")
     })
@@ -420,9 +437,11 @@ fn extract_openclaw_usage(source: &Path) -> Option<SessionUsageRecord> {
 fn read_u64(value: &Value, keys: &[&str]) -> u64 {
     keys.iter()
         .find_map(|key| {
-            value
-                .get(*key)
-                .and_then(|field| field.as_u64().or_else(|| field.as_i64().map(|v| v.max(0) as u64)))
+            value.get(*key).and_then(|field| {
+                field
+                    .as_u64()
+                    .or_else(|| field.as_i64().map(|v| v.max(0) as u64))
+            })
         })
         .unwrap_or(0)
 }
@@ -557,14 +576,8 @@ mod tests {
         let codex = parse_fixture(CodexAdapter, fixtures_root().join("codex"));
         let openclaw = parse_fixture(OpenClawAdapter, fixtures_root().join("openclaw"));
         let overview = build_usage_overview([
-            (
-                "codex".to_string(),
-                extract_session_usage(&codex),
-            ),
-            (
-                "openclaw".to_string(),
-                extract_session_usage(&openclaw),
-            ),
+            ("codex".to_string(), extract_session_usage(&codex)),
+            ("openclaw".to_string(), extract_session_usage(&openclaw)),
         ]);
         let serialized = serde_json::to_value(&overview).expect("overview serializes");
         let assistants = serialized

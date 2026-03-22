@@ -1,7 +1,11 @@
 use std::{
+    env,
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
 use rusqlite::Connection;
@@ -25,9 +29,11 @@ use super::{
     delete::{SoftDeleteRequest, soft_delete_session},
     export::{ExportRequest, export_session_markdown},
     restore::restore_session,
+    session_control::{SessionControlRequest, continue_session, resume_session},
 };
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[test]
 fn exports_soft_deletes_restores_and_audits_session() {
@@ -72,6 +78,10 @@ fn exports_soft_deletes_restores_and_audits_session() {
         confidence: 0.92,
     };
 
+    let _guard = ENV_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("lock env guard");
     let export_result = export_session_markdown(&ExportRequest {
         session: &session,
         insight: &insight,
@@ -1216,6 +1226,158 @@ fn writes_back_and_rolls_back_openclaw_config_with_backup_and_audit() {
     assert_eq!(restored_credentials[0].masked_value, "***7890");
 }
 
+#[test]
+fn resumes_supported_session_and_records_control_state() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-ses-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "abc123".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+        let result = resume_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("resume session");
+
+        assert!(result.response.contains("READY"));
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+    });
+
+    let (attached, last_command): (i64, String) = connection
+        .query_row(
+            "SELECT attached, last_command
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .expect("control state should be persisted");
+
+    assert_eq!(attached, 1);
+    assert!(last_command.contains("exec resume"));
+    assert!(last_command.contains("codex-ses-1"));
+    assert!(query_event_types(&connection).contains(&"session_resume".to_string()));
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read codex log")
+            .contains("exec resume"),
+        "fake codex command should have been invoked"
+    );
+}
+
+#[test]
+fn continues_attached_session_and_persists_audit_event() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("claude.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("claude-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"assistant\"}\n").expect("write source session");
+    write_fake_claude_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "claude-ses-1".to_string(),
+        installation_id: None,
+        assistant: "claude-code".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 18,
+        tool_count: 7,
+        status: "running".to_string(),
+        raw_format: "claude-jsonl".to_string(),
+        content_hash: "def456".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND",
+                fake_command_path(&bin_dir, "claude"),
+            );
+        }
+        continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue with the next verification step."),
+        })
+        .expect("continue session");
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND");
+        }
+    });
+
+    let (attached, last_prompt, last_response): (i64, String, String) = connection
+        .query_row(
+            "SELECT attached, last_prompt, last_response
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .expect("control state should be persisted");
+
+    assert_eq!(attached, 1);
+    assert_eq!(last_prompt, "Continue with the next verification step.");
+    assert!(last_response.contains("READY"));
+    assert!(query_event_types(&connection).contains(&"session_continue".to_string()));
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read claude log")
+            .contains("-r claude-ses-1"),
+        "fake claude command should receive resume args"
+    );
+}
+
 fn config_fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../tests/fixtures/configs")
@@ -1236,6 +1398,154 @@ fn temp_root() -> PathBuf {
 
     fs::create_dir_all(&root).expect("create temp root");
     root
+}
+
+fn with_path_prefix<T>(bin_dir: &Path, action: impl FnOnce() -> T) -> T {
+    let _guard = ENV_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("lock env guard");
+
+    let original_path = env::var_os("PATH");
+    let joined = match &original_path {
+        Some(path) => env::join_paths(
+            std::iter::once(bin_dir.to_path_buf()).chain(env::split_paths(path)),
+        )
+        .expect("join PATH"),
+        None => env::join_paths([bin_dir.to_path_buf()]).expect("set PATH"),
+    };
+    unsafe {
+        env::set_var("PATH", joined);
+    }
+
+    let result = action();
+
+    match original_path {
+        Some(path) => unsafe {
+            env::set_var("PATH", path);
+        },
+        None => unsafe {
+            env::remove_var("PATH");
+        },
+    }
+
+    result
+}
+
+fn write_fake_codex_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("codex.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "setlocal EnableDelayedExpansion\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "set \"out=\"\r\n",
+                    ":next\r\n",
+                    "if \"%~1\"==\"\" goto done\r\n",
+                    "if \"%~1\"==\"-o\" (\r\n",
+                    "  set \"out=%~2\"\r\n",
+                    "  shift\r\n",
+                    ")\r\n",
+                    "shift\r\n",
+                    "goto next\r\n",
+                    ":done\r\n",
+                    "if not \"!out!\"==\"\" (\r\n",
+                    "  >\"!out!\" echo READY from fake codex\r\n",
+                    ")\r\n",
+                    "echo ok\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake codex");
+        return;
+    }
+
+    let script_path = bin_dir.join("codex");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "out=''\n",
+                "while [ \"$#\" -gt 0 ]; do\n",
+                "  if [ \"$1\" = '-o' ]; then\n",
+                "    out=\"$2\"\n",
+                "    shift 2\n",
+                "    continue\n",
+                "  fi\n",
+                "  shift\n",
+                "done\n",
+                "if [ -n \"$out\" ]; then\n",
+                "  printf 'READY from fake codex\\n' > \"$out\"\n",
+                "fi\n",
+                "printf 'ok\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake codex");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake codex");
+    }
+}
+
+fn write_fake_claude_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("claude.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake claude\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake claude");
+        return;
+    }
+
+    let script_path = bin_dir.join("claude");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake claude\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake claude");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake claude");
+    }
+}
+
+fn fake_command_path(bin_dir: &Path, name: &str) -> PathBuf {
+    if cfg!(windows) {
+        bin_dir.join(format!("{name}.cmd"))
+    } else {
+        bin_dir.join(name)
+    }
 }
 
 fn query_event_types(connection: &Connection) -> Vec<String> {

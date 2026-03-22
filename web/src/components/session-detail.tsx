@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import type { SessionDetailRecord } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
@@ -5,7 +7,9 @@ type SessionDetailProps = {
   session?: SessionDetailRecord;
   canSoftDelete?: boolean;
   exportPath?: string;
+  onContinueSession?: (sessionId: string, prompt: string) => void;
   onExportMarkdown?: (sessionId: string) => void;
+  onResumeSession?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
 
@@ -13,11 +17,18 @@ export function SessionDetail({
   session,
   canSoftDelete = false,
   exportPath,
+  onContinueSession,
   onExportMarkdown,
+  onResumeSession,
   onSoftDelete
 }: SessionDetailProps) {
   const { copy, translateProgressState, translateRiskFlag } = useI18n();
   const unknownValue = copy.data.unknownValue;
+  const [continuePrompt, setContinuePrompt] = useState("");
+
+  useEffect(() => {
+    setContinuePrompt("");
+  }, [session?.sessionId]);
 
   if (!session) {
     return (
@@ -63,6 +74,18 @@ export function SessionDetail({
 
       <div className="action-row detail-action-row">
         <button
+          className="action-button action-button-secondary"
+          disabled={
+            !onResumeSession ||
+            !session.sessionControl?.supported ||
+            !session.sessionControl?.available
+          }
+          onClick={() => onResumeSession?.(session.sessionId)}
+          type="button"
+        >
+          {copy.sessionDetail.actions.resumeSession}
+        </button>
+        <button
           className="action-button action-button-primary"
           onClick={() => onExportMarkdown?.(session.sessionId)}
           type="button"
@@ -78,6 +101,9 @@ export function SessionDetail({
           {copy.sessionDetail.actions.moveToQuarantine}
         </button>
       </div>
+      {session.sessionControl?.supported && !session.sessionControl.available ? (
+        <p className="action-hint">{copy.sessionDetail.controlUnavailable}</p>
+      ) : null}
       {!canSoftDelete ? (
         <p className="action-hint">
           {copy.sessionDetail.cleanupRequirement}
@@ -90,6 +116,87 @@ export function SessionDetail({
       ) : null}
 
       <div className="detail-card-grid">
+        <section className="detail-card">
+          <h3>{copy.sessionDetail.sections.sessionControl}</h3>
+          {session.sessionControl ? (
+            <div className="detail-control-stack">
+              <ul className="detail-list">
+                <li>
+                  {copy.sessionDetail.fields.controller}: {session.sessionControl.controller}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.command}:{" "}
+                  {session.sessionControl.command || unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.controlStatus}:{" "}
+                  {session.sessionControl.attached
+                    ? copy.sessionDetail.statuses.attached
+                    : copy.sessionDetail.statuses.detached}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.lastResumeAt}:{" "}
+                  {session.sessionControl.lastResumedAt ?? unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.lastContinueAt}:{" "}
+                  {session.sessionControl.lastContinuedAt ?? unknownValue}
+                </li>
+              </ul>
+              <label className="search-label" htmlFor="session-continue-prompt">
+                {copy.sessionDetail.fields.continuePrompt}
+              </label>
+              <textarea
+                className="detail-control-textarea"
+                id="session-continue-prompt"
+                onChange={(event) => setContinuePrompt(event.target.value)}
+                placeholder={copy.sessionDetail.continuePlaceholder}
+                value={continuePrompt}
+              />
+              <div className="action-row">
+                <button
+                  className="action-button action-button-secondary"
+                  disabled={
+                    !onContinueSession ||
+                    !session.sessionControl.available ||
+                    continuePrompt.trim().length === 0
+                  }
+                  onClick={() => {
+                    const trimmed = continuePrompt.trim();
+                    if (!trimmed) {
+                      return;
+                    }
+                    onContinueSession?.(session.sessionId, trimmed);
+                    setContinuePrompt("");
+                  }}
+                  type="button"
+                >
+                  {copy.sessionDetail.actions.continueSession}
+                </button>
+              </div>
+              {session.sessionControl.lastPrompt ? (
+                <p className="action-success">
+                  {copy.sessionDetail.fields.lastPrompt}:{" "}
+                  <span>{session.sessionControl.lastPrompt}</span>
+                </p>
+              ) : null}
+              {session.sessionControl.lastResponse ? (
+                <p className="action-success">
+                  {copy.sessionDetail.fields.lastResponse}:{" "}
+                  <span>{session.sessionControl.lastResponse}</span>
+                </p>
+              ) : null}
+              {session.sessionControl.lastError ? (
+                <p className="action-hint">
+                  {copy.sessionDetail.fields.lastError}: {session.sessionControl.lastError}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="detail-empty-copy">{copy.sessionDetail.noSessionControl}</p>
+          )}
+        </section>
+
         <section className="detail-card">
           <h3>{copy.sessionDetail.sections.context}</h3>
           <ul className="detail-list">

@@ -2,11 +2,14 @@ use std::{
     collections::{BTreeSet, HashSet},
     env, fmt, fs, io,
     path::{Path, PathBuf},
+    time::UNIX_EPOCH,
 };
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::{
     adapters::{
@@ -39,7 +42,12 @@ use crate::{
     },
     preferences::RuntimeSnapshot,
     session_text::normalize_session_text,
-    storage::sqlite::{load_audit_events, open_database},
+    storage::sqlite::{
+        SessionIndexCacheRow, SessionIndexRunRecord, delete_session_index_cache_rows,
+        insert_session_index_run, list_session_index_cache_paths, load_audit_events,
+        load_session_control_state, load_session_index_cache_row, open_database,
+        upsert_session_index_cache_row,
+    },
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
     usage::{SessionUsageRecord, UsageOverviewRecord, build_usage_overview, extract_session_usage},
 };
@@ -115,14 +123,14 @@ pub struct DashboardSnapshot {
     pub runtime: RuntimeSnapshot,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DashboardMetric {
     pub label: String,
     pub value: String,
     pub note: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionDetailRecord {
     pub session_id: String,
@@ -143,6 +151,30 @@ pub struct SessionDetailRecord {
     pub todo_items: Vec<TranscriptTodo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usage: Option<SessionUsageRecord>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_control: Option<SessionControlRecord>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionControlRecord {
+    pub supported: bool,
+    pub available: bool,
+    pub controller: String,
+    pub command: String,
+    pub attached: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_response: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_resumed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_continued_at: Option<String>,
 }
 
 #[derive(Debug)]
@@ -347,7 +379,10 @@ pub fn build_local_dashboard_snapshot_with_audit(
 pub fn build_local_indexed_sessions(
     context: &DiscoveryContext,
 ) -> SnapshotResult<Vec<IndexedSession>> {
-    Ok(build_indexed_sessions_with_findings(discover_known_session_roots(context))?.sessions)
+    Ok(
+        build_indexed_sessions_with_findings(discover_known_session_roots(context), None)?
+            .sessions,
+    )
 }
 
 pub fn find_local_config_target(
@@ -377,8 +412,9 @@ pub fn find_local_config_target(
 }
 
 pub fn build_local_doctor_report(context: &DiscoveryContext) -> SnapshotResult<DoctorReport> {
-    let findings = build_indexed_sessions_with_findings(discover_known_session_roots(context))?
-        .doctor_findings;
+    let findings =
+        build_indexed_sessions_with_findings(discover_known_session_roots(context), None)?
+            .doctor_findings;
 
     Ok(DoctorReport {
         status: doctor_status(&findings).to_string(),
@@ -391,18 +427,27 @@ fn build_snapshot(
     config_targets: Vec<ConfigAuditTarget>,
     audit_db_path: Option<&Path>,
 ) -> SnapshotResult<DashboardSnapshot> {
+    let connection = match audit_db_path {
+        Some(path) => Some(open_database(path)?),
+        None => None,
+    };
     let IndexedSessionBuildResult {
         sessions: indexed_sessions,
         doctor_findings,
-    } = build_indexed_sessions_with_findings(session_roots)?;
+    } = build_indexed_sessions_with_findings(session_roots, connection.as_ref())?;
     let sessions = indexed_sessions
         .into_iter()
-        .map(|indexed| indexed.detail)
+        .map(|indexed| {
+            let mut detail = indexed.detail;
+            detail.session_control =
+                Some(build_session_control_record(&indexed.session, connection.as_ref()));
+            detail
+        })
         .collect::<Vec<_>>();
     let derived_project_targets = derive_project_config_targets(&sessions);
     let merged_config_targets = merge_config_targets(config_targets, derived_project_targets);
     let configs = build_config_records(&merged_config_targets)?;
-    let audit_events = build_audit_records(audit_db_path)?;
+    let audit_events = build_audit_records(connection.as_ref())?;
     let usage_overview = build_usage_overview(
         sessions
             .iter()
@@ -422,12 +467,21 @@ fn build_snapshot(
 
 fn build_session_records(session_roots: &[KnownPath]) -> SnapshotResult<Vec<SessionDetailRecord>> {
     Ok(
-        build_indexed_sessions_with_findings(session_roots.to_vec())?
+        build_indexed_sessions_with_findings(session_roots.to_vec(), None)?
             .sessions
             .into_iter()
             .map(|indexed| indexed.detail)
             .collect(),
     )
+}
+
+#[derive(Debug, Default)]
+struct IndexedBuildStats {
+    discovered_files: i64,
+    cache_hits: i64,
+    cache_misses: i64,
+    reindexed_files: i64,
+    stale_deleted: i64,
 }
 
 struct IndexedSessionBuildResult {
@@ -437,9 +491,13 @@ struct IndexedSessionBuildResult {
 
 fn build_indexed_sessions_with_findings(
     session_roots: Vec<KnownPath>,
+    connection: Option<&Connection>,
 ) -> SnapshotResult<IndexedSessionBuildResult> {
     let mut sessions = Vec::new();
     let mut doctor_findings = Vec::new();
+    let mut observed_source_paths = HashSet::new();
+    let mut stats = IndexedBuildStats::default();
+    let started_at = Utc::now().to_rfc3339();
 
     for root in &session_roots {
         if !root.path.exists() {
@@ -455,8 +513,23 @@ fn build_indexed_sessions_with_findings(
         )?);
 
         for session_file in discovered {
+            stats.discovered_files += 1;
+            observed_source_paths.insert(session_file.display().to_string());
+
+            if let Some(cached) = try_load_cached_indexed_session(connection, root, &session_file)? {
+                stats.cache_hits += 1;
+                sessions.push(cached);
+                continue;
+            }
+
+            stats.cache_misses += 1;
+
             match build_indexed_session_from_file(adapter.as_ref(), root, &session_file) {
-                Ok(indexed) => sessions.push(indexed),
+                Ok(indexed) => {
+                    stats.reindexed_files += 1;
+                    persist_cached_indexed_session(connection, &session_file, &indexed)?;
+                    sessions.push(indexed);
+                }
                 Err(error) if is_recoverable_session_file_error(&error) => {
                     doctor_findings.push(build_recoverable_session_file_finding(
                         root,
@@ -468,6 +541,12 @@ fn build_indexed_sessions_with_findings(
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    if let Some(connection) = connection {
+        stats.stale_deleted =
+            prune_stale_cached_sessions(connection, &observed_source_paths)? as i64;
+        persist_index_run_stats(connection, &started_at, &stats)?;
     }
 
     Ok(IndexedSessionBuildResult {
@@ -642,6 +721,7 @@ fn build_indexed_session(
         transcript_highlights: transcript_digest.highlights.clone(),
         todo_items: transcript_digest.todos.clone(),
         usage,
+        session_control: None,
     };
     let insight = SessionInsight {
         session_id: session.session_id.clone(),
@@ -661,6 +741,219 @@ fn build_indexed_session(
         session,
         insight,
         detail,
+    })
+}
+
+fn try_load_cached_indexed_session(
+    connection: Option<&Connection>,
+    root: &KnownPath,
+    session_file: &Path,
+) -> SnapshotResult<Option<IndexedSession>> {
+    let Some(connection) = connection else {
+        return Ok(None);
+    };
+
+    let metadata = read_session_file_metadata(session_file)?;
+    let source_path = session_file.display().to_string();
+    let Some(cached) = load_session_index_cache_row(connection, &source_path)? else {
+        return Ok(None);
+    };
+
+    if cached.assistant != root.assistant
+        || cached.environment != root.environment
+        || cached.source_size != metadata.0
+        || cached.source_modified_at != metadata.1
+    {
+        return Ok(None);
+    }
+
+    let Ok(session) = serde_json::from_str::<SessionRecord>(&cached.session_json) else {
+        return Ok(None);
+    };
+    let Ok(insight) = serde_json::from_str::<SessionInsight>(&cached.insight_json) else {
+        return Ok(None);
+    };
+    let Ok(detail) = serde_json::from_str::<SessionDetailRecord>(&cached.detail_json) else {
+        return Ok(None);
+    };
+
+    Ok(Some(IndexedSession {
+        session,
+        insight,
+        detail,
+    }))
+}
+
+fn persist_cached_indexed_session(
+    connection: Option<&Connection>,
+    session_file: &Path,
+    indexed: &IndexedSession,
+) -> SnapshotResult<()> {
+    let Some(connection) = connection else {
+        return Ok(());
+    };
+
+    let metadata = read_session_file_metadata(session_file)?;
+    let row = SessionIndexCacheRow {
+        source_path: session_file.display().to_string(),
+        assistant: indexed.session.assistant.clone(),
+        environment: indexed.session.environment.clone(),
+        source_size: metadata.0,
+        source_modified_at: metadata.1,
+        session_id: indexed.session.session_id.clone(),
+        session_json: serde_json::to_string(&indexed.session)?,
+        insight_json: serde_json::to_string(&indexed.insight)?,
+        detail_json: serde_json::to_string(&indexed.detail)?,
+        indexed_at: Utc::now().to_rfc3339(),
+    };
+
+    upsert_session_index_cache_row(connection, &row)?;
+    Ok(())
+}
+
+fn prune_stale_cached_sessions(
+    connection: &Connection,
+    observed_source_paths: &HashSet<String>,
+) -> SnapshotResult<usize> {
+    let stale_paths = list_session_index_cache_paths(connection)?
+        .into_iter()
+        .filter(|source_path| !observed_source_paths.contains(source_path))
+        .collect::<Vec<_>>();
+
+    delete_session_index_cache_rows(connection, &stale_paths).map_err(Into::into)
+}
+
+fn persist_index_run_stats(
+    connection: &Connection,
+    started_at: &str,
+    stats: &IndexedBuildStats,
+) -> SnapshotResult<()> {
+    let finished_at = Utc::now().to_rfc3339();
+    let payload = format!(
+        "{started_at}:{}:{}:{}:{}",
+        stats.discovered_files,
+        stats.cache_hits,
+        stats.cache_misses,
+        stats.reindexed_files
+    );
+    let digest = Sha256::digest(payload.as_bytes());
+    let run_id = digest
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+
+    insert_session_index_run(
+        connection,
+        &SessionIndexRunRecord {
+            run_id,
+            started_at: started_at.to_string(),
+            finished_at,
+            discovered_files: stats.discovered_files,
+            cache_hits: stats.cache_hits,
+            cache_misses: stats.cache_misses,
+            reindexed_files: stats.reindexed_files,
+            stale_deleted: stats.stale_deleted,
+        },
+    )?;
+
+    Ok(())
+}
+
+fn read_session_file_metadata(session_file: &Path) -> SnapshotResult<(i64, i64)> {
+    let metadata = fs::metadata(session_file)?;
+    let source_size = metadata.len().min(i64::MAX as u64) as i64;
+    let modified = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+        .unwrap_or_default();
+
+    Ok((source_size, modified))
+}
+
+fn build_session_control_record(
+    session: &SessionRecord,
+    connection: Option<&Connection>,
+) -> SessionControlRecord {
+    let (supported, controller, command) = match session.assistant.as_str() {
+        "codex" => (
+            true,
+            "codex".to_string(),
+            env::var("OPEN_SESSION_MANAGER_CODEX_COMMAND")
+                .unwrap_or_else(|_| "codex".to_string()),
+        ),
+        "claude-code" => (
+            true,
+            "claude-code".to_string(),
+            env::var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND")
+                .unwrap_or_else(|_| "claude".to_string()),
+        ),
+        assistant => (false, assistant.to_string(), String::new()),
+    };
+    let available = supported && dashboard_command_is_available(&command);
+    let persisted = connection
+        .and_then(|db| load_session_control_state(db, &session.session_id).ok())
+        .flatten();
+
+    SessionControlRecord {
+        supported,
+        available,
+        controller,
+        command,
+        attached: persisted.as_ref().is_some_and(|state| state.attached),
+        last_command: persisted.as_ref().and_then(|state| state.last_command.clone()),
+        last_prompt: persisted.as_ref().and_then(|state| state.last_prompt.clone()),
+        last_response: persisted.as_ref().and_then(|state| state.last_response.clone()),
+        last_error: persisted.as_ref().and_then(|state| state.last_error.clone()),
+        last_resumed_at: persisted
+            .as_ref()
+            .and_then(|state| state.last_resumed_at.clone()),
+        last_continued_at: persisted
+            .as_ref()
+            .and_then(|state| state.last_continued_at.clone()),
+    }
+}
+
+fn dashboard_command_is_available(command: &str) -> bool {
+    if command.trim().is_empty() {
+        return false;
+    }
+
+    if command.contains(std::path::MAIN_SEPARATOR) || command.contains('/') || command.contains('\\')
+    {
+        return Path::new(command).exists();
+    }
+
+    let Some(path_var) = env::var_os("PATH") else {
+        return false;
+    };
+
+    let path_exts = if cfg!(windows) {
+        env::var_os("PATHEXT")
+            .and_then(|value| value.into_string().ok())
+            .map(|value| value.split(';').map(|entry| entry.to_string()).collect())
+            .unwrap_or_else(|| {
+                vec![
+                    ".COM".to_string(),
+                    ".EXE".to_string(),
+                    ".BAT".to_string(),
+                    ".CMD".to_string(),
+                ]
+            })
+    } else {
+        vec![String::new()]
+    };
+
+    env::split_paths(&path_var).any(|dir| {
+        if cfg!(windows) && dir.join(command).exists() {
+            return true;
+        }
+
+        path_exts
+            .iter()
+            .map(|ext| dir.join(format!("{command}{ext}")))
+            .any(|candidate| candidate.exists())
     })
 }
 
@@ -904,17 +1197,11 @@ fn build_metrics(
     ]
 }
 
-fn build_audit_records(audit_db_path: Option<&Path>) -> SnapshotResult<Vec<AuditEventRecord>> {
-    let Some(audit_db_path) = audit_db_path else {
+fn build_audit_records(connection: Option<&Connection>) -> SnapshotResult<Vec<AuditEventRecord>> {
+    let Some(connection) = connection else {
         return Ok(Vec::new());
     };
-
-    if !audit_db_path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let connection = open_database(audit_db_path)?;
-    let events = load_audit_events(&connection, 100)?;
+    let events = load_audit_events(connection, 100)?;
 
     Ok(events.into_iter().map(build_audit_record).collect())
 }
@@ -1598,11 +1885,18 @@ mod tests {
         fs,
         path::PathBuf,
         sync::atomic::{AtomicU64, Ordering},
+        thread,
+        time::Duration,
     };
+
+    use rusqlite::Connection;
 
     use crate::discovery::DiscoveryContext;
 
-    use super::{build_fixture_dashboard_snapshot, build_local_dashboard_snapshot};
+    use super::{
+        build_fixture_dashboard_snapshot, build_local_dashboard_snapshot,
+        build_local_dashboard_snapshot_with_audit,
+    };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -2047,6 +2341,128 @@ mod tests {
             Some("openrouter/anthropic/claude-sonnet-4")
         );
         assert_eq!(factory_config.masked_secret, "***7890");
+    }
+
+    #[test]
+    fn local_snapshot_reuses_cached_index_for_unchanged_sessions() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let codex_root = home_dir.join(".codex").join("sessions");
+        let audit_db_path = sandbox.join("audit").join("audit.db");
+
+        fs::create_dir_all(&codex_root).expect("create codex root");
+        fs::create_dir_all(audit_db_path.parent().expect("audit dir")).expect("create audit dir");
+        fs::copy(
+            fixtures_root().join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl"),
+            codex_root.join("rollout-2026-03-15.jsonl"),
+        )
+        .expect("copy codex fixture");
+
+        let context = DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        };
+
+        build_local_dashboard_snapshot_with_audit(&context, Some(&audit_db_path))
+            .expect("first snapshot should build");
+        build_local_dashboard_snapshot_with_audit(&context, Some(&audit_db_path))
+            .expect("second snapshot should build");
+
+        let connection = Connection::open(&audit_db_path).expect("open audit db");
+        let latest_run = connection
+            .query_row(
+                "SELECT discovered_files, cache_hits, reindexed_files
+                 FROM session_index_runs
+                 ORDER BY started_at DESC
+                 LIMIT 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .expect("index run stats should be persisted");
+
+        assert_eq!(latest_run.0, 1);
+        assert_eq!(latest_run.1, 1);
+        assert_eq!(latest_run.2, 0);
+    }
+
+    #[test]
+    fn local_snapshot_reindexes_only_changed_sessions_incrementally() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let codex_root = home_dir.join(".codex").join("sessions");
+        let claude_root = home_dir.join(".claude").join("projects").join("C--Projects-Claude-Demo");
+        let audit_db_path = sandbox.join("audit").join("audit.db");
+
+        fs::create_dir_all(&codex_root).expect("create codex root");
+        fs::create_dir_all(&claude_root).expect("create claude root");
+        fs::create_dir_all(audit_db_path.parent().expect("audit dir")).expect("create audit dir");
+        let codex_target = codex_root.join("rollout-2026-03-15.jsonl");
+        let claude_target = claude_root.join("claude-ses-1.jsonl");
+        fs::copy(
+            fixtures_root().join("codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl"),
+            &codex_target,
+        )
+        .expect("copy codex fixture");
+        fs::copy(
+            fixtures_root().join("claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl"),
+            &claude_target,
+        )
+        .expect("copy claude fixture");
+
+        let context = DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        };
+
+        build_local_dashboard_snapshot_with_audit(&context, Some(&audit_db_path))
+            .expect("first snapshot should build");
+
+        thread::sleep(Duration::from_millis(20));
+        fs::write(
+            &codex_target,
+            concat!(
+                "{\"timestamp\":\"2026-03-15T04:00:00.000Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\"codex-ses-1\",\"timestamp\":\"2026-03-15T04:00:00.000Z\",\"cwd\":\"C:\\\\Projects\\\\demo\",\"originator\":\"codex_cli_rs\",\"cli_version\":\"0.97.0\",\"source\":\"cli\"}}\n",
+                "{\"timestamp\":\"2026-03-15T04:00:03.000Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"整理本地 agent 会话\"}]}}\n",
+                "{\"timestamp\":\"2026-03-15T04:00:06.000Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"先扫描 Codex 和 Claude 的 transcript 目录。\"}]}}\n",
+                "{\"timestamp\":\"2026-03-15T04:00:09.000Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"补一条新的缓存命中验证消息。\"}]}}\n"
+            ),
+        )
+        .expect("mutate codex session");
+
+        build_local_dashboard_snapshot_with_audit(&context, Some(&audit_db_path))
+            .expect("second snapshot should build");
+
+        let connection = Connection::open(&audit_db_path).expect("open audit db");
+        let latest_run = connection
+            .query_row(
+                "SELECT discovered_files, cache_hits, reindexed_files
+                 FROM session_index_runs
+                 ORDER BY started_at DESC
+                 LIMIT 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .expect("index run stats should be persisted");
+
+        assert_eq!(latest_run.0, 2);
+        assert_eq!(latest_run.1, 1);
+        assert_eq!(latest_run.2, 1);
     }
 
     fn fixtures_root() -> PathBuf {

@@ -17,6 +17,8 @@ fn bootstrap_creates_expected_tables() {
         "config_artifacts",
         "credential_artifacts",
         "audit_events",
+        "session_index_cache",
+        "session_index_runs",
     ] {
         assert!(
             tables.iter().any(|table| table == expected),

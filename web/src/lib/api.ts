@@ -30,6 +30,20 @@ export type SessionUsageRecord = {
   costUsd?: number;
 };
 
+export type SessionControlRecord = {
+  supported: boolean;
+  available: boolean;
+  controller: string;
+  command: string;
+  attached: boolean;
+  lastCommand?: string;
+  lastPrompt?: string;
+  lastResponse?: string;
+  lastError?: string;
+  lastResumedAt?: string;
+  lastContinuedAt?: string;
+};
+
 export type SessionDetailRecord = SessionListItem & {
   summary: string;
   projectPath: string;
@@ -40,6 +54,7 @@ export type SessionDetailRecord = SessionListItem & {
   transcriptHighlights: TranscriptHighlight[];
   todoItems: TranscriptTodo[];
   usage?: SessionUsageRecord;
+  sessionControl?: SessionControlRecord;
 };
 
 export type ConfigRiskRecord = {
@@ -142,6 +157,11 @@ export type ConfigWritebackInput = {
   model?: string;
   baseUrl: string;
   secret?: string;
+};
+
+export type SessionContinueInput = {
+  sessionId: string;
+  prompt: string;
 };
 
 const DEMO_DATA_STORAGE_KEY = "open-session-manager.enable-demo-data";
@@ -530,7 +550,7 @@ export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
   }
 
   const browserSnapshot = shouldUseDemoData()
-    ? normalizeDashboardSnapshot(fallbackSnapshot)
+    ? normalizeDashboardSnapshot(seedDemoSessionControls(fallbackSnapshot))
     : buildEmptyDashboardSnapshot();
 
   return applyBrowserRuntimePreferences(browserSnapshot);
@@ -629,6 +649,77 @@ export function recordConfigWriteback(
   };
 }
 
+export function recordSessionResume(
+  current: DashboardSnapshot,
+  sessionId: string
+): DashboardSnapshot {
+  const nextSessions = current.sessions.map((session) => {
+    if (session.sessionId !== sessionId) {
+      return session;
+    }
+
+    return {
+      ...session,
+      sessionControl: {
+        ...resolveSessionControlState(session),
+        attached: true,
+        available: true,
+        lastResponse: "READY from demo resume",
+        lastResumedAt: new Date().toISOString()
+      }
+    };
+  });
+
+  return {
+    ...current,
+    sessions: nextSessions,
+    auditEvents: [
+      createAuditEvent(
+        "session_resume",
+        sessionId,
+        `Resumed ${sessionId} from the session detail panel.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
+export function recordSessionContinue(
+  current: DashboardSnapshot,
+  input: SessionContinueInput
+): DashboardSnapshot {
+  const nextSessions = current.sessions.map((session) => {
+    if (session.sessionId !== input.sessionId) {
+      return session;
+    }
+
+    return {
+      ...session,
+      sessionControl: {
+        ...resolveSessionControlState(session),
+        attached: true,
+        available: true,
+        lastPrompt: input.prompt,
+        lastResponse: `READY from demo continue: ${input.prompt}`,
+        lastContinuedAt: new Date().toISOString()
+      }
+    };
+  });
+
+  return {
+    ...current,
+    sessions: nextSessions,
+    auditEvents: [
+      createAuditEvent(
+        "session_continue",
+        input.sessionId,
+        `Sent a follow-up prompt to ${input.sessionId}.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
 export async function applyMarkdownExport(
   current: DashboardSnapshot,
   sessionId: string
@@ -681,6 +772,46 @@ export async function applySoftDelete(
   }
 
   return normalizeDashboardSnapshot(recordSoftDelete(current, sessionId));
+}
+
+export async function applySessionResume(
+  current: DashboardSnapshot,
+  sessionId: string
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "resume_existing_session",
+    { sessionId }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordSessionResume(current, sessionId));
+  }
+
+  return current;
+}
+
+export async function applySessionContinue(
+  current: DashboardSnapshot,
+  input: SessionContinueInput
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "continue_existing_session",
+    input
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordSessionContinue(current, input));
+  }
+
+  return current;
 }
 
 export async function applyConfigWriteback(
@@ -861,8 +992,87 @@ function normalizeSessionDetailRecord(
       : [],
     usage: isSessionUsageRecord(session.usage)
       ? normalizeSessionUsageRecord(session.usage)
+      : undefined,
+    sessionControl: isSessionControlRecord(session.sessionControl)
+      ? normalizeSessionControlRecord(session.sessionControl)
       : undefined
   };
+}
+
+function normalizeSessionControlRecord(
+  control: SessionControlRecord
+): SessionControlRecord {
+  return {
+    ...control,
+    lastCommand:
+      typeof control.lastCommand === "string" ? control.lastCommand : undefined,
+    lastPrompt:
+      typeof control.lastPrompt === "string" ? control.lastPrompt : undefined,
+    lastResponse:
+      typeof control.lastResponse === "string" ? control.lastResponse : undefined,
+    lastError:
+      typeof control.lastError === "string" ? control.lastError : undefined,
+    lastResumedAt:
+      typeof control.lastResumedAt === "string" ? control.lastResumedAt : undefined,
+    lastContinuedAt:
+      typeof control.lastContinuedAt === "string"
+        ? control.lastContinuedAt
+        : undefined
+  };
+}
+
+function seedDemoSessionControls(snapshot: DashboardSnapshot): DashboardSnapshot {
+  return {
+    ...snapshot,
+    sessions: snapshot.sessions.map((session) => ({
+      ...session,
+      sessionControl: session.sessionControl ?? buildDemoSessionControl(session)
+    }))
+  };
+}
+
+function buildDemoSessionControl(
+  session: Pick<SessionDetailRecord, "assistant">
+): SessionControlRecord | undefined {
+  if (session.assistant === "Codex" || session.assistant === "codex") {
+    return {
+      supported: true,
+      available: true,
+      controller: "codex",
+      command: "codex",
+      attached: false
+    };
+  }
+
+  if (
+    session.assistant === "Claude Code" ||
+    session.assistant === "claude-code"
+  ) {
+    return {
+      supported: true,
+      available: true,
+      controller: "claude-code",
+      command: "claude",
+      attached: false
+    };
+  }
+
+  return undefined;
+}
+
+function resolveSessionControlState(
+  session: Pick<SessionDetailRecord, "assistant" | "sessionControl">
+): SessionControlRecord {
+  return (
+    session.sessionControl ??
+    buildDemoSessionControl(session) ?? {
+      supported: false,
+      available: false,
+      controller: "unsupported",
+      command: "",
+      attached: false
+    }
+  );
 }
 
 function compareSessionsByActivity(
@@ -925,6 +1135,17 @@ function isAuditEventRecord(value: unknown): value is AuditEventRecord {
     typeof value.createdAt === "string" &&
     typeof value.result === "string" &&
     typeof value.detail === "string"
+  );
+}
+
+function isSessionControlRecord(value: unknown): value is SessionControlRecord {
+  return (
+    isRecord(value) &&
+    typeof value.supported === "boolean" &&
+    typeof value.available === "boolean" &&
+    typeof value.controller === "string" &&
+    typeof value.command === "string" &&
+    typeof value.attached === "boolean"
   );
 }
 
