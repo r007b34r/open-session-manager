@@ -123,7 +123,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `GIT-01` | P0 | todo | diff viewer | 前端可视化 diff 组件测试通过 |
+| `GIT-01` | P0 | done | diff viewer | 已有独立前端 diff 组件测试，覆盖字段标签、前后值、风险 badge 和空 diff 提示 |
 | `GIT-02` | P1 | todo | commit / push / branch switch | Git 操作链路有保护和回显，集成测试通过 |
 | `GIT-03` | P1 | todo | global git status dashboard | 多项目状态面板测试通过 |
 | `GIT-04` | P1 | todo | commit history view | 历史视图支持筛选与详情 |

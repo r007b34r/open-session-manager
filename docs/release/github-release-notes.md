@@ -37,6 +37,7 @@
 - Sessions 搜索现在会做本地 BM25 风格 lexical 排序，并补上 search-as-you-type 防抖、取消旧查询、命中片段和命中来源标签；transcript 命中会直接定位到右侧详情高亮
 - Sessions 页面新增高级筛选器，可按 assistant / project / risk / export / control 组合收窄会话队列，快速找出该导出、该隔离或可直接恢复的会话
 - 配置写回前新增 masked diff 审查流和风险提示，必须显式确认后才会落盘；会话移入隔离区前也新增 cleanup 审查确认
+- `DiffViewer` 现在有独立组件测试和空状态提示，不再只是配置审查流里的隐含实现
 - 会话详情新增 `Knowledge Lift` 卡片，可把当前摘要、待办、风险和关键证据直接提炼成 rule / skill Markdown，再决定是否清理原会话
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去

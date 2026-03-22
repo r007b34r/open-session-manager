@@ -37,6 +37,7 @@
 | One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
 | Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
 | Git worktree lifecycle CLI | 已实现 | `node scripts/git-worktree-manager.mjs` 支持在仓库内 `.worktrees/` 下执行 `create / merge / delete / recycle` |
+| Diff viewer | 已实现 | 配置审查流使用独立前端 diff 组件展示字段标签、前后值、风险 badge，并在无差异时显示明确空状态 |
 | Fixture drift ledger | 已实现 | `tests/fixtures/fixture-ledger.json` 记录 fixture 版本、来源和文件 hash，`scripts/fixture-ledger.mjs --check` 已进入统一 verify |
 | Fixture snapshot golden diff | 已实现 | `tests/fixtures/dashboard-snapshot.golden.json` 提供规范化 snapshot 基线，`scripts/check-fixture-snapshot.mjs` 会输出 JSON 路径级 diff |
 | Responsive detail panes | 已实现 | 会话详情改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI、窄窗和嵌入式选中场景 |
