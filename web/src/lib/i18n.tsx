@@ -5,6 +5,11 @@ import {
   type PropsWithChildren,
   type SetStateAction
 } from "react";
+import type {
+  ReviewDiffField,
+  ReviewDiffSeverity,
+  ReviewWarningCode
+} from "./review-flow";
 
 export const LANGUAGE_STORAGE_KEY = "open-session-manager.language";
 
@@ -208,6 +213,15 @@ type Messages = {
       detached: string;
       searchHit: string;
     };
+    cleanupReview: {
+      title: string;
+      description: string;
+      confirmLabel: string;
+      actions: {
+        confirm: string;
+        back: string;
+      };
+    };
     noRiskFlags: string;
     noTranscriptHighlights: string;
     noTodoItems: string;
@@ -252,6 +266,22 @@ type Messages = {
       endpoint: string;
       maskedKey: string;
       newKey: string;
+    };
+    review: {
+      title: string;
+      description: string;
+      warningsTitle: string;
+      confirmLabel: string;
+      beforeLabel: string;
+      afterLabel: string;
+      actions: {
+        review: string;
+        apply: string;
+        back: string;
+      };
+      severityLabels: Record<ReviewDiffSeverity, string>;
+      fieldLabels: Record<ReviewDiffField, string>;
+      warningMessages: Record<ReviewWarningCode, string>;
     };
   };
   runtimePanel: {
@@ -528,6 +558,16 @@ const messages: Record<Language, Messages> = {
         detached: "Detached",
         searchHit: "Search hit"
       },
+      cleanupReview: {
+        title: "Review cleanup before quarantine",
+        description:
+          "Confirm that the useful parts have already been exported before this session is moved into quarantine.",
+        confirmLabel: "I exported the valuable parts and want to continue.",
+        actions: {
+          confirm: "Confirm move to quarantine",
+          back: "Back to details"
+        }
+      },
       noRiskFlags: "no active risk flags",
       noTranscriptHighlights: "No transcript highlights were extracted for this session.",
       noTodoItems: "No todo evidence was captured for this session.",
@@ -577,6 +617,37 @@ const messages: Record<Language, Messages> = {
         endpoint: "Endpoint",
         maskedKey: "Masked Key",
         newKey: "New Key"
+      },
+      review: {
+        title: "Review changes",
+        description:
+          "Inspect the masked diff and risk prompts before any local config file is changed.",
+        warningsTitle: "Risk prompts",
+        confirmLabel: "I reviewed the masked diff and want to apply it.",
+        beforeLabel: "Before",
+        afterLabel: "After",
+        actions: {
+          review: "Review Changes",
+          apply: "Apply Reviewed Changes",
+          back: "Back to editing"
+        },
+        severityLabels: {
+          safe: "Safe",
+          warning: "Warning"
+        },
+        fieldLabels: {
+          provider: "Provider",
+          model: "Model",
+          baseUrl: "Endpoint",
+          secret: "Key"
+        },
+        warningMessages: {
+          provider_changed: "Provider routing will change for this config.",
+          endpoint_changed: "Endpoint change will redirect requests to a different base URL.",
+          secret_changed: "A new secret will be written to disk.",
+          existing_risks:
+            "This config already carries risky flags that should be reviewed again."
+        }
       }
     },
     runtimePanel: {
@@ -881,6 +952,15 @@ const messages: Record<Language, Messages> = {
         detached: "未附着",
         searchHit: "搜索命中"
       },
+      cleanupReview: {
+        title: "移入隔离区前的清理审查",
+        description: "请先确认有价值内容已经导出，再继续把当前会话移入隔离区。",
+        confirmLabel: "我已经导出有价值内容，并确认继续。",
+        actions: {
+          confirm: "确认移入隔离区",
+          back: "返回详情"
+        }
+      },
       noRiskFlags: "当前没有风险标记",
       noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",
       noTodoItems: "当前没有捕获到待办证据。",
@@ -927,6 +1007,35 @@ const messages: Record<Language, Messages> = {
         endpoint: "端点",
         maskedKey: "脱敏密钥",
         newKey: "新密钥"
+      },
+      review: {
+        title: "审查改动",
+        description: "在真正修改本地配置文件前，先检查脱敏 diff 和风险提示。",
+        warningsTitle: "风险提示",
+        confirmLabel: "我已审查脱敏 diff，并确认应用这些改动。",
+        beforeLabel: "修改前",
+        afterLabel: "修改后",
+        actions: {
+          review: "审查改动",
+          apply: "应用已审查改动",
+          back: "返回编辑"
+        },
+        severityLabels: {
+          safe: "安全",
+          warning: "警告"
+        },
+        fieldLabels: {
+          provider: "提供商",
+          model: "模型",
+          baseUrl: "端点",
+          secret: "密钥"
+        },
+        warningMessages: {
+          provider_changed: "这次改动会切换当前配置使用的 provider 路由。",
+          endpoint_changed: "端点改动会把请求重定向到新的 Base URL。",
+          secret_changed: "新的密钥将被写入本地磁盘。",
+          existing_risks: "当前配置本身已经带有风险标记，请再次确认。"
+        }
       }
     },
     runtimePanel: {

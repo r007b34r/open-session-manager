@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type SetStateAction } from "react";
 
 import type {
   ConfigRiskRecord,
@@ -20,6 +20,8 @@ import {
   buildConfigDraft,
   getProviderPresets
 } from "../lib/provider-presets";
+import { buildConfigReview, type ConfigReview } from "../lib/review-flow";
+import { DiffViewer } from "./diff-viewer";
 
 type ConfigRiskPanelProps = {
   configs: ConfigRiskRecord[];
@@ -44,9 +46,13 @@ export function ConfigRiskPanel({
   const [snippetExport, setSnippetExport] = useState("");
   const [snippetImport, setSnippetImport] = useState("");
   const [snippetError, setSnippetError] = useState<string | null>(null);
+  const [configReview, setConfigReview] = useState<ConfigReview | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
 
   const beginEditing = (config: ConfigRiskRecord) => {
     setDraft(buildConfigDraft(config));
+    setConfigReview(null);
+    setReviewConfirmed(false);
     setSnippetName("");
     setSnippetExport("");
     setSnippetImport("");
@@ -62,6 +68,12 @@ export function ConfigRiskPanel({
 
   const recordSnippetAudit = (input: LocalAuditEventInput) => {
     onAuditEvent?.(input);
+  };
+
+  const updateDraft = (nextValue: SetStateAction<ConfigWritebackInput | null>) => {
+    setConfigReview(null);
+    setReviewConfirmed(false);
+    setDraft(nextValue);
   };
 
   return (
@@ -114,8 +126,15 @@ export function ConfigRiskPanel({
                   <>
                     <button
                       className="action-button action-button-primary"
+                      disabled={Boolean(configReview) && !reviewConfirmed}
                       onClick={() => {
                         if (!draft) {
+                          return;
+                        }
+
+                        if (!configReview) {
+                          setConfigReview(buildConfigReview(config, draft));
+                          setReviewConfirmed(false);
                           return;
                         }
 
@@ -125,20 +144,34 @@ export function ConfigRiskPanel({
                           secret: normalizeOptionalValue(draft.secret)
                         });
                         setDraft(null);
+                        setConfigReview(null);
+                        setReviewConfirmed(false);
                       }}
                       type="button"
                     >
-                      {copy.configRisk.actions.saveConfig}
+                      {configReview
+                        ? copy.configRisk.review.actions.apply
+                        : copy.configRisk.review.actions.review}
                     </button>
                     <button
                       className="action-button"
                       onClick={() => {
+                        if (configReview) {
+                          setConfigReview(null);
+                          setReviewConfirmed(false);
+                          return;
+                        }
+
                         setDraft(null);
+                        setConfigReview(null);
+                        setReviewConfirmed(false);
                         resetSnippetComposer();
                       }}
                       type="button"
                     >
-                      {copy.configRisk.actions.cancelEdit}
+                      {configReview
+                        ? copy.configRisk.review.actions.back
+                        : copy.configRisk.actions.cancelEdit}
                     </button>
                   </>
                 ) : (
@@ -157,12 +190,12 @@ export function ConfigRiskPanel({
                 className="config-meta"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  onSaveConfig?.({
-                    ...draft,
-                    model: normalizeOptionalValue(draft.model),
-                    secret: normalizeOptionalValue(draft.secret)
-                  });
-                  setDraft(null);
+                  if (!draft) {
+                    return;
+                  }
+
+                  setConfigReview(buildConfigReview(config, draft));
+                  setReviewConfirmed(false);
                 }}
               >
                 <div>
@@ -171,7 +204,7 @@ export function ConfigRiskPanel({
                     <input
                       disabled={!isProviderEditable(config.assistant)}
                       onChange={(event) =>
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current
                             ? { ...current, provider: event.target.value }
                             : current
@@ -187,7 +220,7 @@ export function ConfigRiskPanel({
                     {copy.configRisk.fields.model}
                     <input
                       onChange={(event) =>
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current ? { ...current, model: event.target.value } : current
                         )
                       }
@@ -201,7 +234,7 @@ export function ConfigRiskPanel({
                     {copy.configRisk.fields.endpoint}
                     <input
                       onChange={(event) =>
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current
                             ? { ...current, baseUrl: event.target.value }
                             : current
@@ -217,7 +250,7 @@ export function ConfigRiskPanel({
                     {copy.configRisk.fields.newKey}
                     <input
                       onChange={(event) =>
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current ? { ...current, secret: event.target.value } : current
                         )
                       }
@@ -227,6 +260,35 @@ export function ConfigRiskPanel({
                   </label>
                 </div>
               </form>
+            ) : null}
+            {draft?.artifactId === config.artifactId && configReview ? (
+              <section className="config-review-panel">
+                <div className="config-preset-head">
+                  <h4>{copy.configRisk.review.title}</h4>
+                  <p>{copy.configRisk.review.description}</p>
+                </div>
+                <DiffViewer entries={configReview.entries} />
+                {configReview.warnings.length > 0 ? (
+                  <div className="review-warning-stack">
+                    <strong>{copy.configRisk.review.warningsTitle}</strong>
+                    <ul className="detail-list">
+                      {configReview.warnings.map((warning) => (
+                        <li key={warning}>
+                          {copy.configRisk.review.warningMessages[warning]}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                <label className="review-confirm">
+                  <input
+                    checked={reviewConfirmed}
+                    onChange={(event) => setReviewConfirmed(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>{copy.configRisk.review.confirmLabel}</span>
+                </label>
+              </section>
             ) : null}
             {draft?.artifactId === config.artifactId ? (
               <section className="config-preset-panel">
@@ -240,7 +302,7 @@ export function ConfigRiskPanel({
                       className="action-button action-button-secondary config-preset-chip"
                       key={preset.id}
                       onClick={() =>
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current ? applyProviderPreset(current, preset) : current
                         )
                       }
@@ -251,7 +313,7 @@ export function ConfigRiskPanel({
                   ))}
                   <button
                     className="action-button action-button-secondary config-preset-chip"
-                    onClick={() => setDraft(buildConfigDraft(config))}
+                    onClick={() => updateDraft(buildConfigDraft(config))}
                     type="button"
                   >
                     {copy.configRisk.presets.restoreDetectedValues}
@@ -352,7 +414,7 @@ export function ConfigRiskPanel({
 
                       try {
                         const snippet = parseConfigSnippet(snippetImport);
-                        setDraft((current) =>
+                        updateDraft((current) =>
                           current ? applyConfigSnippetToDraft(current, snippet) : current
                         );
                         setSnippetName(snippet.name);
@@ -381,7 +443,7 @@ export function ConfigRiskPanel({
                           className="action-button action-button-secondary config-preset-chip"
                           key={snippet.id}
                           onClick={() => {
-                            setDraft((current) =>
+                            updateDraft((current) =>
                               current ? applyConfigSnippetToDraft(current, snippet) : current
                             );
                             setSnippetName(snippet.name);

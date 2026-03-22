@@ -998,9 +998,25 @@ a {
   background: rgba(252, 249, 242, 0.9);
 }
 
+.config-review-panel,
+.detail-review-card {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(31, 39, 34, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 252, 245, 0.96), rgba(246, 239, 225, 0.98));
+}
+
 .config-preset-head {
   display: grid;
   gap: 4px;
+}
+
+.config-preset-head h4 {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .config-preset-head strong {
@@ -1040,6 +1056,61 @@ a {
   color: var(--ink);
 }
 
+.review-diff-list {
+  display: grid;
+  gap: 10px;
+}
+
+.review-diff-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.review-diff-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.review-diff-grid div {
+  display: grid;
+  gap: 4px;
+}
+
+.review-diff-grid dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.review-diff-grid dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.review-warning-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.review-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.review-confirm input {
+  margin-top: 2px;
+}
+
 .audit-stack {
   display: grid;
   gap: 14px;
@@ -1077,6 +1148,10 @@ a {
 
   .session-filter-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .review-diff-grid {
+    grid-template-columns: 1fr;
   }
 
   .detail-panel {

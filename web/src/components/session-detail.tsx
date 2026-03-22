@@ -30,9 +30,13 @@ export function SessionDetail({
   const { copy, translateProgressState, translateRiskFlag } = useI18n();
   const unknownValue = copy.data.unknownValue;
   const [continuePrompt, setContinuePrompt] = useState("");
+  const [showCleanupReview, setShowCleanupReview] = useState(false);
+  const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
 
   useEffect(() => {
     setContinuePrompt("");
+    setShowCleanupReview(false);
+    setCleanupConfirmed(false);
   }, [session?.sessionId]);
 
   if (!session) {
@@ -100,7 +104,10 @@ export function SessionDetail({
         <button
           className="action-button action-button-danger"
           disabled={!canSoftDelete}
-          onClick={() => onSoftDelete?.(session.sessionId)}
+          onClick={() => {
+            setShowCleanupReview(true);
+            setCleanupConfirmed(false);
+          }}
           type="button"
         >
           {copy.sessionDetail.actions.moveToQuarantine}
@@ -118,6 +125,49 @@ export function SessionDetail({
         <p className="action-success">
           {copy.sessionDetail.exportPathLabel}: <span>{exportPath}</span>
         </p>
+      ) : null}
+      {showCleanupReview ? (
+        <section className="detail-card detail-review-card">
+          <h3>{copy.sessionDetail.cleanupReview.title}</h3>
+          <p className="panel-copy">{copy.sessionDetail.cleanupReview.description}</p>
+          {session.riskFlags.length > 0 ? (
+            <div className="badge-row">
+              {session.riskFlags.map((flag) => (
+                <span className="badge badge-risk" key={`cleanup-${flag}`}>
+                  {translateRiskFlag(flag)}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <label className="review-confirm">
+            <input
+              checked={cleanupConfirmed}
+              onChange={(event) => setCleanupConfirmed(event.target.checked)}
+              type="checkbox"
+            />
+            <span>{copy.sessionDetail.cleanupReview.confirmLabel}</span>
+          </label>
+          <div className="action-row">
+            <button
+              className="action-button action-button-danger"
+              disabled={!cleanupConfirmed}
+              onClick={() => onSoftDelete?.(session.sessionId)}
+              type="button"
+            >
+              {copy.sessionDetail.cleanupReview.actions.confirm}
+            </button>
+            <button
+              className="action-button"
+              onClick={() => {
+                setShowCleanupReview(false);
+                setCleanupConfirmed(false);
+              }}
+              type="button"
+            >
+              {copy.sessionDetail.cleanupReview.actions.back}
+            </button>
+          </div>
+        </section>
       ) : null}
 
       <div className="detail-card-grid">
