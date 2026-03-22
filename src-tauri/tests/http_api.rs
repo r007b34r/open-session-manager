@@ -4,11 +4,14 @@ use std::{
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
     thread,
     time::{Duration, Instant},
 };
 
 use serde_json::Value;
+
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
 fn fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -190,9 +193,10 @@ fn serve_command_requires_bearer_token_when_configured() {
 }
 
 fn temp_root() -> PathBuf {
+    let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = env::temp_dir().join(format!(
-        "open-session-manager-http-api-{}",
-        std::process::id()
+        "open-session-manager-http-api-{}-{suffix}",
+        std::process::id(),
     ));
 
     if root.exists() {
