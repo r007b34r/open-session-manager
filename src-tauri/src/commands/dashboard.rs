@@ -49,7 +49,10 @@ use crate::{
         upsert_session_index_cache_row,
     },
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
-    usage::{SessionUsageRecord, UsageOverviewRecord, build_usage_overview, extract_session_usage},
+    usage::{
+        SessionUsageRecord, UsageOverviewRecord, UsageTimelineRecord, build_usage_overview,
+        build_usage_timeline, extract_session_usage,
+    },
 };
 
 #[derive(Debug)]
@@ -120,6 +123,7 @@ pub struct DashboardSnapshot {
     pub doctor_findings: Vec<DoctorFindingRecord>,
     pub audit_events: Vec<AuditEventRecord>,
     pub usage_overview: UsageOverviewRecord,
+    pub usage_timeline: Vec<UsageTimelineRecord>,
     pub runtime: RuntimeSnapshot,
 }
 
@@ -379,10 +383,7 @@ pub fn build_local_dashboard_snapshot_with_audit(
 pub fn build_local_indexed_sessions(
     context: &DiscoveryContext,
 ) -> SnapshotResult<Vec<IndexedSession>> {
-    Ok(
-        build_indexed_sessions_with_findings(discover_known_session_roots(context), None)?
-            .sessions,
-    )
+    Ok(build_indexed_sessions_with_findings(discover_known_session_roots(context), None)?.sessions)
 }
 
 pub fn find_local_config_target(
@@ -439,8 +440,10 @@ fn build_snapshot(
         .into_iter()
         .map(|indexed| {
             let mut detail = indexed.detail;
-            detail.session_control =
-                Some(build_session_control_record(&indexed.session, connection.as_ref()));
+            detail.session_control = Some(build_session_control_record(
+                &indexed.session,
+                connection.as_ref(),
+            ));
             detail
         })
         .collect::<Vec<_>>();
@@ -453,6 +456,12 @@ fn build_snapshot(
             .iter()
             .map(|session| (session.assistant.clone(), session.usage.clone())),
     );
+    let usage_timeline = build_usage_timeline(sessions.iter().map(|session| {
+        (
+            Some(session.last_activity_at.clone()),
+            session.usage.clone(),
+        )
+    }));
 
     Ok(DashboardSnapshot {
         metrics: build_metrics(&sessions, &configs),
@@ -461,6 +470,7 @@ fn build_snapshot(
         doctor_findings,
         audit_events,
         usage_overview,
+        usage_timeline,
         runtime: RuntimeSnapshot::default(),
     })
 }
@@ -516,7 +526,8 @@ fn build_indexed_sessions_with_findings(
             stats.discovered_files += 1;
             observed_source_paths.insert(session_file.display().to_string());
 
-            if let Some(cached) = try_load_cached_indexed_session(connection, root, &session_file)? {
+            if let Some(cached) = try_load_cached_indexed_session(connection, root, &session_file)?
+            {
                 stats.cache_hits += 1;
                 sessions.push(cached);
                 continue;
@@ -831,10 +842,7 @@ fn persist_index_run_stats(
     let finished_at = Utc::now().to_rfc3339();
     let payload = format!(
         "{started_at}:{}:{}:{}:{}",
-        stats.discovered_files,
-        stats.cache_hits,
-        stats.cache_misses,
-        stats.reindexed_files
+        stats.discovered_files, stats.cache_hits, stats.cache_misses, stats.reindexed_files
     );
     let digest = Sha256::digest(payload.as_bytes());
     let run_id = digest
@@ -880,8 +888,7 @@ fn build_session_control_record(
         "codex" => (
             true,
             "codex".to_string(),
-            env::var("OPEN_SESSION_MANAGER_CODEX_COMMAND")
-                .unwrap_or_else(|_| "codex".to_string()),
+            env::var("OPEN_SESSION_MANAGER_CODEX_COMMAND").unwrap_or_else(|_| "codex".to_string()),
         ),
         "claude-code" => (
             true,
@@ -902,10 +909,18 @@ fn build_session_control_record(
         controller,
         command,
         attached: persisted.as_ref().is_some_and(|state| state.attached),
-        last_command: persisted.as_ref().and_then(|state| state.last_command.clone()),
-        last_prompt: persisted.as_ref().and_then(|state| state.last_prompt.clone()),
-        last_response: persisted.as_ref().and_then(|state| state.last_response.clone()),
-        last_error: persisted.as_ref().and_then(|state| state.last_error.clone()),
+        last_command: persisted
+            .as_ref()
+            .and_then(|state| state.last_command.clone()),
+        last_prompt: persisted
+            .as_ref()
+            .and_then(|state| state.last_prompt.clone()),
+        last_response: persisted
+            .as_ref()
+            .and_then(|state| state.last_response.clone()),
+        last_error: persisted
+            .as_ref()
+            .and_then(|state| state.last_error.clone()),
         last_resumed_at: persisted
             .as_ref()
             .and_then(|state| state.last_resumed_at.clone()),
@@ -920,7 +935,9 @@ fn dashboard_command_is_available(command: &str) -> bool {
         return false;
     }
 
-    if command.contains(std::path::MAIN_SEPARATOR) || command.contains('/') || command.contains('\\')
+    if command.contains(std::path::MAIN_SEPARATOR)
+        || command.contains('/')
+        || command.contains('\\')
     {
         return Path::new(command).exists();
     }
@@ -2044,6 +2061,10 @@ mod tests {
         let usage_overview = serialized
             .get("usageOverview")
             .expect("usage overview should be present");
+        let usage_timeline = serialized
+            .get("usageTimeline")
+            .and_then(serde_json::Value::as_array)
+            .expect("usage timeline should be present");
         let assistants = usage_overview
             .get("assistants")
             .and_then(serde_json::Value::as_array)
@@ -2088,6 +2109,12 @@ mod tests {
             Some(0.02)
         );
         assert_eq!(
+            opencode_usage
+                .get("costSource")
+                .and_then(serde_json::Value::as_str),
+            Some("reported")
+        );
+        assert_eq!(
             session_usage
                 .get("model")
                 .and_then(serde_json::Value::as_str),
@@ -2104,6 +2131,61 @@ mod tests {
                 .get("totalTokens")
                 .and_then(serde_json::Value::as_u64),
             Some(210)
+        );
+        let timeline_2025 = usage_timeline
+            .iter()
+            .find(|entry| {
+                entry.get("date").and_then(serde_json::Value::as_str) == Some("2025-03-15")
+            })
+            .expect("2025 timeline bucket exists");
+        let timeline_2026 = usage_timeline
+            .iter()
+            .find(|entry| {
+                entry.get("date").and_then(serde_json::Value::as_str) == Some("2026-03-15")
+            })
+            .expect("2026 timeline bucket exists");
+        assert_eq!(
+            timeline_2025
+                .get("sessionsWithUsage")
+                .and_then(serde_json::Value::as_u64),
+            Some(1)
+        );
+        assert_eq!(
+            timeline_2025
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(210)
+        );
+        assert_eq!(
+            timeline_2025
+                .get("costUsd")
+                .and_then(serde_json::Value::as_f64),
+            Some(0.02)
+        );
+        assert_eq!(
+            timeline_2025
+                .get("costSource")
+                .and_then(serde_json::Value::as_str),
+            Some("reported")
+        );
+        assert_eq!(
+            timeline_2026
+                .get("sessionsWithUsage")
+                .and_then(serde_json::Value::as_u64),
+            Some(4)
+        );
+        assert_eq!(
+            timeline_2026
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(115092)
+        );
+        assert!(timeline_2026.get("costUsd").is_none());
+        assert_eq!(
+            timeline_2026
+                .get("costSource")
+                .and_then(serde_json::Value::as_str),
+            Some("unknown")
         );
     }
 
@@ -2398,7 +2480,10 @@ mod tests {
         let sandbox = temp_root();
         let home_dir = sandbox.join("home");
         let codex_root = home_dir.join(".codex").join("sessions");
-        let claude_root = home_dir.join(".claude").join("projects").join("C--Projects-Claude-Demo");
+        let claude_root = home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo");
         let audit_db_path = sandbox.join("audit").join("audit.db");
 
         fs::create_dir_all(&codex_root).expect("create codex root");

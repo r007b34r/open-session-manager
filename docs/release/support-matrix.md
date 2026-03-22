@@ -44,7 +44,7 @@
 | 会话列表辨识度增强 | 已实现 | 列表显示会话 ID，便于区分相近标题 |
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
-| Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总 |
+| Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |
 | 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、命中片段和来源标签 |
 | upstream intake pipeline | 已实现 | 支持 catalog、研究索引、发布致谢和镜像规划产物 |
 
@@ -67,7 +67,7 @@
 | `kbwo/ccmanager` | 已吸收 | repo-local worktree 生命周期管理方向，当前已落成 OSM 的 clean-room `git-worktree-manager` CLI |
 | `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
-| `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板与字段模型已落进 OSM clean-room 实现 |
+| `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板、成本来源标注、本地价格目录估算与 usage timeline 已落进 OSM clean-room 实现 |
 | `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段和命中来源；MCP `list/search/get` 仍在后续计划里 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
 | `sugyan/claude-code-webui` | 已研究 | 轻量远程壳层、plan mode / permission mode、history loader 方向 |
@@ -83,7 +83,7 @@
 | 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider presets / 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回，但还没有预设编排和健康切换 |
-| pricing lookup / usage 趋势图 / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地 usage 面板，但还没有价格同步和长期趋势分析 |
+| 高级 analytics / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地价格目录估算、成本来源标注与日级 usage timeline，但还没有 model/platform breakdown、contribution graph、shareable stats 与更宽连接器覆盖 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |
 

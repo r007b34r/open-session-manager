@@ -168,8 +168,8 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `ANA-01` | P0 | todo | pricing lookup | 本地价格表或在线同步测试通过 |
-| `ANA-02` | P0 | todo | usage timeline | 时序图和时间聚合测试通过 |
+| `ANA-01` | P0 | done | pricing lookup | 本地价格目录已落地；支持 `reported / estimated / unknown` 成本来源，并有 Rust / Web / CLI 测试覆盖 |
+| `ANA-02` | P0 | done | usage timeline | dashboard snapshot 与 Web overview 已展示日级 usage timeline，并有聚合与 golden 回归测试 |
 | `ANA-03` | P1 | todo | model / platform breakdown | 多模型、多 provider 聚合测试通过 |
 | `ANA-04` | P2 | todo | contribution graph | 周期热力图测试通过 |
 | `ANA-05` | P2 | todo | leaderboards / shareable stats | 导出图表和分享数据测试通过 |

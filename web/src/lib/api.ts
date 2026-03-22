@@ -19,6 +19,8 @@ export type TranscriptTodo = {
   completed: boolean;
 };
 
+export type CostSource = "reported" | "estimated" | "mixed" | "unknown";
+
 export type SessionUsageRecord = {
   model?: string;
   inputTokens: number;
@@ -28,6 +30,7 @@ export type SessionUsageRecord = {
   reasoningTokens: number;
   totalTokens: number;
   costUsd?: number;
+  costSource: CostSource;
 };
 
 export type SessionControlRecord = {
@@ -115,6 +118,7 @@ export type UsageTotalsRecord = {
   reasoningTokens: number;
   totalTokens: number;
   costUsd?: number;
+  costSource: CostSource;
 };
 
 export type AssistantUsageRecord = {
@@ -127,6 +131,20 @@ export type AssistantUsageRecord = {
   reasoningTokens: number;
   totalTokens: number;
   costUsd?: number;
+  costSource: CostSource;
+};
+
+export type UsageTimelineRecord = {
+  date: string;
+  sessionsWithUsage: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  costUsd?: number;
+  costSource: CostSource;
 };
 
 export type UsageOverviewRecord = {
@@ -141,6 +159,7 @@ export type DashboardSnapshot = {
   doctorFindings: DoctorFindingRecord[];
   auditEvents: AuditEventRecord[];
   usageOverview: UsageOverviewRecord;
+  usageTimeline: UsageTimelineRecord[];
   runtime: DashboardRuntime;
 };
 
@@ -174,10 +193,11 @@ const EMPTY_USAGE_OVERVIEW: UsageOverviewRecord = {
     cacheWriteTokens: 0,
     reasoningTokens: 0,
     totalTokens: 0,
-    costUsd: 0
+    costSource: "unknown"
   },
   assistants: []
 };
+const EMPTY_USAGE_TIMELINE: UsageTimelineRecord[] = [];
 const EMPTY_RUNTIME: DashboardRuntime = {
   auditDbPath: "",
   exportRoot: "",
@@ -490,7 +510,8 @@ const fallbackSnapshot: DashboardSnapshot = {
       cacheReadTokens: 1146,
       cacheWriteTokens: 144,
       reasoningTokens: 10,
-      totalTokens: 4069
+      totalTokens: 4069,
+      costSource: "unknown"
     },
     assistants: [
       {
@@ -501,7 +522,9 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 890,
         cacheWriteTokens: 144,
         reasoningTokens: 0,
-        totalTokens: 2835
+        totalTokens: 2835,
+        costUsd: 0.01301,
+        costSource: "estimated"
       },
       {
         assistant: "Codex",
@@ -511,7 +534,8 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 256,
         cacheWriteTokens: 0,
         reasoningTokens: 0,
-        totalTokens: 1024
+        totalTokens: 1024,
+        costSource: "unknown"
       },
       {
         assistant: "OpenCode",
@@ -522,10 +546,24 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheWriteTokens: 0,
         reasoningTokens: 10,
         totalTokens: 210,
-        costUsd: 0.02
+        costUsd: 0.02,
+        costSource: "reported"
       }
     ]
   },
+  usageTimeline: [
+    {
+      date: "2026-03-15",
+      sessionsWithUsage: 3,
+      inputTokens: 1994,
+      outputTokens: 775,
+      cacheReadTokens: 1146,
+      cacheWriteTokens: 144,
+      reasoningTokens: 10,
+      totalTokens: 4069,
+      costSource: "unknown"
+    }
+  ],
   runtime: {
     auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
     exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
@@ -926,7 +964,10 @@ function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
     (!("doctorFindings" in value) ||
       (Array.isArray(value.doctorFindings) &&
         value.doctorFindings.every(isDoctorFindingRecord))) &&
-    Array.isArray(value.auditEvents)
+    Array.isArray(value.auditEvents) &&
+    (!("usageTimeline" in value) ||
+      (Array.isArray(value.usageTimeline) &&
+        value.usageTimeline.every(isUsageTimelineRecord)))
   );
 }
 
@@ -953,7 +994,8 @@ function normalizeDashboardSnapshot(
       : [],
     runtime: normalizeDashboardRuntime(snapshot.runtime),
     sessions,
-    usageOverview: normalizeUsageOverview(snapshot.usageOverview, sessions)
+    usageOverview: normalizeUsageOverview(snapshot.usageOverview, sessions),
+    usageTimeline: normalizeUsageTimeline(snapshot.usageTimeline, sessions)
   };
 }
 
@@ -982,6 +1024,13 @@ function normalizeAuditEventRecord(event: AuditEventRecord): AuditEventRecord {
 function normalizeSessionDetailRecord(
   session: SessionDetailRecord
 ): SessionDetailRecord {
+  const usage = isSessionUsageRecord(session.usage)
+    ? normalizeSessionUsageRecord(session.usage)
+    : undefined;
+  const sessionControl = isSessionControlRecord(session.sessionControl)
+    ? normalizeSessionControlRecord(session.sessionControl)
+    : undefined;
+
   return {
     ...session,
     transcriptHighlights: Array.isArray(session.transcriptHighlights)
@@ -990,12 +1039,8 @@ function normalizeSessionDetailRecord(
     todoItems: Array.isArray(session.todoItems)
       ? session.todoItems.filter(isTranscriptTodo)
       : [],
-    usage: isSessionUsageRecord(session.usage)
-      ? normalizeSessionUsageRecord(session.usage)
-      : undefined,
-    sessionControl: isSessionControlRecord(session.sessionControl)
-      ? normalizeSessionControlRecord(session.sessionControl)
-      : undefined
+    ...(usage ? { usage } : {}),
+    ...(sessionControl ? { sessionControl } : {})
   };
 }
 
@@ -1169,7 +1214,8 @@ function isSessionUsageRecord(value: unknown): value is SessionUsageRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    hasOptionalCostValue(value.costUsd)
+    hasOptionalCostValue(value.costUsd) &&
+    hasOptionalCostSource(value.costSource)
   );
 }
 
@@ -1187,6 +1233,19 @@ function normalizeUsageOverview(
   }
 
   return deriveUsageOverviewFromSessions(sessions);
+}
+
+function normalizeUsageTimeline(
+  usageTimeline: UsageTimelineRecord[] | undefined,
+  sessions: SessionDetailRecord[]
+): UsageTimelineRecord[] {
+  if (Array.isArray(usageTimeline) && usageTimeline.every(isUsageTimelineRecord)) {
+    return usageTimeline
+      .map(normalizeUsageTimelineRecord)
+      .sort((left, right) => left.date.localeCompare(right.date));
+  }
+
+  return deriveUsageTimelineFromSessions(sessions);
 }
 
 function isUsageOverviewRecord(value: unknown): value is UsageOverviewRecord {
@@ -1208,7 +1267,8 @@ function isUsageTotalsRecord(value: unknown): value is UsageTotalsRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    hasOptionalCostValue(value.costUsd)
+    hasOptionalCostValue(value.costUsd) &&
+    hasOptionalCostSource(value.costSource)
   );
 }
 
@@ -1223,67 +1283,130 @@ function isAssistantUsageRecord(value: unknown): value is AssistantUsageRecord {
     typeof value.cacheWriteTokens === "number" &&
     typeof value.reasoningTokens === "number" &&
     typeof value.totalTokens === "number" &&
-    hasOptionalCostValue(value.costUsd)
+    hasOptionalCostValue(value.costUsd) &&
+    hasOptionalCostSource(value.costSource)
   );
 }
+
+function isUsageTimelineRecord(value: unknown): value is UsageTimelineRecord {
+  return (
+    isRecord(value) &&
+    typeof value.date === "string" &&
+    typeof value.sessionsWithUsage === "number" &&
+    typeof value.inputTokens === "number" &&
+    typeof value.outputTokens === "number" &&
+    typeof value.cacheReadTokens === "number" &&
+    typeof value.cacheWriteTokens === "number" &&
+    typeof value.reasoningTokens === "number" &&
+    typeof value.totalTokens === "number" &&
+    hasOptionalCostValue(value.costUsd) &&
+    hasOptionalCostSource(value.costSource)
+  );
+}
+
+type UsageAggregateState = {
+  sessionCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  hasKnownCost: boolean;
+  hasUnknownCost: boolean;
+  hasReported: boolean;
+  hasEstimated: boolean;
+};
 
 function deriveUsageOverviewFromSessions(
   sessions: SessionDetailRecord[]
 ): UsageOverviewRecord {
-  const assistants = new Map<string, AssistantUsageRecord>();
-  const totals: UsageTotalsRecord = {
-    sessionsWithUsage: 0,
-    inputTokens: 0,
-    outputTokens: 0,
-    cacheReadTokens: 0,
-    cacheWriteTokens: 0,
-    reasoningTokens: 0,
-    totalTokens: 0,
-    costUsd: 0
-  };
+  const assistants = new Map<string, UsageAggregateState>();
+  const totals = createUsageAggregateState();
 
   for (const session of sessions) {
     if (!session.usage) {
       continue;
     }
 
-    totals.sessionsWithUsage += 1;
-    totals.inputTokens += session.usage.inputTokens;
-    totals.outputTokens += session.usage.outputTokens;
-    totals.cacheReadTokens += session.usage.cacheReadTokens;
-    totals.cacheWriteTokens += session.usage.cacheWriteTokens;
-    totals.reasoningTokens += session.usage.reasoningTokens;
-    totals.totalTokens += session.usage.totalTokens;
-    totals.costUsd = accumulateCost(totals.costUsd, session.usage.costUsd);
+    accumulateUsageAggregate(totals, session.usage);
 
-    const entry =
-      assistants.get(session.assistant) ??
-      {
-        assistant: session.assistant,
-        sessionCount: 0,
-        inputTokens: 0,
-        outputTokens: 0,
-        cacheReadTokens: 0,
-        cacheWriteTokens: 0,
-        reasoningTokens: 0,
-        totalTokens: 0,
-        costUsd: 0
-      };
-    entry.sessionCount += 1;
-    entry.inputTokens += session.usage.inputTokens;
-    entry.outputTokens += session.usage.outputTokens;
-    entry.cacheReadTokens += session.usage.cacheReadTokens;
-    entry.cacheWriteTokens += session.usage.cacheWriteTokens;
-    entry.reasoningTokens += session.usage.reasoningTokens;
-    entry.totalTokens += session.usage.totalTokens;
-    entry.costUsd = accumulateCost(entry.costUsd, session.usage.costUsd);
+    const entry = assistants.get(session.assistant) ?? createUsageAggregateState();
+    accumulateUsageAggregate(entry, session.usage);
     assistants.set(session.assistant, entry);
   }
 
+  const totalCost = resolveAggregateCost(totals);
   return {
-    totals,
-    assistants: [...assistants.values()].sort(compareAssistantUsage)
+    totals: {
+      sessionsWithUsage: totals.sessionCount,
+      inputTokens: totals.inputTokens,
+      outputTokens: totals.outputTokens,
+      cacheReadTokens: totals.cacheReadTokens,
+      cacheWriteTokens: totals.cacheWriteTokens,
+      reasoningTokens: totals.reasoningTokens,
+      totalTokens: totals.totalTokens,
+      costUsd: totalCost.costUsd,
+      costSource: totalCost.costSource
+    },
+    assistants: [...assistants.entries()]
+      .map(([assistant, entry]) => {
+        const cost = resolveAggregateCost(entry);
+        return {
+          assistant,
+          sessionCount: entry.sessionCount,
+          inputTokens: entry.inputTokens,
+          outputTokens: entry.outputTokens,
+          cacheReadTokens: entry.cacheReadTokens,
+          cacheWriteTokens: entry.cacheWriteTokens,
+          reasoningTokens: entry.reasoningTokens,
+          totalTokens: entry.totalTokens,
+          costUsd: cost.costUsd,
+          costSource: cost.costSource
+        };
+      })
+      .sort(compareAssistantUsage)
   };
+}
+
+function deriveUsageTimelineFromSessions(
+  sessions: SessionDetailRecord[]
+): UsageTimelineRecord[] {
+  const buckets = new Map<string, UsageAggregateState>();
+
+  for (const session of sessions) {
+    if (!session.usage) {
+      continue;
+    }
+
+    const date = normalizeUsageDate(session.lastActivityAt);
+    if (!date) {
+      continue;
+    }
+
+    const entry = buckets.get(date) ?? createUsageAggregateState();
+    accumulateUsageAggregate(entry, session.usage);
+    buckets.set(date, entry);
+  }
+
+  return [...buckets.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, entry]) => {
+      const cost = resolveAggregateCost(entry);
+      return {
+        date,
+        sessionsWithUsage: entry.sessionCount,
+        inputTokens: entry.inputTokens,
+        outputTokens: entry.outputTokens,
+        cacheReadTokens: entry.cacheReadTokens,
+        cacheWriteTokens: entry.cacheWriteTokens,
+        reasoningTokens: entry.reasoningTokens,
+        totalTokens: entry.totalTokens,
+        costUsd: cost.costUsd,
+        costSource: cost.costSource
+      };
+    });
 }
 
 function compareAssistantUsage(
@@ -1306,46 +1429,162 @@ function hasOptionalCostValue(value: unknown) {
   return typeof value === "number" || typeof value === "undefined";
 }
 
+function hasOptionalCostSource(value: unknown) {
+  return typeof value === "undefined" || isCostSource(value);
+}
+
+function isCostSource(value: unknown): value is CostSource {
+  return (
+    value === "reported" ||
+    value === "estimated" ||
+    value === "mixed" ||
+    value === "unknown"
+  );
+}
+
 function normalizeOptionalCost(value: unknown) {
   return typeof value === "number" ? value : undefined;
 }
 
+function normalizeCostSource(
+  value: unknown,
+  costUsd: number | undefined
+): CostSource {
+  if (isCostSource(value)) {
+    return value;
+  }
+
+  return typeof costUsd === "number" ? "reported" : "unknown";
+}
+
 function normalizeSessionUsageRecord(usage: SessionUsageRecord): SessionUsageRecord {
+  const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
-    costUsd: normalizeOptionalCost(usage.costUsd)
+    costUsd,
+    costSource: normalizeCostSource(usage.costSource, costUsd)
   };
 }
 
 function normalizeUsageTotalsRecord(usage: UsageTotalsRecord): UsageTotalsRecord {
+  const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
-    costUsd: normalizeOptionalCost(usage.costUsd)
+    costUsd,
+    costSource: normalizeCostSource(usage.costSource, costUsd)
   };
 }
 
 function normalizeAssistantUsageRecord(
   usage: AssistantUsageRecord
 ): AssistantUsageRecord {
+  const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
-    costUsd: normalizeOptionalCost(usage.costUsd)
+    costUsd,
+    costSource: normalizeCostSource(usage.costSource, costUsd)
   };
 }
 
-function accumulateCost(
-  current: number | undefined,
-  next: number | undefined
+function normalizeUsageTimelineRecord(
+  timeline: UsageTimelineRecord
+): UsageTimelineRecord {
+  const costUsd = normalizeOptionalCost(timeline.costUsd);
+  return {
+    ...timeline,
+    costUsd,
+    costSource: normalizeCostSource(timeline.costSource, costUsd)
+  };
+}
+
+function createUsageAggregateState(): UsageAggregateState {
+  return {
+    sessionCount: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+    costUsd: 0,
+    hasKnownCost: false,
+    hasUnknownCost: false,
+    hasReported: false,
+    hasEstimated: false
+  };
+}
+
+function accumulateUsageAggregate(
+  state: UsageAggregateState,
+  usage: SessionUsageRecord
 ) {
-  if (typeof current !== "number") {
+  state.sessionCount += 1;
+  state.inputTokens += usage.inputTokens;
+  state.outputTokens += usage.outputTokens;
+  state.cacheReadTokens += usage.cacheReadTokens;
+  state.cacheWriteTokens += usage.cacheWriteTokens;
+  state.reasoningTokens += usage.reasoningTokens;
+  state.totalTokens += usage.totalTokens;
+
+  if (typeof usage.costUsd === "number") {
+    state.hasKnownCost = true;
+    state.costUsd = roundCost(state.costUsd + usage.costUsd);
+  } else {
+    state.hasUnknownCost = true;
+  }
+
+  switch (normalizeCostSource(usage.costSource, usage.costUsd)) {
+    case "reported":
+      state.hasReported = true;
+      break;
+    case "estimated":
+      state.hasEstimated = true;
+      break;
+    case "mixed":
+      state.hasReported = true;
+      state.hasEstimated = true;
+      break;
+    default:
+      state.hasUnknownCost = true;
+      break;
+  }
+}
+
+function resolveAggregateCost(state: UsageAggregateState) {
+  if (state.hasUnknownCost || !state.hasKnownCost) {
+    return {
+      costUsd: undefined,
+      costSource: "unknown" as const
+    };
+  }
+
+  if (state.hasReported && state.hasEstimated) {
+    return {
+      costUsd: roundCost(state.costUsd),
+      costSource: "mixed" as const
+    };
+  }
+
+  if (state.hasEstimated) {
+    return {
+      costUsd: roundCost(state.costUsd),
+      costSource: "estimated" as const
+    };
+  }
+
+  return {
+    costUsd: roundCost(state.costUsd),
+    costSource: "reported" as const
+  };
+}
+
+function normalizeUsageDate(value: string) {
+  const timestamp = parseActivityTimestamp(value);
+  if (timestamp <= 0) {
     return undefined;
   }
 
-  if (typeof next !== "number") {
-    return undefined;
-  }
-
-  return roundCost(current + next);
+  return new Date(timestamp).toISOString().slice(0, 10);
 }
 
 function buildEmptyDashboardSnapshot(): DashboardSnapshot {
@@ -1356,6 +1595,7 @@ function buildEmptyDashboardSnapshot(): DashboardSnapshot {
     doctorFindings: [],
     auditEvents: [],
     usageOverview: EMPTY_USAGE_OVERVIEW,
+    usageTimeline: EMPTY_USAGE_TIMELINE,
     runtime: EMPTY_RUNTIME
   });
 }

@@ -54,6 +54,15 @@ type Messages = {
     usageDescription: string;
     usageTotalsTitle: string;
     usageAssistantsTitle: string;
+    usageTimelineTitle: string;
+    usageTimelineEmpty: string;
+    costUnavailable: string;
+    costSources: {
+      reported: string;
+      estimated: string;
+      mixed: string;
+      unknown: string;
+    };
     usageFields: {
       sessionsWithUsage: string;
       totalTokens: string;
@@ -265,6 +274,15 @@ const messages: Record<Language, Messages> = {
         "Token and cost signals are now extracted from supported local session formats instead of living only in research notes.",
       usageTotalsTitle: "Totals",
       usageAssistantsTitle: "By assistant",
+      usageTimelineTitle: "Daily timeline",
+      usageTimelineEmpty: "No usage timeline is available for the current snapshot.",
+      costUnavailable: "Cost unavailable",
+      costSources: {
+        reported: "Reported by session log",
+        estimated: "Estimated from local price catalog",
+        mixed: "Mixed reported and estimated cost",
+        unknown: "Cost source unavailable"
+      },
       usageFields: {
         sessionsWithUsage: "Sessions with usage",
         totalTokens: "Total tokens",
@@ -523,6 +541,15 @@ const messages: Record<Language, Messages> = {
         "支持的本地会话格式现在会直接提取 token 和成本信号，不再只停留在研究文档里。",
       usageTotalsTitle: "总体汇总",
       usageAssistantsTitle: "按助手汇总",
+      usageTimelineTitle: "每日趋势",
+      usageTimelineEmpty: "当前快照里还没有可展示的用量趋势。",
+      costUnavailable: "成本不可用",
+      costSources: {
+        reported: "来自会话日志上报",
+        estimated: "来自本地价格目录估算",
+        mixed: "混合了上报值与估算值",
+        unknown: "成本来源不可用"
+      },
       usageFields: {
         sessionsWithUsage: "含用量数据的会话",
         totalTokens: "总 Token",

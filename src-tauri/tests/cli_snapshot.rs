@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     path::PathBuf,
     process::Command,
     sync::{
@@ -142,6 +141,19 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
             .and_then(Value::as_u64),
         Some(5)
     );
+    assert_eq!(
+        usage_overview
+            .get("assistants")
+            .and_then(Value::as_array)
+            .and_then(|assistants| {
+                assistants.iter().find(|assistant| {
+                    assistant.get("assistant").and_then(Value::as_str) == Some("claude-code")
+                })
+            })
+            .and_then(|assistant| assistant.get("costSource"))
+            .and_then(Value::as_str),
+        Some("estimated")
+    );
     assert!(
         sessions.iter().any(|session| {
             session.get("sessionId").and_then(Value::as_str) == Some("openclaw-ses-1")
@@ -152,6 +164,44 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
                     == Some(0.02)
         }),
         "fixture snapshot should expose session usage payloads"
+    );
+    let usage_timeline = snapshot
+        .get("usageTimeline")
+        .and_then(Value::as_array)
+        .expect("usage timeline exists");
+    assert_eq!(usage_timeline.len(), 2);
+    let timeline_2025 = usage_timeline
+        .iter()
+        .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2025-03-15"))
+        .expect("2025 timeline exists");
+    let timeline_2026 = usage_timeline
+        .iter()
+        .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2026-03-15"))
+        .expect("2026 timeline exists");
+    assert_eq!(
+        timeline_2025
+            .get("sessionsWithUsage")
+            .and_then(Value::as_u64),
+        Some(1)
+    );
+    assert_eq!(
+        timeline_2025.get("costUsd").and_then(Value::as_f64),
+        Some(0.02)
+    );
+    assert_eq!(
+        timeline_2025.get("costSource").and_then(Value::as_str),
+        Some("reported")
+    );
+    assert_eq!(
+        timeline_2026
+            .get("sessionsWithUsage")
+            .and_then(Value::as_u64),
+        Some(4)
+    );
+    assert!(timeline_2026.get("costUsd").is_none());
+    assert_eq!(
+        timeline_2026.get("costSource").and_then(Value::as_str),
+        Some("unknown")
     );
 }
 
@@ -393,8 +443,14 @@ fn snapshot_command_exposes_session_control_state() {
         .and_then(|session| session.get("sessionControl"))
         .expect("snapshot should expose session control");
 
-    assert_eq!(control.get("supported").and_then(Value::as_bool), Some(true));
-    assert_eq!(control.get("available").and_then(Value::as_bool), Some(true));
+    assert_eq!(
+        control.get("supported").and_then(Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        control.get("available").and_then(Value::as_bool),
+        Some(true)
+    );
     assert_eq!(
         control.get("controller").and_then(Value::as_str),
         Some("codex")
@@ -547,8 +603,9 @@ fn with_path_prefix<T>(bin_dir: &std::path::Path, action: impl FnOnce() -> T) ->
 
     let original_path = env::var_os("PATH");
     let joined = match &original_path {
-        Some(path) => env::join_paths([bin_dir.to_path_buf(), PathBuf::from(path)])
-            .expect("join PATH"),
+        Some(path) => {
+            env::join_paths([bin_dir.to_path_buf(), PathBuf::from(path)]).expect("join PATH")
+        }
         None => env::join_paths([bin_dir.to_path_buf()]).expect("set PATH"),
     };
     unsafe {
@@ -571,11 +628,7 @@ fn with_path_prefix<T>(bin_dir: &std::path::Path, action: impl FnOnce() -> T) ->
 
 fn write_fake_codex_executable(bin_dir: &std::path::Path) {
     if cfg!(windows) {
-        fs::write(
-            bin_dir.join("codex.cmd"),
-            "@echo off\r\necho ok\r\n",
-        )
-        .expect("write fake codex");
+        fs::write(bin_dir.join("codex.cmd"), "@echo off\r\necho ok\r\n").expect("write fake codex");
         return;
     }
 

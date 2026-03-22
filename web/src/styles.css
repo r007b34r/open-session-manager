@@ -308,6 +308,10 @@ a {
   gap: 14px;
 }
 
+.usage-card-wide {
+  grid-column: 1 / -1;
+}
+
 .usage-card h3 {
   margin: 0;
   font-size: 1rem;
@@ -356,11 +360,57 @@ a {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.usage-cost-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .usage-inline {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: baseline;
+}
+
+.usage-timeline-list {
+  display: grid;
+  gap: 12px;
+}
+
+.usage-timeline-row {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.usage-timeline-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.usage-timeline-topline strong {
+  font-family: "Rockwell", "Georgia", serif;
+  font-size: 1.02rem;
+}
+
+.usage-timeline-bar {
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(38, 72, 61, 0.08);
+  overflow: hidden;
+}
+
+.usage-timeline-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--moss), #7f9f7c);
 }
 
 .runtime-note,

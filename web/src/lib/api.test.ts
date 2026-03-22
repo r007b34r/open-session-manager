@@ -79,17 +79,16 @@ describe("fetchDashboardSnapshot", () => {
         {
           ...realSnapshot.sessions[1],
           transcriptHighlights: [],
-          todoItems: [],
-          usage: undefined
+          todoItems: []
         },
         {
           ...realSnapshot.sessions[0],
           transcriptHighlights: [],
-          todoItems: [],
-          usage: undefined
+          todoItems: []
         }
       ],
-      usageOverview: buildEmptyUsageOverview()
+      usageOverview: buildEmptyUsageOverview(),
+      usageTimeline: []
     } satisfies DashboardSnapshot);
     expect(fetchMock).toHaveBeenCalledWith("/dashboard-snapshot.json", {
       cache: "no-store"
@@ -144,7 +143,8 @@ describe("fetchDashboardSnapshot", () => {
 
     await expect(fetchDashboardSnapshot()).resolves.toEqual({
       ...nativeSnapshot,
-      usageOverview: buildEmptyUsageOverview()
+      usageOverview: buildEmptyUsageOverview(),
+      usageTimeline: []
     });
     expect(invokeMock).toHaveBeenCalledWith("load_dashboard_snapshot", {});
     expect(fetchMock).not.toHaveBeenCalled();
@@ -176,7 +176,8 @@ describe("fetchDashboardSnapshot", () => {
             cacheReadTokens: 40,
             cacheWriteTokens: 0,
             reasoningTokens: 0,
-            totalTokens: 240
+            totalTokens: 240,
+            costSource: "unknown"
           }
         },
         {
@@ -202,13 +203,27 @@ describe("fetchDashboardSnapshot", () => {
             cacheWriteTokens: 0,
             reasoningTokens: 0,
             totalTokens: 40,
-            costUsd: 0
+            costUsd: 0,
+            costSource: "reported"
           }
         }
       ],
       configs: [],
       doctorFindings: [],
       auditEvents: [],
+      usageTimeline: [
+        {
+          date: "2026-03-15",
+          sessionsWithUsage: 2,
+          inputTokens: 150,
+          outputTokens: 90,
+          cacheReadTokens: 40,
+          cacheWriteTokens: 0,
+          reasoningTokens: 0,
+          totalTokens: 280,
+          costSource: "unknown"
+        }
+      ],
       runtime: buildRuntime()
     };
 
@@ -236,12 +251,26 @@ describe("fetchDashboardSnapshot", () => {
       totalTokens: 240
     });
     expect(unknownCostSession?.usage?.costUsd).toBeUndefined();
+    expect((unknownCostSession?.usage as any)?.costSource).toBe("unknown");
     expect(zeroCostSession?.usage?.costUsd).toBe(0);
+    expect((zeroCostSession?.usage as any)?.costSource).toBe("reported");
     expect(snapshot.usageOverview.totals.sessionsWithUsage).toBe(2);
     expect(snapshot.usageOverview.totals.totalTokens).toBe(280);
     expect(snapshot.usageOverview.totals.costUsd).toBeUndefined();
+    expect((snapshot.usageOverview.totals as any).costSource).toBe("unknown");
     expect(codexUsage?.costUsd).toBeUndefined();
+    expect((codexUsage as any)?.costSource).toBe("unknown");
     expect(openCodeUsage?.costUsd).toBe(0);
+    expect((openCodeUsage as any)?.costSource).toBe("reported");
+    expect((snapshot as any).usageTimeline).toEqual([
+      expect.objectContaining({
+        date: "2026-03-15",
+        sessionsWithUsage: 2,
+        totalTokens: 280,
+        costUsd: undefined,
+        costSource: "unknown"
+      })
+    ]);
   });
 });
 
@@ -267,7 +296,7 @@ function buildEmptyUsageOverview() {
       cacheWriteTokens: 0,
       reasoningTokens: 0,
       totalTokens: 0,
-      costUsd: 0
+      costSource: "unknown"
     },
     assistants: []
   };

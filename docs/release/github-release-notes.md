@@ -1,6 +1,6 @@
 # open Session Manager v0.3.0 Public Preview
 
-这次把 OSM 往前推了一整段，不再只是“能看快照”，而是把搜索缓存、会话控制和 worktree 工具链接到了可验证的实现上。
+这次把 OSM 往前推了一整段，不再只是“能看快照”，而是把搜索缓存、会话控制、analytics 和 worktree 工具链接到了可验证的实现上。
 
 ## 本版重点
 
@@ -28,6 +28,8 @@
   - `OpenCode`
   - `Gemini CLI`
   - `OpenClaw`
+- `Claude Code / Gemini CLI` 在上游日志未直接给出成本时，现在会按本地价格目录估算成本
+- usage 面板现在会明确标注 `reported / estimated / unknown` 成本来源，并展示日级 usage timeline
 - Sessions 搜索现在会做本地 BM25 风格 lexical 排序，展示命中片段和命中来源标签
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
@@ -57,7 +59,7 @@
 - `endorhq/rover`
   - 吸收 `GitHub Copilot CLI` companion `mcp-config.json` 路径线索，补到 OSM 的 clean-room 配置审计里
 - `junhoyeo/tokscale`
-  - clean-room 吸收 usage / token / cost 字段模型和本地聚合面板
+  - clean-room 吸收 usage / token / cost 字段模型、本地价格目录估算、成本来源标注和日级 timeline
 - `jazzyalex/agent-sessions`
   - 吸收本地搜索结果呈现、命中来源可视化，以及本地优先索引这条工作台方向
 - `yoavf/ai-sessions-mcp`
@@ -103,6 +105,7 @@
 - SQLite session index cache、增量重建和 index run 统计
 - `Codex / Claude Code` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
+- 本地价格目录估算、`reported / estimated / unknown` 成本来源，以及 overview 日级 usage timeline
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
 - Sessions 页加权搜索、命中片段和来源标签
@@ -130,7 +133,7 @@
 - 除 `Codex / Claude Code` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider presets、共享配置片段、健康探测和自动切换
-- pricing lookup、usage 趋势图、更多助手连接器
+- 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归
 - 发布安装包与签名流程

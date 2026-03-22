@@ -80,7 +80,10 @@ export function OverviewRoute({ snapshot }: OverviewRouteProps) {
 
       <DoctorPanel findings={snapshot.doctorFindings} />
 
-      <UsagePanel usageOverview={snapshot.usageOverview} />
+      <UsagePanel
+        usageOverview={snapshot.usageOverview}
+        usageTimeline={snapshot.usageTimeline}
+      />
 
       <section className="panel adoption-panel">
         <div className="panel-header">

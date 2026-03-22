@@ -35,6 +35,7 @@ This file is generated from `third_party/upstreams/catalog.json`.
 - junhoyeo/tokscale (MIT)
   Posture: candidate-absorb
   Why: Established the analytics baseline OSM needs for token and cost observability.
+  Adopted: Local pricing lookup, cost provenance labels, and daily usage timeline
 - kbwo/ccmanager (MIT)
   Posture: candidate-absorb
   Why: Clarified the level of worktree and multi-project orchestration OSM still needs.

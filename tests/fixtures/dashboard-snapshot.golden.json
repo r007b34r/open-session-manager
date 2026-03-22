@@ -65,7 +65,8 @@
         "cacheReadTokens": 256,
         "cacheWriteTokens": 0,
         "reasoningTokens": 0,
-        "totalTokens": 1024
+        "totalTokens": 1024,
+        "costSource": "unknown"
       },
       "sessionControl": {
         "supported": true,
@@ -128,7 +129,9 @@
         "cacheReadTokens": 890,
         "cacheWriteTokens": 144,
         "reasoningTokens": 0,
-        "totalTokens": 2835
+        "totalTokens": 2835,
+        "costUsd": 0.01301,
+        "costSource": "estimated"
       },
       "sessionControl": {
         "supported": true,
@@ -186,7 +189,8 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 10,
         "totalTokens": 210,
-        "costUsd": 0.02
+        "costUsd": 0.02,
+        "costSource": "reported"
       },
       "sessionControl": {
         "supported": false,
@@ -245,7 +249,9 @@
         "cacheReadTokens": 77,
         "cacheWriteTokens": 0,
         "reasoningTokens": 45,
-        "totalTokens": 590
+        "totalTokens": 590,
+        "costUsd": 0.00212,
+        "costSource": "estimated"
       },
       "sessionControl": {
         "supported": false,
@@ -470,7 +476,8 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 0,
         "totalTokens": 110643,
-        "costUsd": 0.02
+        "costUsd": 0.02,
+        "costSource": "reported"
       },
       "sessionControl": {
         "supported": false,
@@ -601,7 +608,8 @@
       "cacheReadTokens": 110151,
       "cacheWriteTokens": 144,
       "reasoningTokens": 55,
-      "totalTokens": 115302
+      "totalTokens": 115302,
+      "costSource": "unknown"
     },
     "assistants": [
       {
@@ -613,7 +621,8 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 0,
         "totalTokens": 110643,
-        "costUsd": 0.02
+        "costUsd": 0.02,
+        "costSource": "reported"
       },
       {
         "assistant": "claude-code",
@@ -623,7 +632,9 @@
         "cacheReadTokens": 890,
         "cacheWriteTokens": 144,
         "reasoningTokens": 0,
-        "totalTokens": 2835
+        "totalTokens": 2835,
+        "costUsd": 0.01301,
+        "costSource": "estimated"
       },
       {
         "assistant": "codex",
@@ -633,7 +644,8 @@
         "cacheReadTokens": 256,
         "cacheWriteTokens": 0,
         "reasoningTokens": 0,
-        "totalTokens": 1024
+        "totalTokens": 1024,
+        "costSource": "unknown"
       },
       {
         "assistant": "gemini-cli",
@@ -643,7 +655,9 @@
         "cacheReadTokens": 77,
         "cacheWriteTokens": 0,
         "reasoningTokens": 45,
-        "totalTokens": 590
+        "totalTokens": 590,
+        "costUsd": 0.00212,
+        "costSource": "estimated"
       },
       {
         "assistant": "opencode",
@@ -654,10 +668,36 @@
         "cacheWriteTokens": 0,
         "reasoningTokens": 10,
         "totalTokens": 210,
-        "costUsd": 0.02
+        "costUsd": 0.02,
+        "costSource": "reported"
       }
     ]
   },
+  "usageTimeline": [
+    {
+      "date": "2025-03-15",
+      "sessionsWithUsage": 1,
+      "inputTokens": 120,
+      "outputTokens": 80,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "reasoningTokens": 10,
+      "totalTokens": 210,
+      "costUsd": 0.02,
+      "costSource": "reported"
+    },
+    {
+      "date": "2026-03-15",
+      "sessionsWithUsage": 4,
+      "inputTokens": 3879,
+      "outputTokens": 873,
+      "cacheReadTokens": 110151,
+      "cacheWriteTokens": 144,
+      "reasoningTokens": 45,
+      "totalTokens": 115092,
+      "costSource": "unknown"
+    }
+  ],
   "runtime": {
     "auditDbPath": "<runtime>",
     "exportRoot": "<runtime>",
