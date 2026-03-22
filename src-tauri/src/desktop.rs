@@ -342,7 +342,9 @@ mod tests {
     use super::{
         ConfigWritebackPayload, continue_existing_session, expand_session_detail,
         export_session_markdown, get_session_detail, list_session_inventory,
+        ListSessionInventoryRequest,
         load_dashboard_snapshot, resume_existing_session, save_dashboard_preferences,
+        SearchSessionInventoryRequest,
         search_session_inventory, soft_delete_session, view_session_detail,
         write_config_artifact,
     };
@@ -481,6 +483,78 @@ mod tests {
                                     == Some("claude-code")
                             })
                         })
+                );
+            })
+        });
+    }
+
+    #[test]
+    fn desktop_query_api_supports_pagination_filtering_and_sorting() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+
+        seed_session_fixture(
+            &home_dir
+                .join(".factory")
+                .join("sessions")
+                .join("project-a")
+                .join("droid-session-1.jsonl"),
+            "factory/sessions/project-a/droid-session-1.jsonl",
+        );
+        seed_session_fixture(
+            &home_dir
+                .join(".factory")
+                .join("projects")
+                .join("project-a")
+                .join("stream-session-1.jsonl"),
+            "factory/projects/project-a/stream-session-1.jsonl",
+        );
+
+        with_home_dir(&home_dir, || {
+            tauri::async_runtime::block_on(async {
+                let list = list_session_inventory(Some(ListSessionInventoryRequest {
+                    assistant: Some("factory-droid".to_string()),
+                    limit: Some(1),
+                    offset: Some(1),
+                    sort_by: Some("lastActivityAt".to_string()),
+                    descending: Some(true),
+                }))
+                .await
+                .expect("list query command");
+
+                let search = search_session_inventory(SearchSessionInventoryRequest {
+                    query: "branch".to_string(),
+                    assistant: Some("factory-droid".to_string()),
+                    limit: Some(1),
+                    offset: Some(0),
+                    sort_by: Some("title".to_string()),
+                    descending: Some(false),
+                })
+                .await
+                .expect("search query command");
+
+                assert_eq!(
+                    list.get("sessions")
+                        .and_then(Value::as_array)
+                        .map(Vec::len),
+                    Some(1)
+                );
+                assert_eq!(
+                    list.get("sessions")
+                        .and_then(Value::as_array)
+                        .and_then(|sessions| sessions.first())
+                        .and_then(|session| session.get("sessionId"))
+                        .and_then(Value::as_str),
+                    Some("droid-session-1")
+                );
+                assert_eq!(
+                    search
+                        .get("hits")
+                        .and_then(Value::as_array)
+                        .and_then(|hits| hits.first())
+                        .and_then(|hit| hit.get("sessionId"))
+                        .and_then(Value::as_str),
+                    Some("droid-session-1")
                 );
             })
         });
