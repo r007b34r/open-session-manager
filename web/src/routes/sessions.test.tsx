@@ -86,6 +86,40 @@ describe("SessionsRoute", () => {
       screen.getByRole("button", { name: /audit anthropic relay settings/i })
     ).toBeInTheDocument();
   });
+
+  it("supports combining assistant, risk, export, and control filters in the sessions workspace", async () => {
+    renderWithI18n(
+      <SessionsRoute
+        exportedSessionIds={new Set(["ses-001"])}
+        latestMarkdownExportPaths={new Map([["ses-001", "C:/exports/session-ses-001.md"]])}
+        runtime={buildRuntime()}
+        sessions={buildFilterSessions()}
+      />
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: /assistant/i }), {
+      target: { value: "Claude Code" }
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /risk/i }), {
+      target: { value: "at-risk" }
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /export/i }), {
+      target: { value: "needs-export" }
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /control/i }), {
+      target: { value: "controllable" }
+    });
+
+    expect(
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /refactor wsl collector handshake/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /review cleanup handoff template/i })
+    ).not.toBeInTheDocument();
+  });
 });
 
 function renderWithI18n(node: ReactNode) {
@@ -142,6 +176,79 @@ function buildSessions(): SessionDetailRecord[] {
       tags: ["relay", "risk"],
       riskFlags: ["dangerous_permissions"],
       keyArtifacts: ["Captured hook chain"],
+      transcriptHighlights: [],
+      todoItems: []
+    }
+  ];
+}
+
+function buildFilterSessions(): SessionDetailRecord[] {
+  return [
+    {
+      sessionId: "ses-001",
+      title: "Refactor WSL collector handshake",
+      assistant: "Codex",
+      progressState: "In Progress",
+      progressPercent: 65,
+      lastActivityAt: "2026-03-15 12:40",
+      environment: "WSL: Ubuntu",
+      valueScore: 84,
+      summary: "Collector manifest work.",
+      projectPath: "/home/max/src/open-session-manager",
+      sourcePath: "C:/Users/Max/.codex/sessions/2026/03/15/rollout-2026-03-15.jsonl",
+      tags: ["wsl", "collector"],
+      riskFlags: [],
+      keyArtifacts: ["Finalize manifest framing"],
+      transcriptHighlights: [],
+      todoItems: [],
+      sessionControl: {
+        supported: true,
+        available: true,
+        controller: "codex",
+        command: "codex",
+        attached: false
+      }
+    },
+    {
+      sessionId: "ses-002",
+      title: "Audit Anthropic relay settings",
+      assistant: "Claude Code",
+      progressState: "Blocked",
+      progressPercent: 15,
+      lastActivityAt: "2026-03-14 22:10",
+      environment: "Windows 11",
+      valueScore: 47,
+      summary: "Proxy endpoint still needs remediation.",
+      projectPath: "C:/Users/Max/Desktop/ops",
+      sourcePath: "C:/Users/Max/.claude/projects/ops/claude-ses-1.jsonl",
+      tags: ["relay", "risk"],
+      riskFlags: ["dangerous_permissions"],
+      keyArtifacts: ["Captured hook chain"],
+      transcriptHighlights: [],
+      todoItems: [],
+      sessionControl: {
+        supported: true,
+        available: true,
+        controller: "claude-code",
+        command: "claude",
+        attached: true
+      }
+    },
+    {
+      sessionId: "ses-003",
+      title: "Review cleanup handoff template",
+      assistant: "OpenCode",
+      progressState: "Completed",
+      progressPercent: 100,
+      lastActivityAt: "2026-03-13 08:00",
+      environment: "Windows 11",
+      valueScore: 70,
+      summary: "Finalize the cleanup checklist wording.",
+      projectPath: "C:/Users/Max/Desktop/docs",
+      sourcePath: "C:/Users/Max/AppData/Local/OpenCode/ses-003.json",
+      tags: ["docs"],
+      riskFlags: [],
+      keyArtifacts: ["cleanup-template.md"],
       transcriptHighlights: [],
       todoItems: []
     }
