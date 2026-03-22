@@ -147,6 +147,7 @@
 - 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，并补上 `assistant` 过滤、`limit/offset` 分页和 `sortBy/descending` 排序，便于后续 Web / HTTP 壳层直接复用
 - `cargo run -- serve` 现在会启动本地只读 REST API，暴露 `health/list/search/get/view/expand`，并支持可选 Bearer token
 - `/openapi.json` 现在会返回本地 REST API 的 OpenAPI 3.1 文档，方便脚本、测试和后续外壳复用同一份契约
+- `cargo run -- mcp` 现在会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 MCP tools，便于把本地会话知识接进自动化链路
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 

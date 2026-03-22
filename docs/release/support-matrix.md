@@ -37,6 +37,7 @@
 | Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
+| MCP session query server | 已实现 | `cargo run -- mcp` 会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 tools，并复用同一套 Rust 查询层 |
 | Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
 | One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
 | Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
@@ -80,7 +81,7 @@
 | `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计与 preset catalog 思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
 | `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板、成本来源标注、本地价格目录估算与 usage timeline 已落进 OSM clean-room 实现 |
-| `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段、命中来源和 transcript 命中高亮；MCP `list/search/get` 仍在后续计划里 |
+| `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段、命中来源、transcript 命中高亮，以及 `mcp` 子命令里的 `list/search/get` tool 面 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
 | `sugyan/claude-code-webui` | 已研究 | 轻量远程壳层、plan mode / permission mode、history loader 方向 |
 | `ssdeanx/Gemini-CLI-Web` | Reference-only | 远程 Gemini 工作台样本，但许可证口径冲突，暂不吸收代码 |

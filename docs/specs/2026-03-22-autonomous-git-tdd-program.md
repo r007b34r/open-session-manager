@@ -154,7 +154,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `MCP-01` | P1 | todo | MCP server 暴露 OSM 会话数据 | `list/search/get` 端到端测试通过 |
+| `MCP-01` | P1 | done | MCP server 暴露 OSM 会话数据 | `mcp` 子命令已通过 `stdio` 暴露 `list/search/get` tools，并有端到端测试覆盖 |
 | `MCP-02` | P1 | todo | MCP server viewer | UI 可查看 server 列表、状态和配置 |
 | `MCP-03` | P1 | todo | unified MCP management | 增删改查与校验测试通过 |
 | `MCP-04` | P1 | todo | prompts panel | prompt 浏览、编辑和版本切换测试通过 |
