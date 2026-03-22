@@ -7,6 +7,7 @@ use open_session_manager_core::{
         DashboardSnapshot, build_fixture_dashboard_snapshot_with_audit,
         build_local_dashboard_snapshot_with_audit, build_local_doctor_report,
     },
+    api_server,
     commands::query::{expand_session, get_session, list_sessions, search_sessions, view_session},
     desktop,
     discovery::DiscoveryContext,
@@ -89,6 +90,13 @@ fn main() -> ExitCode {
                 println!("{output}");
                 ExitCode::SUCCESS
             }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("serve") => match api_server::run(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("{error}");
                 ExitCode::FAILURE

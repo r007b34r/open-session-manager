@@ -142,25 +142,27 @@ fn reserve_port() -> u16 {
         .port()
 }
 
-fn spawn_server(home_dir: &Path, port: u16) -> Child {
-    Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
-        .env("HOME", home_dir)
-        .env("USERPROFILE", home_dir)
-        .args(["serve", "--host", "127.0.0.1", "--port", &port.to_string()])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("spawn serve command")
+fn spawn_server(home_dir: &Path, port: u16) -> ServerGuard {
+    ServerGuard {
+        child: Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
+            .env("HOME", home_dir)
+            .env("USERPROFILE", home_dir)
+            .args(["serve", "--host", "127.0.0.1", "--port", &port.to_string()])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn serve command"),
+    }
 }
 
-fn wait_for_server(server: &mut Child, port: u16) {
+fn wait_for_server(server: &mut ServerGuard, port: u16) {
     let deadline = Instant::now() + Duration::from_secs(5);
 
     loop {
-        if let Ok(Some(status)) = server.try_wait() {
+        if let Ok(Some(status)) = server.child.try_wait() {
             let mut stderr = String::new();
-            if let Some(handle) = server.stderr.as_mut() {
+            if let Some(handle) = server.child.stderr.as_mut() {
                 handle.read_to_string(&mut stderr).expect("read stderr");
             }
 
@@ -221,3 +223,13 @@ struct HttpResponse {
     body: Vec<u8>,
 }
 
+impl Drop for ServerGuard {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+struct ServerGuard {
+    child: Child,
+}

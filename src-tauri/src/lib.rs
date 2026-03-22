@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod adapters;
+pub mod api_server;
 pub mod audit;
 pub mod commands;
 pub mod desktop;
