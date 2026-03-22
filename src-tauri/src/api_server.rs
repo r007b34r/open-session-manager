@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr, path::PathBuf};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
     response::IntoResponse,
     routing::get,
 };
@@ -31,6 +31,7 @@ struct ApiState {
     app: AppState,
     fixtures_path: Option<PathBuf>,
     audit_db_path: Option<PathBuf>,
+    api_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,6 +41,7 @@ struct ServeConfig {
     port: Option<u16>,
     fixtures_path: Option<PathBuf>,
     audit_db_path: Option<PathBuf>,
+    api_token: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -85,6 +87,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
         app: AppState::default(),
         fixtures_path: config.fixtures_path,
         audit_db_path: config.audit_db_path,
+        api_token: config.api_token,
     };
 
     let runtime = tokio::runtime::Runtime::new().map_err(|error| error.to_string())?;
@@ -119,8 +122,10 @@ async fn health(State(state): State<ApiState>) -> Json<HealthResponse> {
 
 async fn list_sessions(
     State(state): State<ApiState>,
+    headers: HeaderMap,
     Query(query): Query<ListQuery>,
 ) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
     let snapshot = load_snapshot_data(&state)?;
     let request = ListSessionInventoryRequest {
         assistant: query.assistant,
@@ -135,8 +140,10 @@ async fn list_sessions(
 
 async fn search_sessions(
     State(state): State<ApiState>,
+    headers: HeaderMap,
     Query(query): Query<SearchQuery>,
 ) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
     let snapshot = load_snapshot_data(&state)?;
     let request = SearchSessionInventoryRequest {
         query: query.query,
@@ -152,8 +159,10 @@ async fn search_sessions(
 
 async fn get_session_detail(
     State(state): State<ApiState>,
+    headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
     let snapshot = load_snapshot_data(&state)?;
     get_session(&snapshot, &session_id)
         .map(Json)
@@ -162,8 +171,10 @@ async fn get_session_detail(
 
 async fn view_session_detail(
     State(state): State<ApiState>,
+    headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
     let snapshot = load_snapshot_data(&state)?;
     view_session(&snapshot, &session_id)
         .map(Json)
@@ -172,8 +183,10 @@ async fn view_session_detail(
 
 async fn expand_session_detail(
     State(state): State<ApiState>,
+    headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
     let snapshot = load_snapshot_data(&state)?;
     expand_session(&snapshot, &session_id)
         .map(Json)
@@ -230,18 +243,42 @@ fn parse_config(args: &[String]) -> Result<ServeConfig, String> {
         .transpose()?;
     let fixtures_path = parse_flag_value(args, "--fixtures").map(PathBuf::from);
     let audit_db_path = parse_flag_value(args, "--audit-db").map(PathBuf::from);
+    let api_token = parse_flag_value(args, "--api-token")
+        .map(ToString::to_string)
+        .or_else(|| env::var("OPEN_SESSION_MANAGER_API_TOKEN").ok());
 
     Ok(ServeConfig {
         host,
         port,
         fixtures_path,
         audit_db_path,
+        api_token,
     })
 }
 
 fn parse_flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
     args.windows(2)
         .find_map(|window| (window[0] == flag).then_some(window[1].as_str()))
+}
+
+fn authorize(state: &ApiState, headers: &HeaderMap) -> Result<(), ApiError> {
+    let Some(expected_token) = state.api_token.as_deref() else {
+        return Ok(());
+    };
+
+    let provided = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "));
+
+    if provided == Some(expected_token) {
+        return Ok(());
+    }
+
+    Err(ApiError {
+        status: StatusCode::UNAUTHORIZED,
+        message: "missing or invalid bearer token".to_string(),
+    })
 }
 
 #[derive(Debug)]

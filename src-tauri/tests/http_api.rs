@@ -52,7 +52,7 @@ fn serve_command_exposes_health_and_session_routes() {
     );
 
     let port = reserve_port();
-    let mut server = spawn_server(&home_dir, port);
+    let mut server = spawn_server(&home_dir, port, None);
 
     wait_for_server(&mut server, port);
 
@@ -115,6 +115,49 @@ fn serve_command_exposes_health_and_session_routes() {
     );
 }
 
+#[test]
+fn serve_command_requires_bearer_token_when_configured() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let unauthorized = http_get(port, "/api/v1/sessions", None);
+    assert_eq!(unauthorized.status, 401);
+    assert!(
+        serde_json::from_slice::<Value>(&unauthorized.body)
+            .expect("unauthorized body is json")
+            .get("error")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains("bearer token"))
+    );
+
+    let authorized = get_json_with_token(port, "/api/v1/sessions", "osm-local-token");
+    assert!(
+        authorized
+            .get("sessions")
+            .and_then(Value::as_array)
+            .is_some_and(|sessions| sessions.iter().any(|session| {
+                session.get("sessionId").and_then(Value::as_str) == Some("claude-ses-1")
+            }))
+    );
+
+    let health = get_json(port, "/health");
+    assert_eq!(health.get("status").and_then(Value::as_str), Some("ok"));
+}
+
 fn temp_root() -> PathBuf {
     let root = env::temp_dir().join(format!(
         "open-session-manager-http-api-{}",
@@ -142,17 +185,21 @@ fn reserve_port() -> u16 {
         .port()
 }
 
-fn spawn_server(home_dir: &Path, port: u16) -> ServerGuard {
+fn spawn_server(home_dir: &Path, port: u16, api_token: Option<&str>) -> ServerGuard {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"));
+    command
+        .env("HOME", home_dir)
+        .env("USERPROFILE", home_dir)
+        .args(["serve", "--host", "127.0.0.1", "--port", &port.to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    if let Some(token) = api_token {
+        command.env("OPEN_SESSION_MANAGER_API_TOKEN", token);
+    }
+
     ServerGuard {
-        child: Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
-            .env("HOME", home_dir)
-            .env("USERPROFILE", home_dir)
-            .args(["serve", "--host", "127.0.0.1", "--port", &port.to_string()])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("spawn serve command"),
+        child: command.spawn().expect("spawn serve command"),
     }
 }
 
@@ -182,15 +229,24 @@ fn wait_for_server(server: &mut ServerGuard, port: u16) {
 }
 
 fn get_json(port: u16, path: &str) -> Value {
-    let response = http_get(port, path);
+    let response = http_get(port, path, None);
     assert_eq!(response.status, 200, "unexpected status for {path}");
     serde_json::from_slice(&response.body).expect("response body is json")
 }
 
-fn http_get(port: u16, path: &str) -> HttpResponse {
+fn get_json_with_token(port: u16, path: &str, token: &str) -> Value {
+    let response = http_get(port, path, Some(token));
+    assert_eq!(response.status, 200, "unexpected status for {path}");
+    serde_json::from_slice(&response.body).expect("response body is json")
+}
+
+fn http_get(port: u16, path: &str, token: Option<&str>) -> HttpResponse {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("connect server");
+    let authorization = token
+        .map(|token| format!("Authorization: Bearer {token}\r\n"))
+        .unwrap_or_default();
     let request = format!(
-        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n{authorization}Connection: close\r\n\r\n"
     );
     stream
         .write_all(request.as_bytes())
