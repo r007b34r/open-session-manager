@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { RuntimePanel } from "../components/runtime-panel";
 import { SessionDetail } from "../components/session-detail";
@@ -22,6 +22,8 @@ type SessionsRouteProps = {
   onSoftDelete?: (sessionId: string) => void;
 };
 
+const SEARCH_DEBOUNCE_MS = 220;
+
 export function SessionsRoute({
   runtime,
   sessions,
@@ -37,10 +39,30 @@ export function SessionsRoute({
   onSoftDelete
 }: SessionsRouteProps) {
   const { copy } = useI18n();
-  const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
-  const trimmedQuery = deferredQuery.trim();
-  const searchResults = searchSessions(sessions, trimmedQuery);
+  const [rawQuery, setRawQuery] = useState("");
+  const [committedQuery, setCommittedQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const trimmedRawQuery = rawQuery.trim();
+
+  useEffect(() => {
+    if (trimmedRawQuery === committedQuery) {
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setCommittedQuery(trimmedRawQuery);
+      setIsSearching(false);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [committedQuery, trimmedRawQuery]);
+
+  const searchResults = searchSessions(sessions, committedQuery);
   const filteredSessions = searchResults.map((result) => result.session);
   const searchSnippets = new Map(
     searchResults
@@ -78,13 +100,15 @@ export function SessionsRoute({
         <input
           className="search-input"
           id="session-search"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => setRawQuery(event.target.value)}
           placeholder={copy.sessions.searchPlaceholder}
           type="search"
-          value={query}
+          value={rawQuery}
         />
         <p className="search-summary">
-          {trimmedQuery
+          {isSearching
+            ? copy.sessions.searchSummaryPending
+            : committedQuery
             ? `${filteredSessions.length} ${copy.sessions.searchSummary}`
             : copy.sessions.searchSummaryEmpty}
         </p>

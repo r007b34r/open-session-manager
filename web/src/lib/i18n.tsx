@@ -98,6 +98,7 @@ type Messages = {
     searchLabel: string;
     searchPlaceholder: string;
     searchSummary: string;
+    searchSummaryPending: string;
     searchSummaryEmpty: string;
     matchReasonLabels: Record<string, string>;
   };
@@ -365,6 +366,7 @@ const messages: Record<Language, Messages> = {
       searchLabel: "Search sessions",
       searchPlaceholder: "topic, project, assistant, risk",
       searchSummary: "ranked local matches",
+      searchSummaryPending: "Updating matches...",
       searchSummaryEmpty: "Type to search across titles, summaries, transcript highlights, and todos.",
       matchReasonLabels: {
         title: "Title",
@@ -686,6 +688,7 @@ const messages: Record<Language, Messages> = {
       searchLabel: "搜索会话",
       searchPlaceholder: "主题、项目、助手、风险",
       searchSummary: "条排序后的本地命中结果",
+      searchSummaryPending: "正在更新命中结果...",
       searchSummaryEmpty: "输入关键词后，可在标题、摘要、高亮和待办中检索。",
       matchReasonLabels: {
         title: "标题",
