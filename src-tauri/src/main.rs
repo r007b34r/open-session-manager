@@ -4,9 +4,10 @@ use std::{env, path::PathBuf, process::ExitCode};
 
 use open_session_manager_core::{
     commands::dashboard::{
-        build_fixture_dashboard_snapshot_with_audit, build_local_dashboard_snapshot_with_audit,
-        build_local_doctor_report,
+        DashboardSnapshot, build_fixture_dashboard_snapshot_with_audit,
+        build_local_dashboard_snapshot_with_audit, build_local_doctor_report,
     },
+    commands::query::{expand_session, get_session, list_sessions, search_sessions, view_session},
     desktop,
     discovery::DiscoveryContext,
     preferences::build_runtime_paths,
@@ -43,6 +44,56 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Some("list") => match run_list_command(&args[1..]) {
+            Ok(output) => {
+                println!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("search") => match run_search_command(&args[1..]) {
+            Ok(output) => {
+                println!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("get") => match run_get_command(&args[1..]) {
+            Ok(output) => {
+                println!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("view") => match run_view_command(&args[1..]) {
+            Ok(output) => {
+                println!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("expand") => match run_expand_command(&args[1..]) {
+            Ok(output) => {
+                println!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
         Some(command) => {
             eprintln!("unsupported command: {command}");
             ExitCode::FAILURE
@@ -51,6 +102,47 @@ fn main() -> ExitCode {
 }
 
 fn run_snapshot_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string())
+}
+
+fn run_list_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    serde_json::to_string_pretty(&list_sessions(&snapshot)).map_err(|error| error.to_string())
+}
+
+fn run_search_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    let query = require_flag_value(args, "--query")?;
+    serde_json::to_string_pretty(&search_sessions(&snapshot, query))
+        .map_err(|error| error.to_string())
+}
+
+fn run_get_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    let session_id = require_flag_value(args, "--session")?;
+    let payload =
+        get_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
+    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+}
+
+fn run_view_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    let session_id = require_flag_value(args, "--session")?;
+    let payload =
+        view_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
+    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+}
+
+fn run_expand_command(args: &[String]) -> Result<String, String> {
+    let snapshot = load_snapshot_data(args)?;
+    let session_id = require_flag_value(args, "--session")?;
+    let payload = expand_session(&snapshot, session_id)
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
+    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+}
+
+fn load_snapshot_data(args: &[String]) -> Result<DashboardSnapshot, String> {
     let audit_db_path = parse_flag_value(args, "--audit-db").map(PathBuf::from);
 
     if let Some(fixtures_path) = parse_flag_value(args, "--fixtures") {
@@ -62,7 +154,7 @@ fn run_snapshot_command(args: &[String]) -> Result<String, String> {
         if let Ok(runtime) = build_runtime_paths() {
             snapshot.runtime = runtime.snapshot();
         }
-        return serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string());
+        return Ok(snapshot);
     }
 
     let mut snapshot = build_local_dashboard_snapshot_with_audit(
@@ -76,7 +168,7 @@ fn run_snapshot_command(args: &[String]) -> Result<String, String> {
         }
         snapshot.runtime = runtime.snapshot();
     }
-    serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string())
+    Ok(snapshot)
 }
 
 fn run_doctor_command() -> Result<String, String> {
@@ -104,4 +196,8 @@ fn resolve_home_dir() -> PathBuf {
 fn parse_flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
     args.windows(2)
         .find_map(|window| (window[0] == flag).then_some(window[1].as_str()))
+}
+
+fn require_flag_value<'a>(args: &'a [String], flag: &str) -> Result<&'a str, String> {
+    parse_flag_value(args, flag).ok_or_else(|| format!("missing required flag: {flag}"))
 }
