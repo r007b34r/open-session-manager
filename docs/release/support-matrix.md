@@ -22,6 +22,7 @@
 | `Factory Droid` 配置审计 | 已实现 | 支持用户级与项目级 `settings.json/settings.local.json` 合并视图，展示 provider/base URL、command allowlist、MCP 与 masked key 风险 |
 | `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
 | `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、统一 provider presets、输入校验、备份 manifest、回滚测试与审计事件 |
+| 配置片段导入 / 导出 / 复用 | 已实现 | 配置编辑器支持 snippet library、本地持久化、稳定 JSON schema 导入导出，以及 save/apply/export/import 审计事件 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
@@ -82,7 +83,7 @@
 | BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
 | 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
-| 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回和统一 provider presets，但还没有共享片段编排和健康切换 |
+| provider 健康探测 / 自动切换 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、统一 provider presets 和共享 snippet library，但还没有健康探测、自动切换和熔断 |
 | 高级 analytics / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地价格目录估算、成本来源标注与日级 usage timeline，但还没有 model/platform breakdown、contribution graph、shareable stats 与更宽连接器覆盖 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |

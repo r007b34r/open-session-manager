@@ -141,14 +141,14 @@
 | `CFG-03` | P0 | done | `Gemini CLI` 安全写回 | 写回 `.env/settings.json` 的风险保护测试通过 |
 | `CFG-04` | P0 | done | `OpenClaw` 安全写回 | 写回保护和 masked diff 测试通过 |
 | `CFG-05` | P0 | done | 统一 provider presets | 支持写回的配置卡片已提供统一 preset catalog、套用和恢复检测值，并有 Web 测试覆盖 |
-| `CFG-06` | P1 | todo | provider import / export | 导入导出 schema 测试通过 |
+| `CFG-06` | P1 | done | provider import / export | 配置编辑器已支持稳定 snippet schema 的导出与导入，Web 测试覆盖 JSON schema、导出、导入与审计链路 |
 | `CFG-07` | P1 | todo | provider health monitor | provider 连通性与健康状态探测测试通过 |
 | `CFG-08` | P1 | todo | proxy / failover / circuit breaker | 失败切换和熔断测试通过 |
 | `CFG-09` | P1 | todo | request rectifier | 请求修正规则测试通过 |
 | `CFG-10` | P2 | todo | tray quick switch | 桌面快捷切换测试通过 |
 | `CFG-11` | P1 | todo | auto backup | 配置写回前自动备份测试通过 |
 | `CFG-12` | P2 | todo | cloud sync | 同步冲突与脱机恢复测试通过 |
-| `CFG-13` | P1 | todo | shared config snippets | 共享片段可导入、复用和审计 |
+| `CFG-13` | P1 | done | shared config snippets | 配置片段可保存到本地 snippet library、重新应用到草稿，并把 save/apply/export/import 写入审计历史 |
 
 ### 4.8 MCP、skills、prompts
 

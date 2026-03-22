@@ -15,6 +15,7 @@
 - 配置审计扩到 7 个助手，`GitHub Copilot CLI / Factory Droid` 已补上用户级配置治理
 - `GitHub Copilot CLI / Factory Droid` 现在会按会话项目路径带出项目级配置覆盖层
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的配置编辑面板现在支持统一 provider presets，可一键恢复到官方端点和常用模型组合
+- 配置编辑面板新增共享 snippet library，可把 provider/model/base URL 组合保存到本地、导出为稳定 JSON，并重新导入到任意支持写回的草稿里
 - 把一批真实竞品镜像拉到本地并纳入 catalog、研究索引和开源致谢，不再只有零散笔记
 - 修掉会直接影响可用性的会话质量问题：
   - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
@@ -104,6 +105,7 @@
 - `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、备份、回滚和审计事件
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的统一 provider presets、套用和恢复检测值
+- 配置 snippet library、本地持久化、JSON 导入导出和 save/apply/export/import 审计事件
 - SQLite session index cache、增量重建和 index run 统计
 - `Codex / Claude Code` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
@@ -134,7 +136,7 @@
 - 语义搜索、hybrid ranking、统一 search API 和更大历史库压测
 - 除 `Codex / Claude Code` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
-- 共享配置片段、健康探测和自动切换
+- provider 健康探测和自动切换
 - 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归
