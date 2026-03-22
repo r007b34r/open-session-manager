@@ -75,7 +75,7 @@
 | `SRCH-02` | P0 | done | BM25 排序 | 搜索结果测试已验证 BM25 风格 lexical 排名稳定，标题中的精确短语命中不会再被低信号字段堆分数反超 |
 | `SRCH-03` | P1 | todo | semantic search | 引入向量索引或嵌入后，语义检索测试通过 |
 | `SRCH-04` | P1 | todo | hybrid ranking | lexical + semantic 混合排序测试通过 |
-| `SRCH-05` | P0 | partial | snippet preview 深化 | 命中片段支持 transcript 内定位和高亮测试 |
+| `SRCH-05` | P0 | done | snippet preview 深化 | 搜索命中会保留 transcript focus，详情页可高亮对应命中的 transcript 条目 |
 | `SRCH-06` | P1 | todo | search-as-you-type | 前端交互测试验证防抖、取消和增量刷新 |
 | `SRCH-07` | P1 | todo | `list/search/get/view/expand` 统一 CLI | CLI 集成测试覆盖五类命令 |
 | `SRCH-08` | P1 | todo | 统一 search API | HTTP 或 Tauri command 测试验证分页、过滤和排序 |

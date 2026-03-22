@@ -31,7 +31,7 @@
   - `OpenClaw`
 - `Claude Code / Gemini CLI` 在上游日志未直接给出成本时，现在会按本地价格目录估算成本
 - usage 面板现在会明确标注 `reported / estimated / unknown` 成本来源，并展示日级 usage timeline
-- Sessions 搜索现在会做本地 BM25 风格 lexical 排序，展示命中片段和命中来源标签
+- Sessions 搜索现在会做本地 BM25 风格 lexical 排序，展示命中片段和命中来源标签，并把 transcript 命中直接定位到右侧详情高亮
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地
@@ -64,7 +64,7 @@
 - `jazzyalex/agent-sessions`
   - 吸收本地搜索结果呈现、命中来源可视化，以及本地优先索引这条工作台方向
 - `yoavf/ai-sessions-mcp`
-  - 吸收本地 lexical ranking + snippet 的产品线索，先落到 Web 工作台
+  - 吸收本地 lexical ranking + snippet 的产品线索，先落到 Web 工作台，并补上 transcript 命中高亮
 
 已经纳入本地镜像、研究索引和致谢体系的还包括：
 
@@ -110,7 +110,7 @@
 - 本地价格目录估算、`reported / estimated / unknown` 成本来源，以及 overview 日级 usage timeline
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
-- Sessions 页加权搜索、命中片段和来源标签
+- Sessions 页加权搜索、命中片段、来源标签和 transcript 命中高亮
 - `doctor` CLI 与总览环境诊断面板，可显示被跳过的 malformed session 文件
 - `Claude Code` 历史 JSONL 如果正文缺失 `sessionId`，但文件名本身是 UUID，OSM 现在会自动恢复会话 ID，而不是一律丢弃
 - 已知会话根目录下被适配器静默过滤的未知 session-like 文件，现在也会进入 `doctor` 诊断输出
