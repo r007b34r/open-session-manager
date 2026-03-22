@@ -24,6 +24,7 @@
 - Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
 - `Codex / Claude Code` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
 - Web 详情页补上了一键恢复、继续提示、最近控制结果和导出落盘路径提示
+- 总览页新增 `active session cockpit`，可直接查看当前可控会话、最近控制响应，并手动刷新运行时状态
 - 支持 usage / cost analytics：
   - `Codex`
   - `Claude Code`

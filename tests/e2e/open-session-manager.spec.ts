@@ -182,3 +182,99 @@ test("highlights the matched transcript when a search result is selected", async
   await expect(matchedEntry.locator("mark")).toHaveCount(2);
   await expect(matchedEntry.locator("mark").nth(1)).toHaveText(/override/i);
 });
+
+test("shows the active session cockpit and refreshes runtime status", async ({
+  page
+}) => {
+  await page.unroute("**/dashboard-snapshot.json");
+  await page.addInitScript(() => {
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+  });
+
+  let requestCount = 0;
+  await page.route("**/dashboard-snapshot.json", async (route) => {
+    requestCount += 1;
+    const snapshot =
+      requestCount < 3
+        ? buildRuntimeSnapshot("READY from initial snapshot", false)
+        : buildRuntimeSnapshot("READY from refreshed snapshot", true);
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshot)
+    });
+  });
+
+  await page.goto("/");
+
+  const cockpit = page.locator(".cockpit-panel");
+
+  await expect(page.getByRole("heading", { name: /active session cockpit/i })).toBeVisible();
+  await expect(cockpit.getByText(/ready from initial snapshot/i)).toBeVisible();
+
+  await cockpit.getByRole("button", { name: /refresh cockpit/i }).click();
+
+  await expect(cockpit.getByText(/ready from refreshed snapshot/i)).toBeVisible();
+  await expect(cockpit.getByText(/^attached$/i)).toBeVisible();
+});
+
+function buildRuntimeSnapshot(lastResponse: string, attached: boolean) {
+  return {
+    metrics: [],
+    sessions: [
+      {
+        sessionId: "ses-mon-001",
+        title: "Resume Codex rollout",
+        assistant: "Codex",
+        progressState: "completed",
+        progressPercent: 100,
+        lastActivityAt: "2026-03-23T01:00:00.000Z",
+        environment: "Windows 11",
+        valueScore: 88,
+        summary: "Runtime snapshot for the active cockpit.",
+        projectPath: "C:/Projects/osm",
+        sourcePath: "C:/Users/Max/.codex/sessions/demo.jsonl",
+        tags: [],
+        riskFlags: [],
+        keyArtifacts: [],
+        transcriptHighlights: [],
+        todoItems: [],
+        sessionControl: {
+          supported: true,
+          available: true,
+          controller: "codex",
+          command: "codex",
+          attached,
+          lastResponse
+        }
+      }
+    ],
+    configs: [],
+    doctorFindings: [],
+    auditEvents: [],
+    usageOverview: {
+      totals: {
+        sessionsWithUsage: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        reasoningTokens: 0,
+        totalTokens: 0,
+        costSource: "unknown"
+      },
+      assistants: []
+    },
+    usageTimeline: [],
+    runtime: {
+      auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
+      exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+      defaultExportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+      exportRootSource: "default",
+      quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
+      preferencesPath:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+    }
+  };
+}

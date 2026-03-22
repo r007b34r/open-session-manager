@@ -34,6 +34,7 @@
 | Session index cache / incremental reindex | 已实现 | snapshot 会把索引结果落到 SQLite，按 `assistant + environment + source_path + size + modified_at` 复用缓存，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
 | Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
 | One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
+| Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
 | Git worktree lifecycle CLI | 已实现 | `node scripts/git-worktree-manager.mjs` 支持在仓库内 `.worktrees/` 下执行 `create / merge / delete / recycle` |
 | Fixture drift ledger | 已实现 | `tests/fixtures/fixture-ledger.json` 记录 fixture 版本、来源和文件 hash，`scripts/fixture-ledger.mjs --check` 已进入统一 verify |
 | Fixture snapshot golden diff | 已实现 | `tests/fixtures/dashboard-snapshot.golden.json` 提供规范化 snapshot 基线，`scripts/check-fixture-snapshot.mjs` 会输出 JSON 路径级 diff |

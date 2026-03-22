@@ -100,7 +100,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `MON-01` | P0 | todo | active session cockpit | 前端展示活跃会话总览，状态数据可刷新 |
+| `MON-01` | P0 | done | active session cockpit | 总览页已展示可控会话、最近控制结果和刷新动作，并有 Web / E2E 测试覆盖刷新后的状态更新 |
 | `MON-02` | P1 | todo | live HUD | 实时面板测试覆盖 token、事件、进度更新 |
 | `MON-03` | P0 | todo | busy / waiting / idle 状态识别 | 适配器状态机测试通过 |
 | `MON-04` | P1 | todo | live TODO / project monitor | TODO 变化触发 UI 刷新和审计事件 |
