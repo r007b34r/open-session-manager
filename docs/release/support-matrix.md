@@ -34,7 +34,7 @@
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
 | Session index cache / incremental reindex | 已实现 | snapshot 会把索引结果落到 SQLite，按 `assistant + environment + source_path + size + modified_at` 复用缓存，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
 | Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle |
-| Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层 |
+| Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
 | One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
 | Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
@@ -89,7 +89,7 @@
 
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
-| 语义搜索 / hybrid ranking / search API | 未纳入本版承诺 | 当前已实现本地加权搜索、search-as-you-type 防抖与取消，但还没有语义索引、混合排序和 API 暴露 |
+| 语义搜索 / hybrid ranking | 未纳入本版承诺 | 当前已实现本地加权搜索、search-as-you-type 防抖与取消，以及统一查询 API 的分页/过滤/排序，但还没有语义索引和混合排序 |
 | 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider 健康探测 / 自动切换 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、统一 provider presets 和共享 snippet library，但还没有健康探测、自动切换和熔断 |

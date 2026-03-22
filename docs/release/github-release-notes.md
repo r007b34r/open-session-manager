@@ -143,7 +143,7 @@
 - `node scripts/git-worktree-manager.mjs` 提供 `.worktrees/` 下的 create / recycle / merge / delete
 - `npm --prefix web run browser` 提供固定端口的浏览器预览入口，适合不走桌面壳层时直接本地打开
 - `cargo run -- list/search/get/view/expand` 提供统一的终端查询入口，既能拿 JSON，也能直接看 Markdown 视图
-- 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，便于后续 Web / HTTP 壳层直接复用
+- 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，并补上 `assistant` 过滤、`limit/offset` 分页和 `sortBy/descending` 排序，便于后续 Web / HTTP 壳层直接复用
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 
@@ -151,7 +151,7 @@
 
 以下内容不包含在 `v0.3.0 Public Preview` 承诺范围内：
 
-- 语义搜索、hybrid ranking、统一 search API 和更大历史库压测
+- 语义搜索、hybrid ranking 和更大历史库压测
 - 除 `Codex / Claude Code` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider 健康探测和自动切换
