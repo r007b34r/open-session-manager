@@ -167,6 +167,13 @@ export type DashboardPreferencesUpdate = {
   exportRoot: string | null;
 };
 
+export type LocalAuditEventInput = {
+  type: string;
+  target: string;
+  detail: string;
+  result?: string;
+};
+
 export type ConfigWritebackInput = {
   artifactId: string;
   assistant: string;
@@ -687,6 +694,21 @@ export function recordConfigWriteback(
   };
 }
 
+export function recordLocalAuditEvent(
+  current: DashboardSnapshot,
+  input: LocalAuditEventInput
+): DashboardSnapshot {
+  return {
+    ...current,
+    auditEvents: [
+      createAuditEvent(input.type, input.target, input.detail, {
+        result: input.result
+      }),
+      ...current.auditEvents
+    ]
+  };
+}
+
 export function recordSessionResume(
   current: DashboardSnapshot,
   sessionId: string
@@ -897,7 +919,9 @@ function createAuditEvent(
   type: string,
   target: string,
   detail: string,
-  paths: Partial<Pick<AuditEventRecord, "outputPath" | "quarantinedPath" | "manifestPath">> = {}
+  paths: Partial<
+    Pick<AuditEventRecord, "outputPath" | "quarantinedPath" | "manifestPath" | "result">
+  > = {}
 ): AuditEventRecord {
   return {
     eventId: `${type}-${target}-${Date.now()}`,
@@ -905,9 +929,9 @@ function createAuditEvent(
     target,
     actor: "r007b34r",
     createdAt: "2026-03-15 13:40",
-    result: "success",
-    detail,
-    ...paths
+    ...paths,
+    result: paths.result ?? "success",
+    detail
   };
 }
 

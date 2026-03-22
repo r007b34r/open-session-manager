@@ -173,6 +173,20 @@ type Messages = {
         string
       >;
     };
+    snippets: {
+      title: string;
+      description: string;
+      snippetName: string;
+      exportJson: string;
+      importJson: string;
+      savedLibrary: string;
+      importError: string;
+      actions: {
+        saveSnippet: string;
+        prepareExport: string;
+        applyImportedSnippet: string;
+      };
+    };
     fields: {
       scope: string;
       provider: string;
@@ -424,6 +438,21 @@ const messages: Record<Language, Messages> = {
           openrouter_official: "OpenRouter Official"
         }
       },
+      snippets: {
+        title: "Snippet Library",
+        description:
+          "Save reusable provider snippets, export them as JSON, or import a shared snippet back into the current draft.",
+        snippetName: "Snippet name",
+        exportJson: "Snippet export JSON",
+        importJson: "Snippet import JSON",
+        savedLibrary: "Saved snippets",
+        importError: "Invalid config snippet JSON.",
+        actions: {
+          saveSnippet: "Save Snippet",
+          prepareExport: "Prepare Export",
+          applyImportedSnippet: "Apply Imported Snippet"
+        }
+      },
       fields: {
         scope: "Scope",
         provider: "Provider",
@@ -507,6 +536,10 @@ const messages: Record<Language, Messages> = {
         export_markdown: "export_markdown",
         soft_delete: "soft_delete",
         restore: "restore",
+        config_snippet_save: "Config snippet saved",
+        config_snippet_apply: "Config snippet applied",
+        config_snippet_export: "Config snippet exported",
+        config_snippet_import: "Config snippet imported",
         session_resume: "session_resume",
         session_continue: "session_continue"
       },
@@ -698,6 +731,20 @@ const messages: Record<Language, Messages> = {
           openrouter_official: "OpenRouter 官方"
         }
       },
+      snippets: {
+        title: "片段库",
+        description: "把可复用的 provider 片段保存下来，导出为 JSON，或把共享片段重新导入到当前草稿。",
+        snippetName: "片段名称",
+        exportJson: "片段导出 JSON",
+        importJson: "片段导入 JSON",
+        savedLibrary: "已保存片段",
+        importError: "配置片段 JSON 无效。",
+        actions: {
+          saveSnippet: "保存片段",
+          prepareExport: "准备导出",
+          applyImportedSnippet: "应用导入片段"
+        }
+      },
       fields: {
         scope: "范围",
         provider: "提供商",
@@ -779,6 +826,10 @@ const messages: Record<Language, Messages> = {
         export_markdown: "导出 Markdown",
         soft_delete: "软删除",
         restore: "恢复",
+        config_snippet_save: "配置片段已保存",
+        config_snippet_apply: "配置片段已应用",
+        config_snippet_export: "配置片段已导出",
+        config_snippet_import: "配置片段已导入",
         session_resume: "恢复会话",
         session_continue: "继续运行"
       },

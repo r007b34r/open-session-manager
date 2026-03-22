@@ -1,6 +1,19 @@
 import { useState } from "react";
 
-import type { ConfigRiskRecord, ConfigWritebackInput } from "../lib/api";
+import type {
+  ConfigRiskRecord,
+  ConfigWritebackInput,
+  LocalAuditEventInput
+} from "../lib/api";
+import {
+  applyConfigSnippetToDraft,
+  buildConfigSnippet,
+  loadSavedConfigSnippets,
+  parseConfigSnippet,
+  saveConfigSnippetRecord,
+  serializeConfigSnippet,
+  type StoredConfigSnippetRecord
+} from "../lib/config-snippets";
 import { useI18n } from "../lib/i18n";
 import {
   applyProviderPreset,
@@ -12,16 +25,44 @@ type ConfigRiskPanelProps = {
   configs: ConfigRiskRecord[];
   canEditConfigs?: boolean;
   onSaveConfig?: (input: ConfigWritebackInput) => void;
+  onAuditEvent?: (input: LocalAuditEventInput) => void;
 };
 
 export function ConfigRiskPanel({
   configs,
   canEditConfigs = false,
-  onSaveConfig
+  onSaveConfig,
+  onAuditEvent
 }: ConfigRiskPanelProps) {
   const { copy, translateProxyMode, translateRiskFlag, translateScope } =
     useI18n();
   const [draft, setDraft] = useState<ConfigWritebackInput | null>(null);
+  const [savedSnippets, setSavedSnippets] = useState<StoredConfigSnippetRecord[]>(() =>
+    loadSavedConfigSnippets()
+  );
+  const [snippetName, setSnippetName] = useState("");
+  const [snippetExport, setSnippetExport] = useState("");
+  const [snippetImport, setSnippetImport] = useState("");
+  const [snippetError, setSnippetError] = useState<string | null>(null);
+
+  const beginEditing = (config: ConfigRiskRecord) => {
+    setDraft(buildConfigDraft(config));
+    setSnippetName("");
+    setSnippetExport("");
+    setSnippetImport("");
+    setSnippetError(null);
+  };
+
+  const resetSnippetComposer = () => {
+    setSnippetName("");
+    setSnippetExport("");
+    setSnippetImport("");
+    setSnippetError(null);
+  };
+
+  const recordSnippetAudit = (input: LocalAuditEventInput) => {
+    onAuditEvent?.(input);
+  };
 
   return (
     <section className="panel">
@@ -91,7 +132,10 @@ export function ConfigRiskPanel({
                     </button>
                     <button
                       className="action-button"
-                      onClick={() => setDraft(null)}
+                      onClick={() => {
+                        setDraft(null);
+                        resetSnippetComposer();
+                      }}
                       type="button"
                     >
                       {copy.configRisk.actions.cancelEdit}
@@ -100,7 +144,7 @@ export function ConfigRiskPanel({
                 ) : (
                   <button
                     className="action-button action-button-primary"
-                    onClick={() => setDraft(buildConfigDraft(config))}
+                    onClick={() => beginEditing(config)}
                     type="button"
                   >
                     {copy.configRisk.actions.editConfig}
@@ -213,6 +257,150 @@ export function ConfigRiskPanel({
                     {copy.configRisk.presets.restoreDetectedValues}
                   </button>
                 </div>
+              </section>
+            ) : null}
+            {draft?.artifactId === config.artifactId ? (
+              <section className="config-snippet-panel">
+                <div className="config-preset-head">
+                  <strong>{copy.configRisk.snippets.title}</strong>
+                  <p>{copy.configRisk.snippets.description}</p>
+                </div>
+                <div className="config-meta">
+                  <div>
+                    <label>
+                      {copy.configRisk.snippets.snippetName}
+                      <input
+                        onChange={(event) => setSnippetName(event.target.value)}
+                        type="text"
+                        value={snippetName}
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      {copy.configRisk.snippets.exportJson}
+                      <textarea
+                        className="config-snippet-textarea"
+                        readOnly
+                        value={snippetExport}
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label>
+                      {copy.configRisk.snippets.importJson}
+                      <textarea
+                        className="config-snippet-textarea"
+                        onChange={(event) => setSnippetImport(event.target.value)}
+                        value={snippetImport}
+                      />
+                    </label>
+                  </div>
+                </div>
+                {snippetError ? <p className="action-hint">{snippetError}</p> : null}
+                <div className="action-row">
+                  <button
+                    className="action-button action-button-secondary"
+                    onClick={() => {
+                      if (!draft) {
+                        return;
+                      }
+
+                      const snippet = buildConfigSnippet(draft, { name: snippetName });
+                      const nextSnippets = saveConfigSnippetRecord(snippet);
+                      setSavedSnippets(nextSnippets);
+                      setSnippetName(snippet.name);
+                      setSnippetExport(serializeConfigSnippet(snippet));
+                      setSnippetError(null);
+                      recordSnippetAudit({
+                        type: "config_snippet_save",
+                        target: draft.artifactId,
+                        detail: `Saved config snippet ${snippet.name}.`
+                      });
+                    }}
+                    type="button"
+                  >
+                    {copy.configRisk.snippets.actions.saveSnippet}
+                  </button>
+                  <button
+                    className="action-button action-button-secondary"
+                    onClick={() => {
+                      if (!draft) {
+                        return;
+                      }
+
+                      const snippet = buildConfigSnippet(draft, { name: snippetName });
+                      setSnippetName(snippet.name);
+                      setSnippetExport(serializeConfigSnippet(snippet));
+                      setSnippetError(null);
+                      recordSnippetAudit({
+                        type: "config_snippet_export",
+                        target: draft.artifactId,
+                        detail: `Prepared config snippet export ${snippet.name}.`
+                      });
+                    }}
+                    type="button"
+                  >
+                    {copy.configRisk.snippets.actions.prepareExport}
+                  </button>
+                  <button
+                    className="action-button action-button-secondary"
+                    onClick={() => {
+                      if (!draft) {
+                        return;
+                      }
+
+                      try {
+                        const snippet = parseConfigSnippet(snippetImport);
+                        setDraft((current) =>
+                          current ? applyConfigSnippetToDraft(current, snippet) : current
+                        );
+                        setSnippetName(snippet.name);
+                        setSnippetExport(serializeConfigSnippet(snippet));
+                        setSnippetError(null);
+                        recordSnippetAudit({
+                          type: "config_snippet_import",
+                          target: draft.artifactId,
+                          detail: `Imported config snippet ${snippet.name}.`
+                        });
+                      } catch {
+                        setSnippetError(copy.configRisk.snippets.importError);
+                      }
+                    }}
+                    type="button"
+                  >
+                    {copy.configRisk.snippets.actions.applyImportedSnippet}
+                  </button>
+                </div>
+                {savedSnippets.length > 0 ? (
+                  <div className="config-snippet-library">
+                    <strong>{copy.configRisk.snippets.savedLibrary}</strong>
+                    <div className="config-preset-list">
+                      {savedSnippets.map((snippet) => (
+                        <button
+                          className="action-button action-button-secondary config-preset-chip"
+                          key={snippet.id}
+                          onClick={() => {
+                            setDraft((current) =>
+                              current ? applyConfigSnippetToDraft(current, snippet) : current
+                            );
+                            setSnippetName(snippet.name);
+                            setSnippetExport(serializeConfigSnippet(snippet));
+                            setSnippetError(null);
+                            recordSnippetAudit({
+                              type: "config_snippet_apply",
+                              target: config.artifactId,
+                              detail: `Applied config snippet ${snippet.name}.`
+                            });
+                          }}
+                          type="button"
+                        >
+                          {snippet.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </section>
             ) : null}
             <div className="badge-row">

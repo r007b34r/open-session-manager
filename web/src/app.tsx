@@ -4,13 +4,15 @@ import {
   applyConfigWriteback,
   applyDashboardPreferences,
   applyMarkdownExport,
+  recordLocalAuditEvent,
   applySessionContinue,
   applySessionResume,
   applySoftDelete,
   fetchDashboardSnapshot,
   isConfigWritebackAvailable,
   type ConfigWritebackInput,
-  type DashboardSnapshot
+  type DashboardSnapshot,
+  type LocalAuditEventInput
 } from "./lib/api";
 import {
   getInitialLanguage,
@@ -195,6 +197,16 @@ export function App() {
     });
   };
 
+  const handleAuditEvent = (input: LocalAuditEventInput) => {
+    if (!snapshot) {
+      return;
+    }
+
+    startTransition(() => {
+      setSnapshot(recordLocalAuditEvent(snapshot, input));
+    });
+  };
+
   const handleSelectSession = (sessionId: string) => {
     startTransition(() => {
       setSelectedSessionId(sessionId);
@@ -235,7 +247,8 @@ export function App() {
               handleSessionResume,
               handleSessionContinue,
               handleSoftDelete,
-              handleSaveConfig
+              handleSaveConfig,
+              handleAuditEvent
             )
           ) : (
             <section className="panel empty-state">
@@ -261,7 +274,8 @@ function renderRoute(
   onResumeSession: (sessionId: string) => void,
   onContinueSession: (sessionId: string, prompt: string) => void,
   onSoftDelete: (sessionId: string) => void,
-  onSaveConfig: (input: ConfigWritebackInput) => void
+  onSaveConfig: (input: ConfigWritebackInput) => void,
+  onAuditEvent: (input: LocalAuditEventInput) => void
 ) {
   const canEditConfigs = isConfigWritebackAvailable();
   const exportedSessionIds = new Set(
@@ -276,6 +290,7 @@ function renderRoute(
       <ConfigsRoute
         canEditConfigs={canEditConfigs}
         configs={snapshot.configs}
+        onAuditEvent={onAuditEvent}
         onSaveConfig={onSaveConfig}
       />
     );
@@ -324,6 +339,7 @@ function renderRoute(
       <ConfigsRoute
         canEditConfigs={canEditConfigs}
         configs={snapshot.configs}
+        onAuditEvent={onAuditEvent}
         onSaveConfig={onSaveConfig}
       />
     </>
