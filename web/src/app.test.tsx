@@ -434,6 +434,23 @@ describe("App", () => {
     expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
     expect(screen.getByText("override").tagName).toBe("MARK");
   });
+
+  it("保存配置片段后会把动作写入审计历史", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/configs";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /config risk center/i });
+    await user.click(screen.getAllByRole("button", { name: /edit config/i })[0]);
+    await user.type(screen.getByLabelText(/snippet name/i), "Shared GitHub");
+    await user.click(screen.getByRole("button", { name: /save snippet/i }));
+
+    await user.click(screen.getByRole("link", { name: "Audit" }));
+
+    expect(await screen.findByText(/saved config snippet shared github/i)).toBeInTheDocument();
+    expect(screen.getByText(/config snippet saved/i)).toBeInTheDocument();
+  });
 });
 
 function mockNavigatorLanguage(language: string, languages: string[]) {

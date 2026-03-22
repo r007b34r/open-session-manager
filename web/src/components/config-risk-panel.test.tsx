@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 describe("ConfigRiskPanel", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("renders masked values and risk badges for risky config entries", async () => {
     const { ConfigRiskPanel } = await import("./config-risk-panel");
 
@@ -168,6 +172,114 @@ describe("ConfigRiskPanel", () => {
     );
     expect(screen.getByLabelText(/endpoint/i)).toHaveValue(
       "https://factory-relay.example/v1"
+    );
+  });
+
+  it("saves a reusable snippet and reapplies it back to the current draft", async () => {
+    const user = userEvent.setup();
+    const onAuditEvent = vi.fn();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-003",
+            assistant: "GitHub Copilot CLI",
+            scope: "Global",
+            path: "~/.copilot/config.json",
+            provider: "github",
+            model: "gpt-5",
+            baseUrl: "https://api.githubcopilot.com",
+            maskedSecret: "***7890",
+            officialOrProxy: "Official",
+            risks: []
+          }
+        ]}
+        onAuditEvent={onAuditEvent}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    await user.type(screen.getByLabelText(/snippet name/i), "Shared GitHub");
+    await user.click(screen.getByRole("button", { name: /save snippet/i }));
+
+    expect(onAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "config_snippet_save",
+        target: "cfg-003"
+      })
+    );
+
+    await user.clear(screen.getByLabelText(/^model$/i));
+    await user.type(screen.getByLabelText(/^model$/i), "gpt-5-mini");
+    await user.clear(screen.getByLabelText(/endpoint/i));
+    await user.type(screen.getByLabelText(/endpoint/i), "https://example.invalid/v1");
+    await user.click(screen.getByRole("button", { name: /shared github/i }));
+
+    expect(screen.getByLabelText(/^model$/i)).toHaveValue("gpt-5");
+    expect(screen.getByLabelText(/endpoint/i)).toHaveValue(
+      "https://api.githubcopilot.com"
+    );
+  });
+
+  it("exports snippet JSON and imports a snippet payload back into the draft", async () => {
+    const user = userEvent.setup();
+    const onAuditEvent = vi.fn();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-004",
+            assistant: "Factory Droid",
+            scope: "Global",
+            path: "~/.factory/settings.local.json",
+            provider: "openrouter",
+            model: "openrouter/anthropic/claude-sonnet-4",
+            baseUrl: "https://openrouter.ai/api/v1",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_provider"]
+          }
+        ]}
+        onAuditEvent={onAuditEvent}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    await user.type(screen.getByLabelText(/snippet name/i), "Shared Router");
+    await user.click(screen.getByRole("button", { name: /prepare export/i }));
+
+    expect(
+      (screen.getByLabelText(/snippet export json/i) as HTMLTextAreaElement).value
+    ).toContain('"name": "Shared Router"');
+    expect(onAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "config_snippet_export",
+        target: "cfg-004"
+      })
+    );
+
+    const snippetImportInput = screen.getByLabelText(/snippet import json/i);
+    await user.clear(snippetImportInput);
+    await user.click(snippetImportInput);
+    await user.paste(
+      '{"version":1,"name":"OpenAI Shared","provider":"openai","model":"gpt-5-mini","baseUrl":"https://api.openai.com/v1","originAssistant":"Factory Droid","createdAt":"2026-03-23T02:00:00.000Z"}'
+    );
+    await user.click(screen.getByRole("button", { name: /apply imported snippet/i }));
+
+    expect(screen.getByLabelText(/provider/i)).toHaveValue("openai");
+    expect(screen.getByLabelText(/^model$/i)).toHaveValue("gpt-5-mini");
+    expect(screen.getByLabelText(/endpoint/i)).toHaveValue("https://api.openai.com/v1");
+    expect(onAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "config_snippet_import",
+        target: "cfg-004"
+      })
     );
   });
 });
