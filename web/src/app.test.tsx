@@ -236,7 +236,11 @@ describe("App", () => {
     const row = sessionButton.closest("tr");
 
     expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getByText(/Finalize manifest framing/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        within(row as HTMLElement).getByText(/Finalize manifest framing/i)
+      ).toBeInTheDocument();
+    });
     expect(within(row as HTMLElement).getByText(/To-do/i)).toBeInTheDocument();
   });
 
