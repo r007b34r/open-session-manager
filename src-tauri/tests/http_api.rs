@@ -113,6 +113,37 @@ fn serve_command_exposes_health_and_session_routes() {
                 config.get("assistant").and_then(Value::as_str) == Some("claude-code")
             }))
     );
+
+    let openapi = get_json(port, "/openapi.json");
+    assert_eq!(openapi.get("openapi").and_then(Value::as_str), Some("3.1.0"));
+    assert!(
+        openapi
+            .get("paths")
+            .and_then(|paths| paths.get("/api/v1/sessions"))
+            .and_then(|path| path.get("get"))
+            .is_some()
+    );
+    assert!(
+        openapi
+            .get("paths")
+            .and_then(|paths| paths.get("/api/v1/sessions/search"))
+            .and_then(|path| path.get("get"))
+            .is_some()
+    );
+    assert!(
+        openapi
+            .get("paths")
+            .and_then(|paths| paths.get("/api/v1/sessions/{sessionId}"))
+            .and_then(|path| path.get("get"))
+            .is_some()
+    );
+    assert!(
+        openapi
+            .get("components")
+            .and_then(|components| components.get("securitySchemes"))
+            .and_then(|schemes| schemes.get("bearerAuth"))
+            .is_some()
+    );
 }
 
 #[test]
