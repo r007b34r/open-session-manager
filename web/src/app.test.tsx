@@ -504,6 +504,46 @@ describe("App", () => {
     expect(within(card as HTMLElement).getByText("***4321")).toBeInTheDocument();
   });
 
+  it("配置写回后会在 Audit 页展示备份 manifest 路径", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/configs";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /config risk center/i });
+    const configHeading = await screen.findByRole("heading", {
+      name: /~\/\.copilot\/config\.json/i
+    });
+    const card = configHeading.closest("article");
+
+    expect(card).not.toBeNull();
+    await user.click(
+      within(card as HTMLElement).getByRole("button", { name: /edit config/i })
+    );
+    await user.type(
+      within(card as HTMLElement).getByLabelText(/new key/i),
+      "ghu_new_secret_123454321"
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", { name: /review changes/i })
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i
+      })
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", {
+        name: /apply reviewed changes/i
+      })
+    );
+
+    await user.click(screen.getByRole("link", { name: "Audit" }));
+
+    expect(await screen.findByText(/config-backups/i)).toBeInTheDocument();
+    expect(screen.getByText(/manifest\.json/i)).toBeInTheDocument();
+  });
+
   it("在会话详情里展示 token 和成本细节", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/sessions";
