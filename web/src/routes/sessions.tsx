@@ -52,6 +52,11 @@ export function SessionsRoute({
       .filter((result) => result.matchReasons.length > 0)
       .map((result) => [result.session.sessionId, result.matchReasons])
   );
+  const transcriptFocusBySession = new Map(
+    searchResults
+      .filter((result) => result.focus?.kind === "transcript")
+      .map((result) => [result.session.sessionId, result.focus])
+  );
 
   const selectedSession =
     filteredSessions.find((session) => session.sessionId === selectedSessionId) ??
@@ -59,6 +64,10 @@ export function SessionsRoute({
   const selectedExportPath = selectedSession
     ? latestMarkdownExportPaths.get(selectedSession.sessionId)
     : undefined;
+  const selectedTranscriptFocus =
+    selectedSession?.sessionId
+      ? transcriptFocusBySession.get(selectedSession.sessionId)
+      : undefined;
 
   return (
     <section className="route-stack">
@@ -105,6 +114,14 @@ export function SessionsRoute({
           onResumeSession={onResumeSession}
           onSoftDelete={onSoftDelete}
           session={selectedSession}
+          transcriptFocus={
+            selectedTranscriptFocus?.kind === "transcript"
+              ? {
+                  highlightIndex: selectedTranscriptFocus.highlightIndex,
+                  terms: selectedTranscriptFocus.terms
+                }
+              : undefined
+          }
         />
       </div>
     </section>

@@ -18,6 +18,7 @@ export type SessionSearchResult = {
   score: number;
   snippet?: string;
   matchReasons: SessionSearchReason[];
+  focus?: SessionSearchFocus;
 };
 
 type SearchTerm = {
@@ -31,6 +32,13 @@ type SearchField = {
   originalText: string;
   weight: number;
   tokens: string[];
+  transcriptIndex?: number;
+};
+
+export type SessionSearchFocus = {
+  kind: "transcript";
+  highlightIndex: number;
+  terms: string[];
 };
 
 type IndexedSession = {
@@ -151,6 +159,7 @@ function scoreSession(
     score,
     snippet: snippetField ? extractSnippet(snippetField.originalText, terms) : undefined,
     matchReasons: sortedReasons,
+    focus: buildSearchFocus(snippetField, terms),
     originalIndex
   };
 }
@@ -177,8 +186,8 @@ function buildFields(session: SessionDetailRecord): SearchField[] {
     fields.push(buildField("artifact", artifact));
   }
 
-  for (const highlight of session.transcriptHighlights) {
-    fields.push(buildField("transcript", highlight.content));
+  for (const [index, highlight] of session.transcriptHighlights.entries()) {
+    fields.push(buildField("transcript", highlight.content, { transcriptIndex: index }));
   }
 
   for (const todo of session.todoItems) {
@@ -188,14 +197,19 @@ function buildFields(session: SessionDetailRecord): SearchField[] {
   return fields.filter((field) => field.text.length > 0);
 }
 
-function buildField(reason: SessionSearchReason, originalText: string): SearchField {
+function buildField(
+  reason: SessionSearchReason,
+  originalText: string,
+  options: Pick<SearchField, "transcriptIndex"> = {}
+): SearchField {
   const text = normalizeSearchText(originalText);
   return {
     reason,
     originalText,
     text,
     weight: FIELD_WEIGHTS[reason],
-    tokens: tokenize(text)
+    tokens: tokenize(text),
+    ...options
   };
 }
 
@@ -370,6 +384,30 @@ function buildSnippetProfile(field: SearchField, terms: SearchTerm[]) {
     phraseBonus: joinedTerms && field.text.includes(joinedTerms) ? 1 : 0,
     compactSpan:
       indices.length >= 2 ? indices[indices.length - 1] - indices[0] : Number.MAX_SAFE_INTEGER
+  };
+}
+
+function buildSearchFocus(
+  field: SearchField | undefined,
+  terms: SearchTerm[]
+): SessionSearchFocus | undefined {
+  if (!field || field.reason !== "transcript" || typeof field.transcriptIndex !== "number") {
+    return undefined;
+  }
+
+  const matchedTerms = terms
+    .filter((term) => matchesTerm(field.text, term))
+    .map((term) => term.value)
+    .filter((value, index, values) => values.indexOf(value) === index);
+
+  if (matchedTerms.length === 0) {
+    return undefined;
+  }
+
+  return {
+    kind: "transcript",
+    highlightIndex: field.transcriptIndex,
+    terms: matchedTerms
   };
 }
 

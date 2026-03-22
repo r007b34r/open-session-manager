@@ -148,6 +148,7 @@ type Messages = {
     statuses: {
       attached: string;
       detached: string;
+      searchHit: string;
     };
     noRiskFlags: string;
     noTranscriptHighlights: string;
@@ -393,7 +394,8 @@ const messages: Record<Language, Messages> = {
       },
       statuses: {
         attached: "Attached",
-        detached: "Detached"
+        detached: "Detached",
+        searchHit: "Search hit"
       },
       noRiskFlags: "no active risk flags",
       noTranscriptHighlights: "No transcript highlights were extracted for this session.",
@@ -668,7 +670,8 @@ const messages: Record<Language, Messages> = {
       },
       statuses: {
         attached: "已附着",
-        detached: "未附着"
+        detached: "未附着",
+        searchHit: "搜索命中"
       },
       noRiskFlags: "当前没有风险标记",
       noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",

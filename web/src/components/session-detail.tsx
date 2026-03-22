@@ -11,6 +11,10 @@ type SessionDetailProps = {
   onExportMarkdown?: (sessionId: string) => void;
   onResumeSession?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
+  transcriptFocus?: {
+    highlightIndex: number;
+    terms: string[];
+  };
 };
 
 export function SessionDetail({
@@ -20,7 +24,8 @@ export function SessionDetail({
   onContinueSession,
   onExportMarkdown,
   onResumeSession,
-  onSoftDelete
+  onSoftDelete,
+  transcriptFocus
 }: SessionDetailProps) {
   const { copy, translateProgressState, translateRiskFlag } = useI18n();
   const unknownValue = copy.data.unknownValue;
@@ -289,11 +294,26 @@ export function SessionDetail({
             <div className="detail-transcript-list">
               {session.transcriptHighlights.map((highlight, index) => (
                 <article
-                  className="detail-transcript-entry"
+                  className={
+                    transcriptFocus?.highlightIndex === index
+                      ? "detail-transcript-entry is-search-match"
+                      : "detail-transcript-entry"
+                  }
                   key={`${highlight.role}-${index}-${highlight.content}`}
                 >
-                  <span className="badge badge-neutral">{highlight.role}</span>
-                  <p>{highlight.content}</p>
+                  <div className="badge-row">
+                    <span className="badge badge-neutral">{highlight.role}</span>
+                    {transcriptFocus?.highlightIndex === index ? (
+                      <span className="badge badge-safe">
+                        {copy.sessionDetail.statuses.searchHit}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p>
+                    {transcriptFocus?.highlightIndex === index
+                      ? highlightSearchTerms(highlight.content, transcriptFocus.terms)
+                      : highlight.content}
+                  </p>
                 </article>
               ))}
             </div>
@@ -371,4 +391,36 @@ function formatUsd(value: number | undefined, unknownValue: string) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value);
+}
+
+function highlightSearchTerms(text: string, terms: string[]) {
+  const normalizedTerms = [...new Set(terms.map((term) => term.trim()).filter(Boolean))].sort(
+    (left, right) => right.length - left.length
+  );
+  if (normalizedTerms.length === 0) {
+    return text;
+  }
+
+  const matcher = new RegExp(
+    `(${normalizedTerms.map((term) => escapeRegExp(term)).join("|")})`,
+    "gi"
+  );
+  const segments = text.split(matcher);
+
+  return segments.map((segment, index) => {
+    if (!segment) {
+      return null;
+    }
+
+    const isMatch = normalizedTerms.some((term) => term.toLowerCase() === segment.toLowerCase());
+    if (!isMatch) {
+      return <span key={`${segment}-${index}`}>{segment}</span>;
+    }
+
+    return <mark key={`${segment}-${index}`}>{segment}</mark>;
+  });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -782,10 +782,24 @@ a {
   min-width: 0;
 }
 
+.detail-transcript-entry.is-search-match {
+  border-color: rgba(38, 72, 61, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(38, 72, 61, 0.08);
+  background: linear-gradient(180deg, rgba(229, 242, 234, 0.92), rgba(255, 250, 244, 0.94));
+}
+
 .detail-transcript-entry p {
   margin: 0;
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+
+.detail-transcript-entry mark,
+.session-search-snippet mark {
+  padding: 0 0.2em;
+  border-radius: 0.3em;
+  background: rgba(208, 164, 92, 0.26);
+  color: inherit;
 }
 
 .detail-control-stack {
