@@ -47,7 +47,7 @@
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
 | Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |
-| 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、命中片段和来源标签，并可把 transcript 命中直接定位到右侧详情高亮 |
+| 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、search-as-you-type 防抖与取消、命中片段和来源标签，并可把 transcript 命中直接定位到右侧详情高亮 |
 | upstream intake pipeline | 已实现 | 支持 catalog、研究索引、发布致谢和镜像规划产物 |
 
 ## 平台支持
@@ -81,7 +81,7 @@
 
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
-| BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
+| 语义搜索 / hybrid ranking / search API | 未纳入本版承诺 | 当前已实现本地加权搜索、search-as-you-type 防抖与取消，但还没有语义索引、混合排序和 API 暴露 |
 | 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider 健康探测 / 自动切换 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、统一 provider presets 和共享 snippet library，但还没有健康探测、自动切换和熔断 |
