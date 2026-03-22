@@ -26,6 +26,7 @@
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
+| Session knowledge lift | 已实现 | 会话详情可把摘要、待办、风险和关键证据提炼成可复用的 rule / skill Markdown，并支持中英界面预览切换 |
 | Cleanup checklist / session-end hooks | 已实现 | 导出会同步生成 `cleanup-<session>.json`，并在项目内存在 `session-end.ps1/.sh` 时执行 hook；软删除前要求 checklist 已成功落地且 hook 未失败 |
 | 软删除 / 恢复 | 已实现 | Rust actions 已有测试覆盖，恢复边界已加固 |
 | 审计事件写入 | 已实现 | 当前覆盖导出、cleanup checklist、session-end hook、软删除、恢复 |

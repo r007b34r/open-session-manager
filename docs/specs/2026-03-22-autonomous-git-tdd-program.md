@@ -161,7 +161,7 @@
 | `MCP-05` | P1 | todo | skills panel / installer | 本地 skills 发现、安装和启停测试通过 |
 | `MCP-06` | P2 | todo | skills marketplace | 仓库索引、许可提示和安装流程测试通过 |
 | `MCP-07` | P1 | todo | prompt / rule cross-app sync | 多助手规则同步测试通过 |
-| `MCP-08` | P0 | todo | 会话知识提炼成技能或规则 | Markdown handoff 可转结构化 rule/skill |
+| `MCP-08` | P0 | done | 会话知识提炼成技能或规则 | 会话详情可把摘要、待办、风险和证据提炼成 rule/skill Markdown，并支持预览切换 |
 | `MCP-09` | P0 | done | cleanup checklist / session-end hooks | 导出会生成结构化 cleanup checklist，并在项目内存在 `session-end` hook 时执行；软删除前要求 checklist 成功且最近一次 hook 未失败 |
 
 ### 4.9 分析与可视化

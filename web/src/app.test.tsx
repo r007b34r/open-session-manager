@@ -283,10 +283,17 @@ describe("App", () => {
       await screen.findByRole("heading", { name: /transcript highlights/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
+    const todoHeading = screen.getByRole("heading", { name: /todo snapshot/i });
+    const todoSection = todoHeading.closest("section");
+    expect(todoHeading).toBeInTheDocument();
+    expect(todoSection).not.toBeNull();
     expect(
-      screen.getByRole("heading", { name: /todo snapshot/i })
+      within(todoSection as HTMLElement).getByText(/review shell hook chain/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/review shell hook chain/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /knowledge lift/i })
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/kind: osm-rule/i)).toBeInTheDocument();
   });
 
   it("在首页直接展示已吸收的上游能力", async () => {
