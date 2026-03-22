@@ -175,6 +175,7 @@ type Messages = {
       context: string;
       signals: string;
       usage: string;
+      knowledgeLift: string;
       transcriptHighlights: string;
       todoSnapshot: string;
       keyArtifacts: string;
@@ -220,6 +221,14 @@ type Messages = {
       actions: {
         confirm: string;
         back: string;
+      };
+    };
+    knowledgeLift: {
+      description: string;
+      previewLabel: string;
+      views: {
+        rule: string;
+        skill: string;
       };
     };
     noRiskFlags: string;
@@ -520,6 +529,7 @@ const messages: Record<Language, Messages> = {
         context: "Context",
         signals: "Signals",
         usage: "Usage",
+        knowledgeLift: "Knowledge Lift",
         transcriptHighlights: "Transcript Highlights",
         todoSnapshot: "Todo Snapshot",
         keyArtifacts: "Key Artifacts",
@@ -566,6 +576,15 @@ const messages: Record<Language, Messages> = {
         actions: {
           confirm: "Confirm move to quarantine",
           back: "Back to details"
+        }
+      },
+      knowledgeLift: {
+        description:
+          "Turn the current session evidence into reusable rule or skill Markdown before cleanup.",
+        previewLabel: "Knowledge lift preview",
+        views: {
+          rule: "Rule Artifact",
+          skill: "Skill Artifact"
         }
       },
       noRiskFlags: "no active risk flags",
@@ -914,6 +933,7 @@ const messages: Record<Language, Messages> = {
         context: "上下文",
         signals: "信号",
         usage: "Usage",
+        knowledgeLift: "知识提炼",
         transcriptHighlights: "会话高亮",
         todoSnapshot: "待办快照",
         keyArtifacts: "关键产物",
@@ -959,6 +979,14 @@ const messages: Record<Language, Messages> = {
         actions: {
           confirm: "确认移入隔离区",
           back: "返回详情"
+        }
+      },
+      knowledgeLift: {
+        description: "把当前会话中的摘要、待办、风险和证据整理成可复用的规则或技能 Markdown。",
+        previewLabel: "知识提炼预览",
+        views: {
+          rule: "规则工件",
+          skill: "技能工件"
         }
       },
       noRiskFlags: "当前没有风险标记",

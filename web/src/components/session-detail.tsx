@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { SessionDetailRecord } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { buildRuleArtifact, buildSkillArtifact } from "../lib/knowledge-lift";
 
 type SessionDetailProps = {
   session?: SessionDetailRecord;
@@ -32,11 +33,13 @@ export function SessionDetail({
   const [continuePrompt, setContinuePrompt] = useState("");
   const [showCleanupReview, setShowCleanupReview] = useState(false);
   const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
+  const [liftView, setLiftView] = useState<"rule" | "skill">("rule");
 
   useEffect(() => {
     setContinuePrompt("");
     setShowCleanupReview(false);
     setCleanupConfirmed(false);
+    setLiftView("rule");
   }, [session?.sessionId]);
 
   if (!session) {
@@ -48,6 +51,10 @@ export function SessionDetail({
       </section>
     );
   }
+
+  const ruleArtifact = buildRuleArtifact(session);
+  const skillArtifact = buildSkillArtifact(session);
+  const activeArtifact = liftView === "rule" ? ruleArtifact : skillArtifact;
 
   return (
     <section className="panel detail-panel">
@@ -332,6 +339,45 @@ export function SessionDetail({
               <li key={artifact}>{artifact}</li>
             ))}
           </ul>
+        </section>
+
+        <section className="detail-card detail-card--wide">
+          <h3>{copy.sessionDetail.sections.knowledgeLift}</h3>
+          <p className="detail-empty-copy">
+            {copy.sessionDetail.knowledgeLift.description}
+          </p>
+          <div className="detail-artifact-toolbar" role="tablist">
+            <button
+              aria-selected={liftView === "rule"}
+              className={
+                liftView === "rule"
+                  ? "detail-artifact-button is-active"
+                  : "detail-artifact-button"
+              }
+              onClick={() => setLiftView("rule")}
+              type="button"
+            >
+              {copy.sessionDetail.knowledgeLift.views.rule}
+            </button>
+            <button
+              aria-selected={liftView === "skill"}
+              className={
+                liftView === "skill"
+                  ? "detail-artifact-button is-active"
+                  : "detail-artifact-button"
+              }
+              onClick={() => setLiftView("skill")}
+              type="button"
+            >
+              {copy.sessionDetail.knowledgeLift.views.skill}
+            </button>
+          </div>
+          <textarea
+            className="detail-artifact-preview"
+            readOnly
+            aria-label={copy.sessionDetail.knowledgeLift.previewLabel}
+            value={activeArtifact}
+          />
         </section>
 
         <section className="detail-card detail-card--wide">

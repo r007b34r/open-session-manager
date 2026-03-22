@@ -888,6 +888,43 @@ a {
   color: var(--ink);
 }
 
+.detail-artifact-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detail-artifact-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.detail-artifact-button.is-active,
+.detail-artifact-button:hover {
+  border-color: rgba(157, 61, 15, 0.24);
+  background: linear-gradient(135deg, rgba(247, 217, 191, 0.9), rgba(255, 251, 246, 0.96));
+  color: var(--accent-strong);
+}
+
+.detail-artifact-preview {
+  min-height: 280px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(31, 39, 34, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 16px 18px;
+  color: var(--ink);
+  font: 0.92rem/1.55 "Consolas", "Cascadia Mono", monospace;
+}
+
 .detail-todo-list {
   padding-left: 0;
   list-style: none;
