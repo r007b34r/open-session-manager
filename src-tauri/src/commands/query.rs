@@ -93,7 +93,11 @@ const SEARCH_REASON_ORDER: [SearchReason; 11] = [
 ];
 
 pub fn list_sessions(snapshot: &DashboardSnapshot) -> Value {
-    list_sessions_with_request(snapshot, None)
+    let sessions = build_session_entries(snapshot);
+
+    json!({
+        "sessions": sessions
+    })
 }
 
 pub fn list_sessions_with_request(
@@ -101,24 +105,7 @@ pub fn list_sessions_with_request(
     request: Option<&ListSessionInventoryRequest>,
 ) -> Value {
     let request = request.cloned().unwrap_or_default();
-    let mut sessions = snapshot
-        .sessions
-        .iter()
-        .map(|session| SessionListEntry {
-            session_id: session.session_id.clone(),
-            title: session.title.clone(),
-            assistant: session.assistant.clone(),
-            progress_state: session.progress_state.clone(),
-            last_activity_at: session.last_activity_at.clone(),
-            project_path: session.project_path.clone(),
-            risk_flags: session.risk_flags.clone(),
-            control_available: session
-                .session_control
-                .as_ref()
-                .is_some_and(|control| control.available),
-            value_score: session.value_score,
-        })
-        .collect::<Vec<_>>();
+    let mut sessions = build_session_entries(snapshot);
 
     if let Some(assistant) = request.assistant.as_ref() {
         let normalized = assistant.trim().to_ascii_lowercase();
@@ -135,6 +122,27 @@ pub fn list_sessions_with_request(
         "offset": request.offset.unwrap_or(0),
         "limit": request.limit.unwrap_or(total)
     })
+}
+
+fn build_session_entries(snapshot: &DashboardSnapshot) -> Vec<SessionListEntry> {
+    snapshot
+        .sessions
+        .iter()
+        .map(|session| SessionListEntry {
+            session_id: session.session_id.clone(),
+            title: session.title.clone(),
+            assistant: session.assistant.clone(),
+            progress_state: session.progress_state.clone(),
+            last_activity_at: session.last_activity_at.clone(),
+            project_path: session.project_path.clone(),
+            risk_flags: session.risk_flags.clone(),
+            control_available: session
+                .session_control
+                .as_ref()
+                .is_some_and(|control| control.available),
+            value_score: session.value_score,
+        })
+        .collect()
 }
 
 pub fn search_sessions(snapshot: &DashboardSnapshot, query: &str) -> Value {
