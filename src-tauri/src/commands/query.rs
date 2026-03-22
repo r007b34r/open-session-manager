@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::commands::dashboard::{DashboardSnapshot, SessionDetailRecord};
@@ -14,6 +14,7 @@ struct SessionListEntry {
     project_path: String,
     risk_flags: Vec<String>,
     control_available: bool,
+    value_score: u8,
 }
 
 #[derive(Debug, Serialize)]
@@ -25,6 +26,27 @@ struct SearchHit {
     score: f64,
     snippet: Option<String>,
     match_reasons: Vec<&'static str>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListSessionInventoryRequest {
+    pub assistant: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub sort_by: Option<String>,
+    pub descending: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchSessionInventoryRequest {
+    pub query: String,
+    pub assistant: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub sort_by: Option<String>,
+    pub descending: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +93,15 @@ const SEARCH_REASON_ORDER: [SearchReason; 11] = [
 ];
 
 pub fn list_sessions(snapshot: &DashboardSnapshot) -> Value {
-    let sessions = snapshot
+    list_sessions_with_request(snapshot, None)
+}
+
+pub fn list_sessions_with_request(
+    snapshot: &DashboardSnapshot,
+    request: Option<&ListSessionInventoryRequest>,
+) -> Value {
+    let request = request.cloned().unwrap_or_default();
+    let mut sessions = snapshot
         .sessions
         .iter()
         .map(|session| SessionListEntry {
@@ -86,32 +116,66 @@ pub fn list_sessions(snapshot: &DashboardSnapshot) -> Value {
                 .session_control
                 .as_ref()
                 .is_some_and(|control| control.available),
+            value_score: session.value_score,
         })
         .collect::<Vec<_>>();
 
+    if let Some(assistant) = request.assistant.as_ref() {
+        let normalized = assistant.trim().to_ascii_lowercase();
+        sessions.retain(|session| session.assistant.eq_ignore_ascii_case(&normalized));
+    }
+
+    sort_session_entries(&mut sessions, request.sort_by.as_deref(), request.descending);
+    let total = sessions.len();
+    let sessions = paginate(sessions, request.offset, request.limit);
+
     json!({
-        "sessions": sessions
+        "sessions": sessions,
+        "total": total,
+        "offset": request.offset.unwrap_or(0),
+        "limit": request.limit.unwrap_or(total)
     })
 }
 
 pub fn search_sessions(snapshot: &DashboardSnapshot, query: &str) -> Value {
-    let terms = parse_search_terms(query);
+    search_sessions_with_request(
+        snapshot,
+        &SearchSessionInventoryRequest {
+            query: query.to_string(),
+            assistant: None,
+            limit: None,
+            offset: None,
+            sort_by: None,
+            descending: None,
+        },
+    )
+}
+
+pub fn search_sessions_with_request(
+    snapshot: &DashboardSnapshot,
+    request: &SearchSessionInventoryRequest,
+) -> Value {
+    let terms = parse_search_terms(&request.query);
     let mut hits = snapshot
         .sessions
         .iter()
+        .filter(|session| {
+            request.assistant.as_ref().is_none_or(|assistant| {
+                session.assistant.eq_ignore_ascii_case(assistant.trim())
+            })
+        })
         .filter_map(|session| score_session(session, &terms))
         .collect::<Vec<_>>();
-    hits.sort_by(|left, right| {
-        right
-            .score
-            .partial_cmp(&left.score)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| left.session_id.cmp(&right.session_id))
-    });
+    sort_search_hits(&mut hits, request.sort_by.as_deref(), request.descending);
+    let total = hits.len();
+    let hits = paginate(hits, request.offset, request.limit);
 
     json!({
-        "query": query,
-        "hits": hits
+        "query": request.query,
+        "hits": hits,
+        "total": total,
+        "offset": request.offset.unwrap_or(0),
+        "limit": request.limit.unwrap_or(total)
     })
 }
 
@@ -488,4 +552,75 @@ fn search_reason_label(reason: SearchReason) -> &'static str {
         SearchReason::Transcript => "transcript",
         SearchReason::Todo => "todo",
     }
+}
+
+fn sort_session_entries(
+    sessions: &mut [SessionListEntry],
+    sort_by: Option<&str>,
+    descending: Option<bool>,
+) {
+    let sort_by = sort_by.unwrap_or("lastActivityAt");
+    let descending = descending.unwrap_or(true);
+
+    sessions.sort_by(|left, right| {
+        let ordering = match sort_by {
+            "title" => left.title.cmp(&right.title),
+            "assistant" => left.assistant.cmp(&right.assistant),
+            "valueScore" => left.value_score.cmp(&right.value_score),
+            _ => compare_activity(&left.last_activity_at, &right.last_activity_at),
+        };
+
+        if descending {
+            ordering.reverse()
+        } else {
+            ordering
+        }
+        .then_with(|| left.session_id.cmp(&right.session_id))
+    });
+}
+
+fn sort_search_hits(
+    hits: &mut [SearchHit],
+    sort_by: Option<&str>,
+    descending: Option<bool>,
+) {
+    let sort_by = sort_by.unwrap_or("score");
+    let descending = descending.unwrap_or(true);
+
+    hits.sort_by(|left, right| {
+        let ordering = match sort_by {
+            "title" => left.title.cmp(&right.title),
+            "assistant" => left.assistant.cmp(&right.assistant),
+            _ => left
+                .score
+                .partial_cmp(&right.score)
+                .unwrap_or(std::cmp::Ordering::Equal),
+        };
+
+        if descending {
+            ordering.reverse()
+        } else {
+            ordering
+        }
+        .then_with(|| left.session_id.cmp(&right.session_id))
+    });
+}
+
+fn compare_activity(left: &str, right: &str) -> std::cmp::Ordering {
+    parse_activity_timestamp(left).cmp(&parse_activity_timestamp(right))
+}
+
+fn parse_activity_timestamp(value: &str) -> i64 {
+    if let Ok(timestamp) = chrono::DateTime::parse_from_rfc3339(value) {
+        return timestamp.timestamp_millis();
+    }
+
+    value.parse::<i64>().unwrap_or(0)
+}
+
+fn paginate<T>(items: Vec<T>, offset: Option<usize>, limit: Option<usize>) -> Vec<T> {
+    let offset = offset.unwrap_or(0);
+    let limit = limit.unwrap_or(items.len().saturating_sub(offset));
+
+    items.into_iter().skip(offset).take(limit).collect()
 }

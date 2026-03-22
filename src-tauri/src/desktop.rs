@@ -16,13 +16,16 @@ use crate::{
             build_local_indexed_sessions, find_local_config_target,
         },
         query::{
-            expand_session, get_session, list_sessions, search_sessions, view_session,
+            expand_session, get_session, list_sessions_with_request,
+            search_sessions_with_request, view_session,
         },
     },
     discovery::DiscoveryContext,
     preferences::{RuntimePaths, build_runtime_paths, save_export_root_preference},
     storage::sqlite::open_database,
 };
+
+pub use crate::commands::query::{ListSessionInventoryRequest, SearchSessionInventoryRequest};
 
 pub fn run() -> Result<(), String> {
     tauri::Builder::default()
@@ -68,26 +71,30 @@ pub async fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
 }
 
 #[tauri::command]
-pub async fn list_session_inventory() -> Result<Value, String> {
+pub async fn list_session_inventory(
+    request: Option<ListSessionInventoryRequest>,
+) -> Result<Value, String> {
     let context = build_discovery_context();
     let paths = build_runtime_paths().map_err(|error| error.to_string())?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let snapshot = build_snapshot_with_runtime(&context, &paths)?;
-        Ok(list_sessions(&snapshot))
+        Ok(list_sessions_with_request(&snapshot, request.as_ref()))
     })
     .await
     .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn search_session_inventory(query: String) -> Result<Value, String> {
+pub async fn search_session_inventory(
+    request: SearchSessionInventoryRequest,
+) -> Result<Value, String> {
     let context = build_discovery_context();
     let paths = build_runtime_paths().map_err(|error| error.to_string())?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let snapshot = build_snapshot_with_runtime(&context, &paths)?;
-        Ok(search_sessions(&snapshot, &query))
+        Ok(search_sessions_with_request(&snapshot, &request))
     })
     .await
     .map_err(|error| error.to_string())?
@@ -377,10 +384,17 @@ mod tests {
         let save = save_dashboard_preferences(Some("D:/OSM/exports".to_string()));
         assert_future(&save);
 
-        let list = list_session_inventory();
+        let list = list_session_inventory(None);
         assert_future(&list);
 
-        let search = search_session_inventory("Claude".to_string());
+        let search = search_session_inventory(SearchSessionInventoryRequest {
+            query: "Claude".to_string(),
+            assistant: None,
+            limit: None,
+            offset: None,
+            sort_by: None,
+            descending: None,
+        });
         assert_future(&search);
 
         let get = get_session_detail("claude-ses-1".to_string());
@@ -435,8 +449,15 @@ mod tests {
 
         with_home_dir(&home_dir, || {
             tauri::async_runtime::block_on(async {
-                let list = list_session_inventory().await.expect("list query command");
-                let search = search_session_inventory("Claude".to_string())
+                let list = list_session_inventory(None).await.expect("list query command");
+                let search = search_session_inventory(SearchSessionInventoryRequest {
+                    query: "Claude".to_string(),
+                    assistant: None,
+                    limit: None,
+                    offset: None,
+                    sort_by: None,
+                    descending: None,
+                })
                     .await
                     .expect("search query command");
                 let get = get_session_detail("claude-ses-1".to_string())
