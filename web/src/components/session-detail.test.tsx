@@ -84,6 +84,36 @@ describe("SessionDetail", () => {
       "Continue with validation"
     );
   });
+
+  it("收到搜索命中的 transcript 目标后高亮对应条目", () => {
+    renderWithI18n(
+      <SessionDetail
+        session={buildSessionDetailRecord({
+          transcriptHighlights: [
+            {
+              role: "User",
+              content: "Review the current cleanup flow."
+            },
+            {
+              role: "Assistant",
+              content: "Continue with validation once the relay override is removed."
+            }
+          ]
+        })}
+        transcriptFocus={{
+          highlightIndex: 1,
+          terms: ["validation", "relay override"]
+        }}
+      />
+    );
+
+    expect(screen.getByText(/search hit/i)).toBeInTheDocument();
+    expect(screen.getByText(/continue with/i).closest("article")).toHaveClass(
+      "is-search-match"
+    );
+    expect(screen.getByText("validation").tagName).toBe("MARK");
+    expect(screen.getByText("relay override").tagName).toBe("MARK");
+  });
 });
 
 function renderWithI18n(node: ReactNode) {

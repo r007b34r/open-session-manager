@@ -165,3 +165,20 @@ test("keeps the overview page scroll position stable when selecting an embedded 
   const afterScrollY = await page.evaluate(() => window.scrollY);
   expect(Math.abs(afterScrollY - beforeScrollY)).toBeLessThan(32);
 });
+
+test("highlights the matched transcript when a search result is selected", async ({
+  page
+}) => {
+  await page.goto("/#/sessions");
+
+  await page.getByRole("searchbox", { name: /search sessions/i }).fill(
+    "anthropic_base_url override"
+  );
+  await page.getByRole("button", { name: /audit anthropic relay settings/i }).click();
+
+  await expect(page.getByText(/search hit/i)).toBeVisible();
+  const matchedEntry = page.locator(".detail-transcript-entry.is-search-match");
+  await expect(matchedEntry).toContainText(/mapped anthropic_base_url override/i);
+  await expect(matchedEntry.locator("mark")).toHaveCount(2);
+  await expect(matchedEntry.locator("mark").nth(1)).toHaveText(/override/i);
+});

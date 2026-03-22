@@ -414,6 +414,26 @@ describe("App", () => {
       await screen.findByText(/ready from demo continue: continue with the next verification step\./i)
     ).toBeInTheDocument();
   });
+
+  it("搜索命中 transcript 后会在详情区高亮对应的 transcript 条目", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.type(
+      screen.getByRole("searchbox", { name: /search sessions/i }),
+      "anthropic_base_url override"
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /audit anthropic relay settings/i })
+    );
+
+    expect(await screen.findByText(/search hit/i)).toBeInTheDocument();
+    expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
+    expect(screen.getByText("override").tagName).toBe("MARK");
+  });
 });
 
 function mockNavigatorLanguage(language: string, languages: string[]) {

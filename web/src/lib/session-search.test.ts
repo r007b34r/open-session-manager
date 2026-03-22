@@ -105,6 +105,34 @@ describe("searchSessions", () => {
     expect(results[0]?.session.sessionId).toBe("s1");
     expect(results[0]?.matchReasons).toContain("title");
   });
+
+  it("为 transcript 命中保留结构化定位信息，供详情页高亮对应条目", () => {
+    const sessions = [
+      buildSession("s1", {
+        title: "Relay cleanup",
+        transcriptHighlights: [
+          {
+            role: "User",
+            content: "Review the current cleanup flow."
+          },
+          {
+            role: "Assistant",
+            content: "The shell hook override still points at the old relay endpoint."
+          }
+        ]
+      })
+    ];
+
+    const results = searchSessions(sessions, "\"old relay\"");
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.matchReasons).toEqual(["transcript"]);
+    expect(results[0]?.focus).toEqual({
+      kind: "transcript",
+      highlightIndex: 1,
+      terms: ["old relay"]
+    });
+  });
 });
 
 function buildSession(
