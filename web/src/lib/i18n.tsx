@@ -98,8 +98,32 @@ type Messages = {
     searchLabel: string;
     searchPlaceholder: string;
     searchSummary: string;
+    filterSummary: string;
     searchSummaryPending: string;
     searchSummaryEmpty: string;
+    filters: {
+      reset: string;
+      labels: {
+        assistant: string;
+        project: string;
+        risk: string;
+        export: string;
+        control: string;
+      };
+      options: {
+        allAssistants: string;
+        allProjects: string;
+        allRisks: string;
+        atRisk: string;
+        clean: string;
+        allExports: string;
+        readyToQuarantine: string;
+        needsExport: string;
+        allControls: string;
+        controllable: string;
+        attached: string;
+      };
+    };
     matchReasonLabels: Record<string, string>;
   };
   sessionTable: {
@@ -366,8 +390,32 @@ const messages: Record<Language, Messages> = {
       searchLabel: "Search sessions",
       searchPlaceholder: "topic, project, assistant, risk",
       searchSummary: "ranked local matches",
+      filterSummary: "sessions match the current filters",
       searchSummaryPending: "Updating matches...",
       searchSummaryEmpty: "Type to search across titles, summaries, transcript highlights, and todos.",
+      filters: {
+        reset: "Reset filters",
+        labels: {
+          assistant: "Assistant",
+          project: "Project",
+          risk: "Risk",
+          export: "Export",
+          control: "Control"
+        },
+        options: {
+          allAssistants: "All assistants",
+          allProjects: "All projects",
+          allRisks: "All risk states",
+          atRisk: "At risk",
+          clean: "No risk flags",
+          allExports: "All export states",
+          readyToQuarantine: "Ready to quarantine",
+          needsExport: "Needs export",
+          allControls: "All control states",
+          controllable: "Controllable only",
+          attached: "Attached only"
+        }
+      },
       matchReasonLabels: {
         title: "Title",
         assistant: "Assistant",
@@ -688,8 +736,32 @@ const messages: Record<Language, Messages> = {
       searchLabel: "搜索会话",
       searchPlaceholder: "主题、项目、助手、风险",
       searchSummary: "条排序后的本地命中结果",
+      filterSummary: "条会话符合当前筛选条件",
       searchSummaryPending: "正在更新命中结果...",
       searchSummaryEmpty: "输入关键词后，可在标题、摘要、高亮和待办中检索。",
+      filters: {
+        reset: "重置筛选",
+        labels: {
+          assistant: "助手",
+          project: "项目",
+          risk: "风险",
+          export: "导出",
+          control: "控制"
+        },
+        options: {
+          allAssistants: "全部助手",
+          allProjects: "全部项目",
+          allRisks: "全部风险状态",
+          atRisk: "仅高风险",
+          clean: "无风险标记",
+          allExports: "全部导出状态",
+          readyToQuarantine: "已可移入隔离区",
+          needsExport: "仍需导出",
+          allControls: "全部控制状态",
+          controllable: "仅可控制",
+          attached: "仅已附着"
+        }
+      },
       matchReasonLabels: {
         title: "标题",
         assistant: "助手",
