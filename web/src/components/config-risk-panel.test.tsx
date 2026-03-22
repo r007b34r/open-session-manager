@@ -79,7 +79,7 @@ describe("ConfigRiskPanel", () => {
     expect(screen.getByText(/dangerous_sandbox/i)).toBeInTheDocument();
   });
 
-  it("allows editing a supported config card and submits the writeback payload", async () => {
+  it("requires reviewing a risky config change before submitting the writeback payload", async () => {
     const user = userEvent.setup();
     const onSaveConfig = vi.fn();
     const { ConfigRiskPanel } = await import("./config-risk-panel");
@@ -117,7 +117,23 @@ describe("ConfigRiskPanel", () => {
       screen.getByLabelText(/new key/i),
       "ghu_new_secret_123454321"
     );
-    await user.click(screen.getByRole("button", { name: /save config/i }));
+
+    await user.click(screen.getByRole("button", { name: /review changes/i }));
+
+    expect(onSaveConfig).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: /review changes/i })).toBeInTheDocument();
+    expect(screen.getByText("gpt-5-mini")).toBeInTheDocument();
+    expect(screen.getByText("https://github.com/api/copilot")).toBeInTheDocument();
+
+    const applyButton = screen.getByRole("button", { name: /apply reviewed changes/i });
+    expect(applyButton).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i
+      })
+    );
+    await user.click(applyButton);
 
     expect(onSaveConfig).toHaveBeenCalledWith({
       artifactId: "cfg-003",

@@ -85,6 +85,44 @@ describe("SessionDetail", () => {
     );
   });
 
+  it("要求在移入隔离区前显式确认 cleanup 审查", async () => {
+    const user = userEvent.setup();
+    const onSoftDelete = vi.fn();
+
+    renderWithI18n(
+      <SessionDetail
+        canSoftDelete
+        exportPath="C:/Users/Max/Documents/OpenSessionManager/exports/session-ses-001.md"
+        onSoftDelete={onSoftDelete}
+        session={buildSessionDetailRecord()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /move to quarantine/i }));
+
+    expect(onSoftDelete).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: /review cleanup before quarantine/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/session-ses-001\.md/i)
+    ).toBeInTheDocument();
+
+    const confirmButton = screen.getByRole("button", {
+      name: /confirm move to quarantine/i
+    });
+    expect(confirmButton).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /i exported the valuable parts and want to continue/i
+      })
+    );
+    await user.click(confirmButton);
+
+    expect(onSoftDelete).toHaveBeenCalledWith("ses-001");
+  });
+
   it("收到搜索命中的 transcript 目标后高亮对应条目", () => {
     renderWithI18n(
       <SessionDetail
