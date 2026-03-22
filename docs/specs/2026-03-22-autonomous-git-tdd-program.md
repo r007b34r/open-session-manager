@@ -130,7 +130,7 @@
 | `GIT-05` | P1 | todo | project grouping | 会话和配置按项目聚合，UI 测试通过 |
 | `GIT-06` | P1 | todo | file explorer | 文件树和路径预览测试通过 |
 | `GIT-07` | P1 | todo | file preview / editor | 预览与只读编辑模式测试通过 |
-| `GIT-08` | P1 | todo | browser preview | 本地 Web 预览链路测试通过 |
+| `GIT-08` | P1 | done | browser preview | `web/package.json` 已提供正式 `preview/browser` 脚本，Playwright E2E 统一复用 build 后的 preview 链路 |
 
 ### 4.7 配置、provider 与密钥治理
 

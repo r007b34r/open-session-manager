@@ -41,6 +41,7 @@ try {
   Invoke-Step "Git worktree manager tests" { node --test tests/git-workflow/git-worktree-manager.test.mjs }
   Invoke-Step "Fixture ledger tests" { node --test tests/fixture-ledger/fixture-ledger.test.mjs }
   Invoke-Step "Fixture snapshot tests" { node --test tests/fixture-ledger/fixture-snapshot.test.mjs }
+  Invoke-Step "Browser preview tests" { node --test tests/web-preview/browser-preview.test.mjs }
   Invoke-Step "Fixture ledger check" { node scripts/fixture-ledger.mjs --check }
   Invoke-Step "Fixture snapshot check" { node scripts/check-fixture-snapshot.mjs }
   Invoke-Step "Git review snapshot dry run" {

@@ -38,6 +38,7 @@
 - Sessions 页面新增高级筛选器，可按 assistant / project / risk / export / control 组合收窄会话队列，快速找出该导出、该隔离或可直接恢复的会话
 - 配置写回前新增 masked diff 审查流和风险提示，必须显式确认后才会落盘；会话移入隔离区前也新增 cleanup 审查确认
 - `DiffViewer` 现在有独立组件测试和空状态提示，不再只是配置审查流里的隐含实现
+- 浏览器运行现在也有正式预览链路，`npm --prefix web run browser` 会先 build 再用 `vite preview` 启动，Playwright E2E 不再依赖开发态 dev server
 - 会话详情新增 `Knowledge Lift` 卡片，可把当前摘要、待办、风险和关键证据直接提炼成 rule / skill Markdown，再决定是否清理原会话
 - 配置写回的自动备份 manifest 现在会进入审计链路，并直接显示在 Audit 页，便于确认回滚落点
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
@@ -138,6 +139,7 @@
 - 浅色 / 深色 / 跟随系统主题
 - Markdown 导出目录设置与导出路径显示
 - `node scripts/git-worktree-manager.mjs` 提供 `.worktrees/` 下的 create / recycle / merge / delete
+- `npm --prefix web run browser` 提供固定端口的浏览器预览入口，适合不走桌面壳层时直接本地打开
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 
@@ -164,6 +166,7 @@
 - `npm --prefix web run test`
 - `npm --prefix web run e2e`
 - `npm --prefix web run build`
+- `node --test tests/web-preview/browser-preview.test.mjs`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
 
 ## 开源致谢
