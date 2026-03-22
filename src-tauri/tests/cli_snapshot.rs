@@ -396,6 +396,59 @@ fn expand_command_returns_context_bundle() {
 }
 
 #[test]
+fn robot_json_mode_emits_compact_cli_payloads() {
+    let list = run_fixture_command(["list", "--json"]);
+
+    assert!(
+        list.status.success(),
+        "list --json command failed: {}",
+        String::from_utf8_lossy(&list.stderr)
+    );
+    let list_stdout = String::from_utf8(list.stdout).expect("list stdout is utf8");
+    assert!(
+        !list_stdout.contains("\n  "),
+        "robot json mode should emit compact json without pretty indentation"
+    );
+    let list_payload: Value =
+        serde_json::from_str(&list_stdout).expect("list --json prints valid json");
+    assert_eq!(
+        list_payload
+            .get("sessions")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(8)
+    );
+
+    let view = run_fixture_command(["view", "--session", "claude-ses-1", "--json"]);
+
+    assert!(
+        view.status.success(),
+        "view --json command failed: {}",
+        String::from_utf8_lossy(&view.stderr)
+    );
+    let view_stdout = String::from_utf8(view.stdout).expect("view stdout is utf8");
+    assert!(
+        !view_stdout.contains("\n  "),
+        "view --json should emit compact json envelope"
+    );
+    let view_payload: Value =
+        serde_json::from_str(&view_stdout).expect("view --json prints valid json");
+    assert_eq!(
+        view_payload
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "claude-ses-1"
+    );
+    assert!(
+        view_payload
+            .get("content")
+            .and_then(Value::as_str)
+            .is_some_and(|content| content.contains("# 扫描 Claude transcripts"))
+    );
+}
+
+#[test]
 fn snapshot_command_skips_invalid_local_sessions_without_stderr_noise() {
     let sandbox = temp_root();
     let home_dir = sandbox.join("home");
