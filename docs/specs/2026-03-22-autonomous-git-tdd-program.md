@@ -208,7 +208,7 @@
 | `UX-01` | P1 | todo | 移动端适配 | Playwright 多视口测试通过 |
 | `UX-02` | P1 | todo | 远程访问壳层 | 浏览器跨设备访问测试通过 |
 | `UX-03` | P1 | todo | terminal panel | 终端面板交互测试通过 |
-| `UX-04` | P0 | todo | richer diff / review flows | 审查链路支持 diff、风险提示和确认动作 |
+| `UX-04` | P0 | done | richer diff / review flows | 配置写回前已支持 masked diff、风险提示和显式确认；会话移入隔离区前也要求 cleanup 审查确认 |
 | `UX-05` | P1 | todo | uploads and previews | 图片、文档和附件预览测试通过 |
 | `UX-06` | P1 | done | richer filters | Sessions 页面已支持 assistant / project / risk / export / control 组合筛选，并有 Web 测试覆盖 |
 | `UX-07` | P0 | done | responsive detail panes | 会话详情已改为非 sticky、单列 detail card 布局，并有 E2E 覆盖高 DPI 与窄窗场景 |

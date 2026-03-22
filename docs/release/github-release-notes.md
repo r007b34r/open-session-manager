@@ -36,6 +36,7 @@
 - usage 面板新增 model breakdown 和 provider/platform breakdown，可直接看出 token/cost 集中在哪些模型，以及配置 footprint 分布在哪些 provider
 - Sessions 搜索现在会做本地 BM25 风格 lexical 排序，并补上 search-as-you-type 防抖、取消旧查询、命中片段和命中来源标签；transcript 命中会直接定位到右侧详情高亮
 - Sessions 页面新增高级筛选器，可按 assistant / project / risk / export / control 组合收窄会话队列，快速找出该导出、该隔离或可直接恢复的会话
+- 配置写回前新增 masked diff 审查流和风险提示，必须显式确认后才会落盘；会话移入隔离区前也新增 cleanup 审查确认
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地
@@ -117,6 +118,8 @@
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
 - Sessions 页加权搜索、search-as-you-type 防抖与取消、命中片段、来源标签和 transcript 命中高亮
+- 配置写回 review gate：masked diff、风险提示、确认后再应用
+- 会话 cleanup review gate：导出后仍需显式确认才会移入隔离区
 - Sessions 页高级筛选：assistant / project / risk / export / control 组合筛选
 - `doctor` CLI 与总览环境诊断面板，可显示被跳过的 malformed session 文件
 - `Claude Code` 历史 JSONL 如果正文缺失 `sessionId`，但文件名本身是 UUID，OSM 现在会自动恢复会话 ID，而不是一律丢弃

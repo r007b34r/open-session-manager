@@ -472,7 +472,20 @@ describe("App", () => {
       "ghu_new_secret_123454321"
     );
     await user.click(
-      within(card as HTMLElement).getByRole("button", { name: /save config/i })
+      within(card as HTMLElement).getByRole("button", { name: /review changes/i })
+    );
+    expect(
+      within(card as HTMLElement).getByRole("heading", { name: /review changes/i })
+    ).toBeInTheDocument();
+    await user.click(
+      within(card as HTMLElement).getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i
+      })
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", {
+        name: /apply reviewed changes/i
+      })
     );
 
     await waitFor(() => {
@@ -502,6 +515,40 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/gpt-5/i)).toBeInTheDocument();
     expect(screen.getByText(/\$0\.02/i)).toBeInTheDocument();
+  });
+
+  it("在会话详情里移入隔离区前要求显式 cleanup 审查确认", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.click(screen.getByRole("button", { name: /export markdown/i }));
+    await user.click(screen.getByRole("button", { name: /move to quarantine/i }));
+
+    expect(
+      screen.getByRole("heading", { name: /review cleanup before quarantine/i })
+    ).toBeInTheDocument();
+    const confirmButton = screen.getByRole("button", {
+      name: /confirm move to quarantine/i
+    });
+    expect(confirmButton).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /i exported the valuable parts and want to continue/i
+      })
+    );
+    await user.click(confirmButton);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", {
+          name: /refactor wsl collector handshake/i
+        })
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("在会话详情里允许一键恢复并继续发送提示", async () => {
