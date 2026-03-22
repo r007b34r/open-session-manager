@@ -21,6 +21,12 @@ test("indexes fixtures, exports, soft-deletes, and shows risky masked config ent
 
   await page.getByRole("button", { name: /export markdown/i }).click();
   await page.getByRole("button", { name: /move to quarantine/i }).click();
+  await page
+    .getByRole("checkbox", {
+      name: /i exported the valuable parts and want to continue/i
+    })
+    .click();
+  await page.getByRole("button", { name: /confirm move to quarantine/i }).click();
 
   await page
     .getByRole("navigation", { name: /primary/i })
@@ -195,7 +201,7 @@ test("shows the active session cockpit and refreshes runtime status", async ({
   await page.route("**/dashboard-snapshot.json", async (route) => {
     requestCount += 1;
     const snapshot =
-      requestCount < 3
+      requestCount === 1
         ? buildRuntimeSnapshot("READY from initial snapshot", false)
         : buildRuntimeSnapshot("READY from refreshed snapshot", true);
 
