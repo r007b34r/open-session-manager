@@ -152,6 +152,48 @@ describe("SessionDetail", () => {
     expect(screen.getByText("validation").tagName).toBe("MARK");
     expect(screen.getByText("relay override").tagName).toBe("MARK");
   });
+
+  it("允许在详情里切换 rule 和 skill 提炼预览", async () => {
+    const user = userEvent.setup();
+
+    renderWithI18n(
+      <SessionDetail
+        session={buildSessionDetailRecord({
+          title: "Audit Anthropic relay settings",
+          assistant: "Claude Code",
+          summary:
+            "Proxy endpoint and permissive shell hooks were identified, but remediation steps were not applied yet.",
+          tags: ["relay", "risk", "claude"],
+          riskFlags: ["dangerous_permissions", "shell_hook"],
+          transcriptHighlights: [
+            {
+              role: "Assistant",
+              content:
+                "Mapped ANTHROPIC_BASE_URL override and traced the permissive shell hook chain."
+            }
+          ],
+          todoItems: [
+            {
+              content: "Review shell hook chain",
+              completed: false
+            },
+            {
+              content: "Export remediation summary before cleanup",
+              completed: true
+            }
+          ]
+        })}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: /knowledge lift/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/kind: osm-rule/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /skill artifact/i }));
+
+    expect(screen.getByDisplayValue(/name: audit-anthropic-relay-settings/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/## resume cue/i)).toBeInTheDocument();
+  });
 });
 
 function renderWithI18n(node: ReactNode) {
