@@ -35,7 +35,7 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
-        Some("doctor") => match run_doctor_command() {
+        Some("doctor") => match run_doctor_command(&args[1..]) {
             Ok(output) => {
                 println!("{output}");
                 ExitCode::SUCCESS
@@ -111,19 +111,18 @@ fn main() -> ExitCode {
 
 fn run_snapshot_command(args: &[String]) -> Result<String, String> {
     let snapshot = load_snapshot_data(args)?;
-    serde_json::to_string_pretty(&snapshot).map_err(|error| error.to_string())
+    render_json(&snapshot, has_flag(args, "--json"))
 }
 
 fn run_list_command(args: &[String]) -> Result<String, String> {
     let snapshot = load_snapshot_data(args)?;
-    serde_json::to_string_pretty(&list_sessions(&snapshot)).map_err(|error| error.to_string())
+    render_json(&list_sessions(&snapshot), has_flag(args, "--json"))
 }
 
 fn run_search_command(args: &[String]) -> Result<String, String> {
     let snapshot = load_snapshot_data(args)?;
     let query = require_flag_value(args, "--query")?;
-    serde_json::to_string_pretty(&search_sessions(&snapshot, query))
-        .map_err(|error| error.to_string())
+    render_json(&search_sessions(&snapshot, query), has_flag(args, "--json"))
 }
 
 fn run_get_command(args: &[String]) -> Result<String, String> {
@@ -131,7 +130,7 @@ fn run_get_command(args: &[String]) -> Result<String, String> {
     let session_id = require_flag_value(args, "--session")?;
     let payload =
         get_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
-    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+    render_json(&payload, has_flag(args, "--json"))
 }
 
 fn run_view_command(args: &[String]) -> Result<String, String> {
@@ -139,7 +138,7 @@ fn run_view_command(args: &[String]) -> Result<String, String> {
     let session_id = require_flag_value(args, "--session")?;
     let payload =
         view_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
-    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+    render_json(&payload, has_flag(args, "--json"))
 }
 
 fn run_expand_command(args: &[String]) -> Result<String, String> {
@@ -147,7 +146,7 @@ fn run_expand_command(args: &[String]) -> Result<String, String> {
     let session_id = require_flag_value(args, "--session")?;
     let payload = expand_session(&snapshot, session_id)
         .ok_or_else(|| format!("session not found: {session_id}"))?;
-    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())
+    render_json(&payload, has_flag(args, "--json"))
 }
 
 fn load_snapshot_data(args: &[String]) -> Result<DashboardSnapshot, String> {
@@ -179,10 +178,10 @@ fn load_snapshot_data(args: &[String]) -> Result<DashboardSnapshot, String> {
     Ok(snapshot)
 }
 
-fn run_doctor_command() -> Result<String, String> {
+fn run_doctor_command(args: &[String]) -> Result<String, String> {
     let report =
         build_local_doctor_report(&build_discovery_context()).map_err(|error| error.to_string())?;
-    serde_json::to_string_pretty(&report).map_err(|error| error.to_string())
+    render_json(&report, has_flag(args, "--json"))
 }
 
 fn build_discovery_context() -> DiscoveryContext {
@@ -206,6 +205,18 @@ fn parse_flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         .find_map(|window| (window[0] == flag).then_some(window[1].as_str()))
 }
 
+fn has_flag(args: &[String], flag: &str) -> bool {
+    args.iter().any(|argument| argument == flag)
+}
+
 fn require_flag_value<'a>(args: &'a [String], flag: &str) -> Result<&'a str, String> {
     parse_flag_value(args, flag).ok_or_else(|| format!("missing required flag: {flag}"))
+}
+
+fn render_json(value: &impl serde::Serialize, compact: bool) -> Result<String, String> {
+    if compact {
+        serde_json::to_string(value).map_err(|error| error.to_string())
+    } else {
+        serde_json::to_string_pretty(value).map_err(|error| error.to_string())
+    }
 }
