@@ -39,6 +39,7 @@
 - 配置写回前新增 masked diff 审查流和风险提示，必须显式确认后才会落盘；会话移入隔离区前也新增 cleanup 审查确认
 - `DiffViewer` 现在有独立组件测试和空状态提示，不再只是配置审查流里的隐含实现
 - 会话详情新增 `Knowledge Lift` 卡片，可把当前摘要、待办、风险和关键证据直接提炼成 rule / skill Markdown，再决定是否清理原会话
+- 配置写回的自动备份 manifest 现在会进入审计链路，并直接显示在 Audit 页，便于确认回滚落点
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
 - Markdown 导出补上了 `Session Handoff`，会把 `Next focus / Open tasks / Resume cue` 一起写进去
 - Markdown 导出现在还会同步生成结构化 cleanup checklist，并在项目内检测到 `session-end` hook 时执行；软删除前也不再只看 Markdown，而是要求 checklist 已成功落地

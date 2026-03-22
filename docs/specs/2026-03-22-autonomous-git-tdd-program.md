@@ -146,7 +146,7 @@
 | `CFG-08` | P1 | todo | proxy / failover / circuit breaker | 失败切换和熔断测试通过 |
 | `CFG-09` | P1 | todo | request rectifier | 请求修正规则测试通过 |
 | `CFG-10` | P2 | todo | tray quick switch | 桌面快捷切换测试通过 |
-| `CFG-11` | P1 | todo | auto backup | 配置写回前自动备份测试通过 |
+| `CFG-11` | P1 | done | auto backup | 配置写回前会自动生成备份 manifest，Rust 审计与 Web Audit 页都能看到该路径 |
 | `CFG-12` | P2 | todo | cloud sync | 同步冲突与脱机恢复测试通过 |
 | `CFG-13` | P1 | done | shared config snippets | 配置片段可保存到本地 snippet library、重新应用到草稿，并把 save/apply/export/import 写入审计历史 |
 

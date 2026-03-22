@@ -21,7 +21,7 @@
 | `GitHub Copilot CLI` 配置审计 | 已实现 | 支持用户级 `~/.copilot/config.json` + `mcp-config.json`，并能按会话派生项目级 `.github/copilot/settings.json/settings.local.json` |
 | `Factory Droid` 配置审计 | 已实现 | 支持用户级与项目级 `settings.json/settings.local.json` 合并视图，展示 provider/base URL、command allowlist、MCP 与 masked key 风险 |
 | `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
-| `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、统一 provider presets、输入校验、备份 manifest、回滚测试与审计事件 |
+| `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、统一 provider presets、输入校验、备份 manifest、回滚测试、审计事件，并可在 Audit 页查看备份 manifest 路径 |
 | 配置片段导入 / 导出 / 复用 | 已实现 | 配置编辑器支持 snippet library、本地持久化、稳定 JSON schema 导入导出，以及 save/apply/export/import 审计事件 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
