@@ -894,6 +894,42 @@ a {
   font-weight: 600;
 }
 
+.config-preset-panel {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.config-preset-head {
+  display: grid;
+  gap: 4px;
+}
+
+.config-preset-head strong {
+  font-size: 0.96rem;
+}
+
+.config-preset-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.config-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.config-preset-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+}
+
 .audit-stack {
   display: grid;
   gap: 14px;

@@ -2,6 +2,11 @@ import { useState } from "react";
 
 import type { ConfigRiskRecord, ConfigWritebackInput } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import {
+  applyProviderPreset,
+  buildConfigDraft,
+  getProviderPresets
+} from "../lib/provider-presets";
 
 type ConfigRiskPanelProps = {
   configs: ConfigRiskRecord[];
@@ -95,18 +100,7 @@ export function ConfigRiskPanel({
                 ) : (
                   <button
                     className="action-button action-button-primary"
-                    onClick={() =>
-                      setDraft({
-                        artifactId: config.artifactId,
-                        assistant: config.assistant,
-                        scope: config.scope,
-                        path: config.path,
-                        provider: config.provider,
-                        model: config.model,
-                        baseUrl: config.baseUrl,
-                        secret: ""
-                      })
-                    }
+                    onClick={() => setDraft(buildConfigDraft(config))}
                     type="button"
                   >
                     {copy.configRisk.actions.editConfig}
@@ -189,6 +183,37 @@ export function ConfigRiskPanel({
                   </label>
                 </div>
               </form>
+            ) : null}
+            {draft?.artifactId === config.artifactId ? (
+              <section className="config-preset-panel">
+                <div className="config-preset-head">
+                  <strong>{copy.configRisk.presets.title}</strong>
+                  <p>{copy.configRisk.presets.description}</p>
+                </div>
+                <div className="config-preset-list">
+                  {getProviderPresets(config.assistant).map((preset) => (
+                    <button
+                      className="action-button action-button-secondary config-preset-chip"
+                      key={preset.id}
+                      onClick={() =>
+                        setDraft((current) =>
+                          current ? applyProviderPreset(current, preset) : current
+                        )
+                      }
+                      type="button"
+                    >
+                      {copy.configRisk.presets.options[preset.id]}
+                    </button>
+                  ))}
+                  <button
+                    className="action-button action-button-secondary config-preset-chip"
+                    onClick={() => setDraft(buildConfigDraft(config))}
+                    type="button"
+                  >
+                    {copy.configRisk.presets.restoreDetectedValues}
+                  </button>
+                </div>
+              </section>
             ) : null}
             <div className="badge-row">
               {config.risks.map((risk) => (

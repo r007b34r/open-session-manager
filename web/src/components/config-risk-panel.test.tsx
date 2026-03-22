@@ -126,4 +126,48 @@ describe("ConfigRiskPanel", () => {
       secret: "ghu_new_secret_123454321"
     });
   });
+
+  it("shows provider presets for supported assistants and can revert a draft back to detected values", async () => {
+    const user = userEvent.setup();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-004",
+            assistant: "Factory Droid",
+            scope: "Global",
+            path: "~/.factory/settings.local.json",
+            provider: "openrouter",
+            model: "openrouter/anthropic/claude-sonnet-4",
+            baseUrl: "https://factory-relay.example/v1",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_provider", "dangerous_permissions"]
+          }
+        ]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+
+    expect(screen.getByText(/provider presets/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /openai official/i }));
+
+    expect(screen.getByLabelText(/provider/i)).toHaveValue("openai");
+    expect(screen.getByLabelText(/^model$/i)).toHaveValue("gpt-5-mini");
+    expect(screen.getByLabelText(/endpoint/i)).toHaveValue("https://api.openai.com/v1");
+
+    await user.click(screen.getByRole("button", { name: /restore detected values/i }));
+
+    expect(screen.getByLabelText(/provider/i)).toHaveValue("openrouter");
+    expect(screen.getByLabelText(/^model$/i)).toHaveValue(
+      "openrouter/anthropic/claude-sonnet-4"
+    );
+    expect(screen.getByLabelText(/endpoint/i)).toHaveValue(
+      "https://factory-relay.example/v1"
+    );
+  });
 });

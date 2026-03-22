@@ -14,6 +14,7 @@
   - `OpenClaw`
 - 配置审计扩到 7 个助手，`GitHub Copilot CLI / Factory Droid` 已补上用户级配置治理
 - `GitHub Copilot CLI / Factory Droid` 现在会按会话项目路径带出项目级配置覆盖层
+- `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的配置编辑面板现在支持统一 provider presets，可一键恢复到官方端点和常用模型组合
 - 把一批真实竞品镜像拉到本地并纳入 catalog、研究索引和开源致谢，不再只有零散笔记
 - 修掉会直接影响可用性的会话质量问题：
   - `Codex` 不再把 `AGENTS.md`、环境注入块误当真实主题
@@ -53,7 +54,7 @@
 - `ChristopherA/claude_code_tools`
   - 吸收 session closure / resume brief、cleanup checklist、session-end hook 这条会话收尾链路，补到 OSM 的导出和软删除守卫
 - `farion1231/cc-switch`
-  - clean-room 吸收统一 provider/config 治理方向，以及 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模
+  - clean-room 吸收统一 provider/config 治理方向，以及 `Gemini CLI` 与 `OpenClaw` 配置治理中的路径、auth mode、provider/base URL 风险建模与 preset catalog
 - `kbwo/ccmanager`
   - clean-room 吸收 repo-local worktree 生命周期管理方向，补成 `git-worktree-manager` CLI
 - `endorhq/rover`
@@ -102,6 +103,7 @@
 - 7 个终端代码助手的配置审计读取与风险预览
 - `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、备份、回滚和审计事件
+- `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的统一 provider presets、套用和恢复检测值
 - SQLite session index cache、增量重建和 index run 统计
 - `Codex / Claude Code` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
@@ -132,7 +134,7 @@
 - 语义搜索、hybrid ranking、统一 search API 和更大历史库压测
 - 除 `Codex / Claude Code` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
-- provider presets、共享配置片段、健康探测和自动切换
+- 共享配置片段、健康探测和自动切换
 - 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器
 - MCP / HTTP / headless 自动化接口
 - Linux 桌面实机回归

@@ -140,7 +140,7 @@
 | `CFG-02` | P0 | done | `Factory Droid` 安全写回 | 配置编辑、校验、备份、回滚测试通过 |
 | `CFG-03` | P0 | done | `Gemini CLI` 安全写回 | 写回 `.env/settings.json` 的风险保护测试通过 |
 | `CFG-04` | P0 | done | `OpenClaw` 安全写回 | 写回保护和 masked diff 测试通过 |
-| `CFG-05` | P0 | todo | 统一 provider presets | 预设导入、应用、回滚测试通过 |
+| `CFG-05` | P0 | done | 统一 provider presets | 支持写回的配置卡片已提供统一 preset catalog、套用和恢复检测值，并有 Web 测试覆盖 |
 | `CFG-06` | P1 | todo | provider import / export | 导入导出 schema 测试通过 |
 | `CFG-07` | P1 | todo | provider health monitor | provider 连通性与健康状态探测测试通过 |
 | `CFG-08` | P1 | todo | proxy / failover / circuit breaker | 失败切换和熔断测试通过 |

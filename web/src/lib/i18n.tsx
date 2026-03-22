@@ -163,6 +163,15 @@ type Messages = {
       saveConfig: string;
       cancelEdit: string;
     };
+    presets: {
+      title: string;
+      description: string;
+      restoreDetectedValues: string;
+      options: Record<
+        "github_official" | "google_ai_studio" | "openai_official" | "openrouter_official",
+        string
+      >;
+    };
     fields: {
       scope: string;
       provider: string;
@@ -400,6 +409,18 @@ const messages: Record<Language, Messages> = {
         editConfig: "Edit Config",
         saveConfig: "Save Config",
         cancelEdit: "Cancel"
+      },
+      presets: {
+        title: "Provider Presets",
+        description:
+          "Apply a known-safe provider template, then fine-tune only the fields that still need overrides.",
+        restoreDetectedValues: "Restore detected values",
+        options: {
+          github_official: "GitHub Official",
+          google_ai_studio: "Google AI Studio",
+          openai_official: "OpenAI Official",
+          openrouter_official: "OpenRouter Official"
+        }
       },
       fields: {
         scope: "Scope",
@@ -662,6 +683,17 @@ const messages: Record<Language, Messages> = {
         editConfig: "编辑配置",
         saveConfig: "保存配置",
         cancelEdit: "取消"
+      },
+      presets: {
+        title: "预设模板",
+        description: "先套用一组已知安全的 provider 模板，再只调整仍需覆盖的字段。",
+        restoreDetectedValues: "恢复检测值",
+        options: {
+          github_official: "GitHub 官方",
+          google_ai_studio: "Google AI Studio",
+          openai_official: "OpenAI 官方",
+          openrouter_official: "OpenRouter 官方"
+        }
       },
       fields: {
         scope: "范围",

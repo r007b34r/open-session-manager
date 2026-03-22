@@ -21,7 +21,7 @@
 | `GitHub Copilot CLI` 配置审计 | 已实现 | 支持用户级 `~/.copilot/config.json` + `mcp-config.json`，并能按会话派生项目级 `.github/copilot/settings.json/settings.local.json` |
 | `Factory Droid` 配置审计 | 已实现 | 支持用户级与项目级 `settings.json/settings.local.json` 合并视图，展示 provider/base URL、command allowlist、MCP 与 masked key 风险 |
 | `OpenClaw` 配置审计 | 已实现 | 支持 `openclaw.json`、provider/base URL、default model 与 tools profile 风险 |
-| `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、输入校验、备份 manifest、回滚测试与审计事件 |
+| `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 安全写回 | 已实现 | 支持可视化编辑、统一 provider presets、输入校验、备份 manifest、回滚测试与审计事件 |
 | Transcript digest / todo snapshot | 已实现 | 支持 transcript highlights、Claude todo 提取与会话详情展示 |
 | Markdown 导出 | 已实现 | Rust actions 已有测试覆盖 |
 | Session handoff Markdown 导出 | 已实现 | 导出包含 `Next focus`、`Open tasks`、`Completed tasks`、`Resume cue` |
@@ -65,7 +65,7 @@
 | `d-kimuson/claude-code-viewer` | 已吸收 | viewer 风格 transcript detail 面板、session todo evidence 展示 |
 | `ChristopherA/claude_code_tools` | 已吸收 | session handoff brief、cleanup checklist、session-end hook 这条会话收尾链路已落进 OSM 的导出与软删除守卫 |
 | `kbwo/ccmanager` | 已吸收 | repo-local worktree 生命周期管理方向，当前已落成 OSM 的 clean-room `git-worktree-manager` CLI |
-| `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计思路已落进 OSM clean-room 实现 |
+| `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计与 preset catalog 思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
 | `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板、成本来源标注、本地价格目录估算与 usage timeline 已落进 OSM clean-room 实现 |
 | `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段和命中来源；MCP `list/search/get` 仍在后续计划里 |
@@ -82,7 +82,7 @@
 | BM25 / 语义搜索 / search API | 未纳入本版承诺 | 当前已实现本地加权搜索预览，但还没有后台索引和 API 暴露 |
 | 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
-| provider presets / 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回，但还没有预设编排和健康切换 |
+| 共享配置片段 / 健康探测 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回和统一 provider presets，但还没有共享片段编排和健康切换 |
 | 高级 analytics / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地价格目录估算、成本来源标注与日级 usage timeline，但还没有 model/platform breakdown、contribution graph、shareable stats 与更宽连接器覆盖 |
 | Linux 桌面实机回归 | 未纳入本版承诺 | 当前没有 Linux 环境下的 Tauri 构建与真实助手目录回归证据 |
 | 发布安装包与签名 | 未纳入本版承诺 | 目前以源码仓库与本地构建产物为主，没有 MSI / AppImage / deb / 签名流程 |
