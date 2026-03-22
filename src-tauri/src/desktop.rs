@@ -1,6 +1,7 @@
 use std::{env, path::PathBuf};
 
 use serde::Deserialize;
+use serde_json::Value;
 
 use crate::{
     actions::config_writeback::ConfigWritebackUpdate,
@@ -13,6 +14,9 @@ use crate::{
         dashboard::{
             DashboardSnapshot, IndexedSession, build_local_dashboard_snapshot_with_audit,
             build_local_indexed_sessions, find_local_config_target,
+        },
+        query::{
+            expand_session, get_session, list_sessions, search_sessions, view_session,
         },
     },
     discovery::DiscoveryContext,
@@ -29,7 +33,12 @@ pub fn run() -> Result<(), String> {
             continue_existing_session,
             soft_delete_session,
             save_dashboard_preferences,
-            write_config_artifact
+            write_config_artifact,
+            list_session_inventory,
+            search_session_inventory,
+            get_session_detail,
+            view_session_detail,
+            expand_session_detail
         ])
         .run(tauri::generate_context!())
         .map_err(|error| error.to_string())
@@ -56,6 +65,74 @@ pub async fn load_dashboard_snapshot() -> Result<DashboardSnapshot, String> {
     tauri::async_runtime::spawn_blocking(move || build_snapshot_with_runtime(&context, &paths))
         .await
         .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn list_session_inventory() -> Result<Value, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let snapshot = build_snapshot_with_runtime(&context, &paths)?;
+        Ok(list_sessions(&snapshot))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn search_session_inventory(query: String) -> Result<Value, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let snapshot = build_snapshot_with_runtime(&context, &paths)?;
+        Ok(search_sessions(&snapshot, &query))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_session_detail(session_id: String) -> Result<Value, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let snapshot = build_snapshot_with_runtime(&context, &paths)?;
+        get_session(&snapshot, &session_id)
+            .ok_or_else(|| format!("session not found: {session_id}"))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn view_session_detail(session_id: String) -> Result<Value, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let snapshot = build_snapshot_with_runtime(&context, &paths)?;
+        view_session(&snapshot, &session_id)
+            .ok_or_else(|| format!("session not found: {session_id}"))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn expand_session_detail(session_id: String) -> Result<Value, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let snapshot = build_snapshot_with_runtime(&context, &paths)?;
+        expand_session(&snapshot, &session_id)
+            .ok_or_else(|| format!("session not found: {session_id}"))
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
