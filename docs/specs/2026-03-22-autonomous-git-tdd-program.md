@@ -182,7 +182,7 @@
 | `API-02` | P1 | todo | HTTP control API | 远程控制会话和配置链路测试通过 |
 | `API-03` | P1 | done | OpenAPI 文档 | `/openapi.json` 已暴露本地 REST API 的 OpenAPI 3.1 文档，`http_api` 已校验核心路由与示例字段 |
 | `API-04` | P1 | todo | agent automation server | 任务触发与回执测试通过 |
-| `API-05` | P1 | todo | robot / json mode | CLI/HTTP 可输出稳定 JSON 结构 |
+| `API-05` | P1 | done | robot / json mode | CLI 已支持显式 `--json` 紧凑输出，HTTP 默认返回稳定 JSON，`cli_snapshot/http_api` 已覆盖 |
 | `API-06` | P1 | done | `list/search/get/view/expand` 对外接口 | Tauri command 与 CLI 已共享 `commands::query` 查询层，桌面单测与 CLI 集成测试均已覆盖 |
 | `API-07` | P2 | todo | Prometheus metrics | 指标暴露和采集测试通过 |
 | `API-08` | P0 | done | health / doctor checks | `doctor` 可发现关键环境问题 |

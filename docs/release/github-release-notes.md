@@ -143,6 +143,7 @@
 - `node scripts/git-worktree-manager.mjs` 提供 `.worktrees/` 下的 create / recycle / merge / delete
 - `npm --prefix web run browser` 提供固定端口的浏览器预览入口，适合不走桌面壳层时直接本地打开
 - `cargo run -- list/search/get/view/expand` 提供统一的终端查询入口，既能拿 JSON，也能直接看 Markdown 视图
+- CLI 现在支持显式 `--json` 机器模式，输出紧凑稳定 JSON，便于脚本和自动化消费
 - 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，并补上 `assistant` 过滤、`limit/offset` 分页和 `sortBy/descending` 排序，便于后续 Web / HTTP 壳层直接复用
 - `cargo run -- serve` 现在会启动本地只读 REST API，暴露 `health/list/search/get/view/expand`，并支持可选 Bearer token
 - `/openapi.json` 现在会返回本地 REST API 的 OpenAPI 3.1 文档，方便脚本、测试和后续外壳复用同一份契约

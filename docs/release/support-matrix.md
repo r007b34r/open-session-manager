@@ -33,7 +33,7 @@
 | Environment doctor / health checks | 已实现 | `doctor` CLI 与总览诊断面板会显示被跳过的 malformed session 文件，以及已知根目录下被静默过滤的未知 session-like 文件 |
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
 | Session index cache / incremental reindex | 已实现 | snapshot 会把索引结果落到 SQLite，按 `assistant + environment + source_path + size + modified_at` 复用缓存，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
-| Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle |
+| Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle，并支持显式 `--json` 机器模式 |
 | Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
