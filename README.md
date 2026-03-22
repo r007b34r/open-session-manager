@@ -150,6 +150,12 @@ npm --prefix web install
 npm --prefix web run dev
 ```
 
+浏览器预览：
+
+```bash
+npm --prefix web run browser
+```
+
 桌面开发：
 
 ```bash
