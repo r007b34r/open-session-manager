@@ -316,6 +316,11 @@ type Messages = {
     kicker: string;
     title: string;
     description: string;
+    pathLabels: {
+      outputPath: string;
+      quarantinedPath: string;
+      manifestPath: string;
+    };
   };
   data: {
     unknownValue: string;
@@ -695,6 +700,12 @@ const messages: Record<Language, Messages> = {
       title: "Trace every destructive operation",
       description:
         "Export, quarantine, and restore actions stay attached to an actor, timestamp, and target."
+      ,
+      pathLabels: {
+        outputPath: "Output path",
+        quarantinedPath: "Quarantine path",
+        manifestPath: "Backup manifest"
+      }
     },
     data: {
       unknownValue: "Unknown",
@@ -1090,7 +1101,12 @@ const messages: Record<Language, Messages> = {
     audit: {
       kicker: "审计中心",
       title: "追踪每一次破坏性操作",
-      description: "导出、隔离和恢复动作都绑定到操作者、时间戳和目标。"
+      description: "导出、隔离和恢复动作都绑定到操作者、时间戳和目标。",
+      pathLabels: {
+        outputPath: "输出路径",
+        quarantinedPath: "隔离路径",
+        manifestPath: "备份清单"
+      }
     },
     data: {
       unknownValue: "未知",

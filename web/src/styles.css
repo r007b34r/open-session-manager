@@ -1162,6 +1162,30 @@ a {
   font-size: 0.88rem;
 }
 
+.audit-paths {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.audit-paths div {
+  display: grid;
+  gap: 4px;
+}
+
+.audit-paths dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.audit-paths dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
 .route-shell {
   margin-top: 22px;
 }

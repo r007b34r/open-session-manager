@@ -687,7 +687,10 @@ export function recordConfigWriteback(
       createAuditEvent(
         "config_writeback",
         input.artifactId,
-        `Updated config fields for ${input.assistant}.`
+        `Updated config fields for ${input.assistant}.`,
+        {
+          manifestPath: buildConfigBackupManifestPath(current.runtime, input.artifactId)
+        }
       ),
       ...current.auditEvents
     ]
@@ -1638,6 +1641,35 @@ function shouldUseDemoData() {
 
 function buildMarkdownOutputPath(exportRoot: string, sessionId: string) {
   return `${trimTrailingSlashes(exportRoot)}/session-${safeManagedName(sessionId)}.md`;
+}
+
+function buildConfigBackupManifestPath(
+  runtime: DashboardRuntime,
+  artifactId: string
+) {
+  const backupRoot = buildConfigBackupRoot(runtime);
+  if (!backupRoot) {
+    return undefined;
+  }
+
+  return `${trimTrailingSlashes(backupRoot)}/${safeManagedName(artifactId)}/manifest.json`;
+}
+
+function buildConfigBackupRoot(runtime: DashboardRuntime) {
+  const normalizedAuditDbPath = runtime.auditDbPath.trim();
+  if (!normalizedAuditDbPath) {
+    return "";
+  }
+
+  const normalized = normalizedAuditDbPath.replace(/\\/g, "/");
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length < 3) {
+    return "";
+  }
+
+  const root = segments.slice(0, -2).join("/");
+  const drivePrefix = normalized.startsWith("/") ? "/" : "";
+  return `${drivePrefix}${root}/config-backups`;
 }
 
 function safeManagedName(value: string) {

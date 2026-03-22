@@ -91,7 +91,10 @@ pub fn write_config(request: &ConfigWritebackRequest<'_>) -> ActionResult<Config
             target_id: &before_audit.config.artifact_id,
             actor: request.actor,
             before_state: Some(audit_state_json(&before_audit)),
-            after_state: Some(audit_state_json(&after_audit)),
+            after_state: Some(audit_state_json_with_manifest(
+                &after_audit,
+                &manifest.manifest_path,
+            )),
             result: "success",
         },
     )?;
@@ -127,7 +130,10 @@ pub fn rollback_config_writeback(request: &ConfigRollbackRequest<'_>) -> ActionR
             target_id: &manifest.artifact_id,
             actor: request.actor,
             before_state: Some(audit_state_json(&before_audit)),
-            after_state: Some(audit_state_json(&after_audit)),
+            after_state: Some(audit_state_json_with_manifest(
+                &after_audit,
+                &manifest.manifest_path,
+            )),
             result: "success",
         },
     )?;
@@ -482,6 +488,22 @@ fn resolve_factory_write_path(path: &Path) -> PathBuf {
 }
 
 fn audit_state_json(audit: &AssistantConfigAudit) -> String {
+    audit_state_value(audit).to_string()
+}
+
+fn audit_state_json_with_manifest(audit: &AssistantConfigAudit, manifest_path: &Path) -> String {
+    let mut state = audit_state_value(audit);
+    if let Some(object) = state.as_object_mut() {
+        object.insert(
+            "manifest_path".to_string(),
+            Value::String(manifest_path.display().to_string()),
+        );
+    }
+
+    state.to_string()
+}
+
+fn audit_state_value(audit: &AssistantConfigAudit) -> Value {
     json!({
         "artifactId": audit.config.artifact_id,
         "assistant": audit.config.assistant,
@@ -493,5 +515,4 @@ fn audit_state_json(audit: &AssistantConfigAudit) -> String {
         "riskFlags": audit.risk_flags.iter().map(|flag| flag.code.clone()).collect::<Vec<_>>(),
         "secretCount": audit.secrets.len(),
     })
-    .to_string()
 }

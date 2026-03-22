@@ -540,8 +540,15 @@ describe("App", () => {
 
     await user.click(screen.getByRole("link", { name: "Audit" }));
 
-    expect(await screen.findByText(/config-backups/i)).toBeInTheDocument();
-    expect(screen.getByText(/manifest\.json/i)).toBeInTheDocument();
+    const configAuditCard = (await screen.findByText(
+      /updated config fields for github copilot cli/i
+    )).closest("article");
+
+    expect(configAuditCard).not.toBeNull();
+    expect(within(configAuditCard as HTMLElement).getByText(/config-backups/i)).toBeInTheDocument();
+    expect(
+      within(configAuditCard as HTMLElement).getByText(/cfg-004\/manifest\.json/i)
+    ).toBeInTheDocument();
   });
 
   it("在会话详情里展示 token 和成本细节", async () => {
