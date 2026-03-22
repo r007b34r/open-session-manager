@@ -144,6 +144,7 @@
 - `npm --prefix web run browser` 提供固定端口的浏览器预览入口，适合不走桌面壳层时直接本地打开
 - `cargo run -- list/search/get/view/expand` 提供统一的终端查询入口，既能拿 JSON，也能直接看 Markdown 视图
 - 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，并补上 `assistant` 过滤、`limit/offset` 分页和 `sortBy/descending` 排序，便于后续 Web / HTTP 壳层直接复用
+- `cargo run -- serve` 现在会启动本地只读 REST API，暴露 `health/list/search/get/view/expand`，并支持可选 Bearer token
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 
@@ -156,7 +157,7 @@
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider 健康探测和自动切换
 - 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器
-- MCP / HTTP / headless 自动化接口
+- MCP / HTTP 控制 / headless 自动化接口
 - Linux 桌面实机回归
 - 发布安装包与签名流程
 

@@ -178,7 +178,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `API-01` | P1 | todo | REST API | 集成测试覆盖分页、筛选、鉴权 |
+| `API-01` | P1 | done | REST API | 本地只读 `serve` 壳层已暴露 `health/list/search/get/view/expand`，并有分页、筛选、Bearer 鉴权集成测试覆盖 |
 | `API-02` | P1 | todo | HTTP control API | 远程控制会话和配置链路测试通过 |
 | `API-03` | P1 | todo | OpenAPI 文档 | schema 生成与示例校验通过 |
 | `API-04` | P1 | todo | agent automation server | 任务触发与回执测试通过 |
