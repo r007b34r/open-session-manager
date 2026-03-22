@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
+import type { DashboardSnapshot } from "./lib/api";
 import { LANGUAGE_STORAGE_KEY } from "./lib/i18n";
 import { THEME_STORAGE_KEY } from "./lib/theme";
 
@@ -12,6 +13,11 @@ describe("App", () => {
     window.location.hash = "";
     mockNavigatorLanguage("en-US", ["en-US"]);
     mockMatchMedia(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("renders the governance dashboard shell", async () => {
@@ -296,6 +302,77 @@ describe("App", () => {
     expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
   });
 
+  it("在总览里展示 active session cockpit，并允许刷新控制状态", async () => {
+    const user = userEvent.setup();
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildDashboardSnapshot({
+            sessions: [
+              buildDashboardSession({
+                sessionId: "ses-mon-001",
+                title: "Resume Codex rollout",
+                sessionControl: {
+                  supported: true,
+                  available: true,
+                  controller: "codex",
+                  command: "codex",
+                  attached: false,
+                  lastResponse: "READY from initial snapshot"
+                }
+              })
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          buildDashboardSnapshot({
+            sessions: [
+              buildDashboardSession({
+                sessionId: "ses-mon-001",
+                title: "Resume Codex rollout",
+                sessionControl: {
+                  supported: true,
+                  available: true,
+                  controller: "codex",
+                  command: "codex",
+                  attached: true,
+                  lastResponse: "READY from refreshed snapshot"
+                }
+              })
+            ]
+          })
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    const cockpitHeading = await screen.findByRole("heading", {
+      name: /active session cockpit/i
+    });
+    const cockpitPanel = cockpitHeading.closest("section");
+
+    expect(cockpitHeading).toBeInTheDocument();
+    expect(cockpitPanel).not.toBeNull();
+    expect(
+      within(cockpitPanel as HTMLElement).getByText(/ready from initial snapshot/i)
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /refresh cockpit/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      await within(cockpitPanel as HTMLElement).findByText(/ready from refreshed snapshot/i)
+    ).toBeInTheDocument();
+    expect(within(cockpitPanel as HTMLElement).getByText(/^attached$/i)).toBeInTheDocument();
+  });
+
   it("在首页嵌入式会话区切换详情时不应强制跳转到 sessions 路由", async () => {
     const user = userEvent.setup();
 
@@ -480,4 +557,62 @@ function mockMatchMedia(prefersDark: boolean) {
       dispatchEvent: () => false
     })
   });
+}
+
+function buildDashboardSnapshot(
+  overrides: Partial<DashboardSnapshot> = {}
+): DashboardSnapshot {
+  return {
+    metrics: [],
+    sessions: overrides.sessions ?? [],
+    configs: [],
+    doctorFindings: [],
+    auditEvents: [],
+    usageOverview: {
+      totals: {
+        sessionsWithUsage: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        reasoningTokens: 0,
+        totalTokens: 0,
+        costSource: "unknown"
+      },
+      assistants: []
+    },
+    usageTimeline: [],
+    runtime: {
+      auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
+      exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+      defaultExportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
+      exportRootSource: "default",
+      quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
+      preferencesPath:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+    },
+    ...overrides
+  };
+}
+
+function buildDashboardSession(overrides: Record<string, unknown>) {
+  return {
+    sessionId: "ses-001",
+    title: "Session",
+    assistant: "Codex",
+    progressState: "completed",
+    progressPercent: 100,
+    lastActivityAt: "2026-03-23T01:00:00.000Z",
+    environment: "Windows 11",
+    valueScore: 80,
+    summary: "Summary",
+    projectPath: "C:/Projects/osm",
+    sourcePath: "C:/Users/Max/.codex/sessions/demo.jsonl",
+    tags: [],
+    riskFlags: [],
+    keyArtifacts: [],
+    transcriptHighlights: [],
+    todoItems: [],
+    ...overrides
+  };
 }
