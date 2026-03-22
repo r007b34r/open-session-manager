@@ -48,6 +48,7 @@
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
 | Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |
+| 模型 / 平台拆分 | 已实现 | 总览 Usage 面板新增 model breakdown 和 provider/platform breakdown，可快速看出 token/cost 集中在哪些模型，以及配置主要分布在哪些 provider |
 | 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、search-as-you-type 防抖与取消、命中片段和来源标签，并可把 transcript 命中直接定位到右侧详情高亮 |
 | upstream intake pipeline | 已实现 | 支持 catalog、研究索引、发布致谢和镜像规划产物 |
 

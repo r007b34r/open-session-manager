@@ -33,6 +33,7 @@
   - `OpenClaw`
 - `Claude Code / Gemini CLI` 在上游日志未直接给出成本时，现在会按本地价格目录估算成本
 - usage 面板现在会明确标注 `reported / estimated / unknown` 成本来源，并展示日级 usage timeline
+- usage 面板新增 model breakdown 和 provider/platform breakdown，可直接看出 token/cost 集中在哪些模型，以及配置 footprint 分布在哪些 provider
 - Sessions 搜索现在会做本地 BM25 风格 lexical 排序，并补上 search-as-you-type 防抖、取消旧查询、命中片段和命中来源标签；transcript 命中会直接定位到右侧详情高亮
 - Sessions 页面新增高级筛选器，可按 assistant / project / risk / export / control 组合收窄会话队列，快速找出该导出、该隔离或可直接恢复的会话
 - 导出目录设置、导出后路径显示、语言切换、主题切换继续保留
@@ -112,6 +113,7 @@
 - `Codex / Claude Code` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 本地价格目录估算、`reported / estimated / unknown` 成本来源，以及 overview 日级 usage timeline
+- 总览里的 model breakdown 与 provider/platform breakdown
 - 会话标题、摘要、进度、价值分、风险标记、最后活跃时间
 - transcript highlights 与 Claude todo snapshot
 - Sessions 页加权搜索、search-as-you-type 防抖与取消、命中片段、来源标签和 transcript 命中高亮

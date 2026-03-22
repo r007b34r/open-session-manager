@@ -328,6 +328,12 @@ describe("App", () => {
 
     expect(openCodeCard).not.toBeNull();
     expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText(/model breakdown/i)).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText(/platform breakdown/i)).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/claude-sonnet-4/i)
+    ).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText("openrouter")).toBeInTheDocument();
   });
 
   it("在总览里展示 active session cockpit，并允许刷新控制状态", async () => {
