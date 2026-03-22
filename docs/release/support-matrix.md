@@ -44,6 +44,7 @@
 | 浅色 / 深色 / 跟随系统主题 | 已实现 | 支持手动覆盖并持久化主题选择 |
 | Markdown 导出目录设置 | 已实现 | 可在界面里修改导出目录，并显示当前落盘路径 |
 | 会话列表辨识度增强 | 已实现 | 列表显示会话 ID，便于区分相近标题 |
+| 高级会话筛选 | 已实现 | Sessions 页面支持按 assistant / project / risk / export / control 组合筛选，快速定位可清理、已导出或可控制的会话 |
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
 | Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |

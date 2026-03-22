@@ -218,6 +218,30 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("支持按助手和风险组合筛选会话", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /assistant/i }),
+      "Claude Code"
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /risk/i }),
+      "at-risk"
+    );
+
+    expect(
+      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /refactor wsl collector handshake/i })
+    ).not.toBeInTheDocument();
+  });
+
   it("搜索结果在列表里显示命中片段和来源标签", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/sessions";
