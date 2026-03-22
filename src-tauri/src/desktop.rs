@@ -250,13 +250,28 @@ fn resolve_actor() -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::future::Future;
+    use std::{
+        env, fs,
+        future::Future,
+        path::{Path, PathBuf},
+        sync::{
+            Mutex, OnceLock,
+            atomic::{AtomicU64, Ordering},
+        },
+    };
+
+    use serde_json::Value;
 
     use super::{
-        ConfigWritebackPayload, continue_existing_session, export_session_markdown,
+        ConfigWritebackPayload, continue_existing_session, expand_session_detail,
+        export_session_markdown, get_session_detail, list_session_inventory,
         load_dashboard_snapshot, resume_existing_session, save_dashboard_preferences,
-        soft_delete_session, write_config_artifact,
+        search_session_inventory, soft_delete_session, view_session_detail,
+        write_config_artifact,
     };
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     #[test]
     fn desktop_commands_are_async_futures() {
@@ -283,6 +298,21 @@ mod tests {
         let save = save_dashboard_preferences(Some("D:/OSM/exports".to_string()));
         assert_future(&save);
 
+        let list = list_session_inventory();
+        assert_future(&list);
+
+        let search = search_session_inventory("Claude".to_string());
+        assert_future(&search);
+
+        let get = get_session_detail("claude-ses-1".to_string());
+        assert_future(&get);
+
+        let view = view_session_detail("claude-ses-1".to_string());
+        assert_future(&view);
+
+        let expand = expand_session_detail("claude-ses-1".to_string());
+        assert_future(&expand);
+
         let write = write_config_artifact(ConfigWritebackPayload {
             artifact_id: "cfg-004".to_string(),
             assistant: "github-copilot-cli".to_string(),
@@ -294,5 +324,151 @@ mod tests {
             secret: Some("ghu_new_secret_123454321".to_string()),
         });
         assert_future(&write);
+    }
+
+    #[test]
+    fn desktop_query_commands_surface_shared_session_payloads() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+
+        seed_session_fixture(
+            &home_dir
+                .join(".codex")
+                .join("sessions")
+                .join("2026")
+                .join("03")
+                .join("15")
+                .join("rollout-2026-03-15.jsonl"),
+            "codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+        );
+        seed_session_fixture(
+            &home_dir
+                .join(".claude")
+                .join("projects")
+                .join("C--Projects-Claude-Demo")
+                .join("claude-ses-1.jsonl"),
+            "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+        );
+        seed_session_fixture(
+            &home_dir.join(".claude").join("settings.json"),
+            "configs/claude/settings.json",
+        );
+
+        with_home_dir(&home_dir, || {
+            tauri::async_runtime::block_on(async {
+                let list = list_session_inventory().await.expect("list query command");
+                let search = search_session_inventory("Claude".to_string())
+                    .await
+                    .expect("search query command");
+                let get = get_session_detail("claude-ses-1".to_string())
+                    .await
+                    .expect("get query command");
+                let view = view_session_detail("claude-ses-1".to_string())
+                    .await
+                    .expect("view query command");
+                let expand = expand_session_detail("claude-ses-1".to_string())
+                    .await
+                    .expect("expand query command");
+
+                assert_eq!(
+                    list.get("sessions")
+                        .and_then(Value::as_array)
+                        .map(Vec::len),
+                    Some(2)
+                );
+                assert_eq!(
+                    search
+                        .get("hits")
+                        .and_then(Value::as_array)
+                        .and_then(|hits| hits.first())
+                        .and_then(|hit| hit.get("sessionId"))
+                        .and_then(Value::as_str),
+                    Some("claude-ses-1")
+                );
+                assert_eq!(
+                    get.get("assistant").and_then(Value::as_str),
+                    Some("claude-code")
+                );
+                assert!(
+                    view.get("content")
+                        .and_then(Value::as_str)
+                        .is_some_and(|content| content.contains("# 扫描 Claude transcripts"))
+                );
+                assert!(
+                    expand
+                        .get("relatedConfigs")
+                        .and_then(Value::as_array)
+                        .is_some_and(|configs| {
+                            configs.iter().any(|config| {
+                                config.get("assistant").and_then(Value::as_str)
+                                    == Some("claude-code")
+                            })
+                        })
+                );
+            })
+        });
+    }
+
+    fn fixtures_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures")
+            .canonicalize()
+            .expect("fixtures root resolves")
+    }
+
+    fn temp_root() -> PathBuf {
+        let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "open-session-manager-desktop-tests-{}-{suffix}",
+            std::process::id(),
+        ));
+
+        if root.exists() {
+            fs::remove_dir_all(&root).expect("reset temp root");
+        }
+
+        fs::create_dir_all(&root).expect("create temp root");
+        root
+    }
+
+    fn seed_session_fixture(target: &Path, fixture_relative: &str) {
+        fs::create_dir_all(target.parent().expect("target parent")).expect("create target dir");
+        fs::copy(fixtures_root().join(fixture_relative), target).expect("copy fixture");
+    }
+
+    fn with_home_dir<T>(home_dir: &Path, action: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock env guard");
+
+        let original_home = env::var_os("HOME");
+        let original_userprofile = env::var_os("USERPROFILE");
+
+        unsafe {
+            env::set_var("HOME", home_dir);
+            env::set_var("USERPROFILE", home_dir);
+        }
+
+        let result = action();
+
+        match original_home {
+            Some(value) => unsafe {
+                env::set_var("HOME", value);
+            },
+            None => unsafe {
+                env::remove_var("HOME");
+            },
+        }
+        match original_userprofile {
+            Some(value) => unsafe {
+                env::set_var("USERPROFILE", value);
+            },
+            None => unsafe {
+                env::remove_var("USERPROFILE");
+            },
+        }
+
+        result
     }
 }
