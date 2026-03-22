@@ -71,6 +71,28 @@ type Messages = {
       assistant: string;
       sessionCount: string;
     };
+    cockpit: {
+      kicker: string;
+      title: string;
+      description: string;
+      empty: string;
+      noRecentResponse: string;
+      actions: {
+        refresh: string;
+        refreshing: string;
+      };
+      fields: {
+        command: string;
+        lastSeen: string;
+        lastResponse: string;
+        lastError: string;
+      };
+      statuses: {
+        attached: string;
+        ready: string;
+        unavailable: string;
+      };
+    };
   };
   sessions: {
     searchLabel: string;
@@ -314,6 +336,29 @@ const messages: Record<Language, Messages> = {
         cacheRead: "Cache read",
         assistant: "Assistant",
         sessionCount: "Sessions"
+      },
+      cockpit: {
+        kicker: "Active Control",
+        title: "Active session cockpit",
+        description:
+          "Watch the assistants that can be resumed locally, along with their latest control response and runtime status.",
+        empty: "No controllable sessions are available in the current snapshot.",
+        noRecentResponse: "No recent control response",
+        actions: {
+          refresh: "Refresh cockpit",
+          refreshing: "Refreshing cockpit"
+        },
+        fields: {
+          command: "Command",
+          lastSeen: "Last seen",
+          lastResponse: "Last response",
+          lastError: "Last error"
+        },
+        statuses: {
+          attached: "Attached",
+          ready: "Ready",
+          unavailable: "Unavailable"
+        }
       }
     },
     sessions: {
@@ -613,6 +658,28 @@ const messages: Record<Language, Messages> = {
         cacheRead: "缓存读取",
         assistant: "助手",
         sessionCount: "会话数"
+      },
+      cockpit: {
+        kicker: "活跃控制",
+        title: "活跃会话总览",
+        description: "把当前可恢复的助手会话、最近控制结果和运行时状态集中放到首页查看。",
+        empty: "当前快照里没有可直接控制的会话。",
+        noRecentResponse: "还没有最近一次控制响应",
+        actions: {
+          refresh: "刷新总览",
+          refreshing: "正在刷新总览"
+        },
+        fields: {
+          command: "命令",
+          lastSeen: "最近时间",
+          lastResponse: "最近响应",
+          lastError: "最近错误"
+        },
+        statuses: {
+          attached: "已附着",
+          ready: "可恢复",
+          unavailable: "不可用"
+        }
       }
     },
     sessions: {

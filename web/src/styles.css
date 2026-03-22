@@ -195,6 +195,10 @@ a {
   margin-top: 22px;
 }
 
+.cockpit-panel {
+  margin-top: 22px;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -453,6 +457,39 @@ a {
 .adoption-column h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.cockpit-actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cockpit-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.cockpit-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 242, 231, 0.94));
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 22px;
+  display: grid;
+  gap: 0.9rem;
+  padding: 18px;
+}
+
+.cockpit-copy-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cockpit-copy-stack p {
+  color: var(--muted);
+  margin: 0;
 }
 
 .table-shell {
@@ -1017,6 +1054,10 @@ a {
   .language-switcher,
   .theme-switcher {
     justify-self: start;
+  }
+
+  .cockpit-actions {
+    align-items: flex-start;
   }
 }
 

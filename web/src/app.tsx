@@ -36,6 +36,7 @@ import { SessionsRoute } from "./routes/sessions";
 
 export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [themePreference, setThemePreference] = useState<ThemePreference>(() =>
     getInitialThemePreference()
@@ -46,22 +47,42 @@ export function App() {
   );
   const copy = getMessages(language);
 
-  useEffect(() => {
+  const loadSnapshot = (options: { refresh: boolean }) => {
     let cancelled = false;
 
-    void fetchDashboardSnapshot().then((data) => {
-      if (cancelled) {
-        return;
-      }
-
+    if (options.refresh) {
       startTransition(() => {
-        setSnapshot(data);
+        setIsRefreshingSnapshot(true);
       });
-    });
+    }
+
+    void fetchDashboardSnapshot()
+      .then((data) => {
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setSnapshot(data);
+        });
+      })
+      .finally(() => {
+        if (cancelled || !options.refresh) {
+          return;
+        }
+
+        startTransition(() => {
+          setIsRefreshingSnapshot(false);
+        });
+      });
 
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    return loadSnapshot({ refresh: false });
   }, []);
 
   useEffect(() => {
@@ -207,6 +228,10 @@ export function App() {
     });
   };
 
+  const handleRefreshSnapshot = () => {
+    loadSnapshot({ refresh: true });
+  };
+
   const handleSelectSession = (sessionId: string) => {
     startTransition(() => {
       setSelectedSessionId(sessionId);
@@ -248,7 +273,9 @@ export function App() {
               handleSessionContinue,
               handleSoftDelete,
               handleSaveConfig,
-              handleAuditEvent
+              handleAuditEvent,
+              handleRefreshSnapshot,
+              isRefreshingSnapshot
             )
           ) : (
             <section className="panel empty-state">
@@ -275,7 +302,9 @@ function renderRoute(
   onContinueSession: (sessionId: string, prompt: string) => void,
   onSoftDelete: (sessionId: string) => void,
   onSaveConfig: (input: ConfigWritebackInput) => void,
-  onAuditEvent: (input: LocalAuditEventInput) => void
+  onAuditEvent: (input: LocalAuditEventInput) => void,
+  onRefreshSnapshot: () => void,
+  isRefreshingSnapshot: boolean
 ) {
   const canEditConfigs = isConfigWritebackAvailable();
   const exportedSessionIds = new Set(
@@ -321,7 +350,11 @@ function renderRoute(
 
   return (
     <>
-      <OverviewRoute snapshot={snapshot} />
+      <OverviewRoute
+        isRefreshing={isRefreshingSnapshot}
+        onRefreshSnapshot={onRefreshSnapshot}
+        snapshot={snapshot}
+      />
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         latestMarkdownExportPaths={latestMarkdownExportPaths}

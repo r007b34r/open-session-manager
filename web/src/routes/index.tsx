@@ -1,3 +1,4 @@
+import { ActiveSessionCockpit } from "../components/active-session-cockpit";
 import { DoctorPanel } from "../components/doctor-panel";
 import type { DashboardSnapshot } from "../lib/api";
 import { UsagePanel } from "../components/usage-panel";
@@ -5,9 +6,15 @@ import { useI18n } from "../lib/i18n";
 
 type OverviewRouteProps = {
   snapshot: DashboardSnapshot;
+  isRefreshing: boolean;
+  onRefreshSnapshot: () => void;
 };
 
-export function OverviewRoute({ snapshot }: OverviewRouteProps) {
+export function OverviewRoute({
+  snapshot,
+  isRefreshing,
+  onRefreshSnapshot
+}: OverviewRouteProps) {
   const { copy, language, translateMetricLabel, translateMetricNote } = useI18n();
   const adoptedUpstreams =
     language === "zh-CN"
@@ -83,6 +90,12 @@ export function OverviewRoute({ snapshot }: OverviewRouteProps) {
       <UsagePanel
         usageOverview={snapshot.usageOverview}
         usageTimeline={snapshot.usageTimeline}
+      />
+
+      <ActiveSessionCockpit
+        isRefreshing={isRefreshing}
+        onRefresh={onRefreshSnapshot}
+        sessions={snapshot.sessions}
       />
 
       <section className="panel adoption-panel">
