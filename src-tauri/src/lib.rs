@@ -7,6 +7,7 @@ pub mod desktop;
 pub mod discovery;
 pub mod domain;
 pub mod insights;
+pub mod mcp_server;
 pub mod openapi;
 pub mod preferences;
 pub mod session_text;

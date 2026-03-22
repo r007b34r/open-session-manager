@@ -8,6 +8,7 @@ use open_session_manager_core::{
         build_local_dashboard_snapshot_with_audit, build_local_doctor_report,
     },
     api_server,
+    mcp_server,
     commands::query::{expand_session, get_session, list_sessions, search_sessions, view_session},
     desktop,
     discovery::DiscoveryContext,
@@ -96,6 +97,13 @@ fn main() -> ExitCode {
             }
         },
         Some("serve") => match api_server::run(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("mcp") => match mcp_server::run(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("{error}");
