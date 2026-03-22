@@ -183,7 +183,7 @@
 | `API-03` | P1 | todo | OpenAPI 文档 | schema 生成与示例校验通过 |
 | `API-04` | P1 | todo | agent automation server | 任务触发与回执测试通过 |
 | `API-05` | P1 | todo | robot / json mode | CLI/HTTP 可输出稳定 JSON 结构 |
-| `API-06` | P1 | todo | `list/search/get/view/expand` 对外接口 | API 与 CLI 能共享同一查询层 |
+| `API-06` | P1 | done | `list/search/get/view/expand` 对外接口 | Tauri command 与 CLI 已共享 `commands::query` 查询层，桌面单测与 CLI 集成测试均已覆盖 |
 | `API-07` | P2 | todo | Prometheus metrics | 指标暴露和采集测试通过 |
 | `API-08` | P0 | done | health / doctor checks | `doctor` 可发现关键环境问题 |
 | `API-09` | P1 | todo | 远程壳层鉴权 | token/JWT 或本地授权测试通过 |

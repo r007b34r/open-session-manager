@@ -36,6 +36,7 @@
 - usage 面板新增 model breakdown 和 provider/platform breakdown，可直接看出 token/cost 集中在哪些模型，以及配置 footprint 分布在哪些 provider
 - Sessions 搜索现在会做本地 BM25 风格 lexical 排序，并补上 search-as-you-type 防抖、取消旧查询、命中片段和命中来源标签；transcript 命中会直接定位到右侧详情高亮
 - Rust CLI 现在新增统一的 `list / search / get / view / expand` 五类命令，不再只能对着整个 snapshot JSON 自己筛
+- 桌面端现在也暴露同名 Tauri command，CLI 和桌面 API 共用同一套 Rust 查询层，不再各算各的
 - Sessions 页面新增高级筛选器，可按 assistant / project / risk / export / control 组合收窄会话队列，快速找出该导出、该隔离或可直接恢复的会话
 - 配置写回前新增 masked diff 审查流和风险提示，必须显式确认后才会落盘；会话移入隔离区前也新增 cleanup 审查确认
 - `DiffViewer` 现在有独立组件测试和空状态提示，不再只是配置审查流里的隐含实现
@@ -142,6 +143,7 @@
 - `node scripts/git-worktree-manager.mjs` 提供 `.worktrees/` 下的 create / recycle / merge / delete
 - `npm --prefix web run browser` 提供固定端口的浏览器预览入口，适合不走桌面壳层时直接本地打开
 - `cargo run -- list/search/get/view/expand` 提供统一的终端查询入口，既能拿 JSON，也能直接看 Markdown 视图
+- 桌面端 Tauri command 同步暴露 `list/search/get/view/expand`，便于后续 Web / HTTP 壳层直接复用
 - Tauri 桌面运行时与浏览器 fallback
 - upstream intake pipeline、研究索引与开源致谢
 

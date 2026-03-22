@@ -34,6 +34,7 @@
 | Metadata repair / self-healing | 已实现 | `Claude Code` 历史 JSONL 缺失 `sessionId` 时会优先尝试按 UUID 文件名恢复，无法恢复的才进入 `doctor` 诊断 |
 | Session index cache / incremental reindex | 已实现 | snapshot 会把索引结果落到 SQLite，按 `assistant + environment + source_path + size + modified_at` 复用缓存，并记录 `cache_hits / cache_misses / reindexed_files / stale_deleted` |
 | Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle |
+| Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层 |
 | Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
 | One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
 | Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
