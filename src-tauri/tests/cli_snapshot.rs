@@ -32,14 +32,7 @@ fn fixtures_root() -> PathBuf {
 
 #[test]
 fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
-    let output = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"))
-        .args([
-            "snapshot",
-            "--fixtures",
-            fixtures_root().to_str().expect("fixtures path as str"),
-        ])
-        .output()
-        .expect("snapshot command runs");
+    let output = run_fixture_command(["snapshot"]);
 
     assert!(
         output.status.success(),
@@ -202,6 +195,203 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
     assert_eq!(
         timeline_2026.get("costSource").and_then(Value::as_str),
         Some("unknown")
+    );
+}
+
+#[test]
+fn list_command_emits_session_inventory() {
+    let output = run_fixture_command(["list"]);
+
+    assert!(
+        output.status.success(),
+        "list command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let payload: Value = serde_json::from_slice(&output.stdout).expect("list command prints json");
+    let sessions = payload
+        .get("sessions")
+        .and_then(Value::as_array)
+        .expect("sessions array exists");
+
+    assert_eq!(sessions.len(), 8);
+    assert_eq!(
+        sessions[0]
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "codex-ses-1"
+    );
+    assert_eq!(
+        sessions[1]
+            .get("title")
+            .and_then(Value::as_str)
+            .expect("title exists"),
+        "扫描 Claude transcripts"
+    );
+}
+
+#[test]
+fn search_command_returns_ranked_hits() {
+    let output = run_fixture_command(["search", "--query", "Claude"]);
+
+    assert!(
+        output.status.success(),
+        "search command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let payload: Value =
+        serde_json::from_slice(&output.stdout).expect("search command prints json");
+    let hits = payload
+        .get("hits")
+        .and_then(Value::as_array)
+        .expect("hits array exists");
+
+    assert_eq!(
+        payload
+            .get("query")
+            .and_then(Value::as_str)
+            .expect("query exists"),
+        "Claude"
+    );
+    assert!(
+        hits.len() >= 2,
+        "expected at least two Claude-related hits, got {hits:?}"
+    );
+    assert_eq!(
+        hits[0]
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "claude-ses-1"
+    );
+    assert!(
+        hits[0]
+            .get("snippet")
+            .and_then(Value::as_str)
+            .is_some_and(|snippet| snippet.contains("Claude")),
+        "top hit should preserve a readable snippet"
+    );
+    assert!(
+        hits[0]
+            .get("matchReasons")
+            .and_then(Value::as_array)
+            .is_some_and(|reasons| reasons.iter().any(|reason| reason.as_str() == Some("title"))),
+        "top hit should explain that the title matched"
+    );
+}
+
+#[test]
+fn get_command_returns_full_session_detail() {
+    let output = run_fixture_command(["get", "--session", "claude-ses-1"]);
+
+    assert!(
+        output.status.success(),
+        "get command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let session: Value =
+        serde_json::from_slice(&output.stdout).expect("get command prints json");
+
+    assert_eq!(
+        session
+            .get("assistant")
+            .and_then(Value::as_str)
+            .expect("assistant exists"),
+        "claude-code"
+    );
+    assert_eq!(
+        session
+            .get("summary")
+            .and_then(Value::as_str)
+            .expect("summary exists"),
+        "已定位项目目录并准备索引。"
+    );
+    assert_eq!(
+        session
+            .get("todoItems")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(2)
+    );
+}
+
+#[test]
+fn view_command_renders_markdown_summary() {
+    let output = run_fixture_command(["view", "--session", "claude-ses-1"]);
+
+    assert!(
+        output.status.success(),
+        "view command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let payload: Value =
+        serde_json::from_slice(&output.stdout).expect("view command prints json");
+    let content = payload
+        .get("content")
+        .and_then(Value::as_str)
+        .expect("markdown content exists");
+
+    assert_eq!(
+        payload
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "claude-ses-1"
+    );
+    assert!(content.contains("# 扫描 Claude transcripts"));
+    assert!(content.contains("## Summary"));
+    assert!(content.contains("## Open Todos"));
+}
+
+#[test]
+fn expand_command_returns_context_bundle() {
+    let output = run_fixture_command(["expand", "--session", "claude-ses-1"]);
+
+    assert!(
+        output.status.success(),
+        "expand command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let payload: Value =
+        serde_json::from_slice(&output.stdout).expect("expand command prints json");
+
+    assert_eq!(
+        payload
+            .get("session")
+            .and_then(|session| session.get("sessionId"))
+            .and_then(Value::as_str)
+            .expect("session id exists"),
+        "claude-ses-1"
+    );
+    assert!(
+        payload
+            .get("relatedConfigs")
+            .and_then(Value::as_array)
+            .is_some_and(|configs| {
+                configs.iter().any(|config| {
+                    config.get("assistant").and_then(Value::as_str) == Some("claude-code")
+                })
+            }),
+        "expand should surface related config context"
+    );
+    assert_eq!(
+        payload
+            .get("transcriptHighlights")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(2)
+    );
+    assert_eq!(
+        payload
+            .get("todoItems")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(2)
     );
 }
 
@@ -642,4 +832,17 @@ fn write_fake_codex_executable(bin_dir: &std::path::Path) {
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
             .expect("chmod fake codex");
     }
+}
+
+fn run_fixture_command<const N: usize>(args: [&str; N]) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"));
+    let fixtures_root = fixtures_root();
+
+    command.args(args);
+    command.args([
+        "--fixtures",
+        fixtures_root.to_str().expect("fixtures path as str"),
+    ]);
+
+    command.output().expect("fixture command runs")
 }
