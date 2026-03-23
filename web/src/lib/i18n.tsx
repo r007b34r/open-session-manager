@@ -106,6 +106,10 @@ type Messages = {
       statuses: {
         attached: string;
         ready: string;
+        busy: string;
+        waiting: string;
+        idle: string;
+        detached: string;
         unavailable: string;
       };
     };
@@ -202,6 +206,8 @@ type Messages = {
       exportMarkdown: string;
       moveToQuarantine: string;
       resumeSession: string;
+      attachSession: string;
+      detachSession: string;
       continueSession: string;
     };
     sections: {
@@ -246,6 +252,10 @@ type Messages = {
     statuses: {
       attached: string;
       detached: string;
+      busy: string;
+      waiting: string;
+      idle: string;
+      unavailable: string;
       searchHit: string;
     };
     cleanupReview: {
@@ -506,6 +516,10 @@ const messages: Record<Language, Messages> = {
         statuses: {
           attached: "Attached",
           ready: "Ready",
+          busy: "Busy",
+          waiting: "Waiting",
+          idle: "Idle",
+          detached: "Detached",
           unavailable: "Unavailable",
         },
       },
@@ -623,6 +637,8 @@ const messages: Record<Language, Messages> = {
         exportMarkdown: "Export Markdown",
         moveToQuarantine: "Move to Quarantine",
         resumeSession: "Resume Session",
+        attachSession: "Attach Session",
+        detachSession: "Detach Session",
         continueSession: "Continue Session",
       },
       sections: {
@@ -667,6 +683,10 @@ const messages: Record<Language, Messages> = {
       statuses: {
         attached: "Attached",
         detached: "Detached",
+        busy: "Busy",
+        waiting: "Waiting",
+        idle: "Idle",
+        unavailable: "Unavailable",
         searchHit: "Search hit",
       },
       cleanupReview: {
@@ -885,8 +905,10 @@ const messages: Record<Language, Messages> = {
         config_snippet_apply: "Config snippet applied",
         config_snippet_export: "Config snippet exported",
         config_snippet_import: "Config snippet imported",
+        session_attach: "session_attach",
         session_resume: "session_resume",
         session_continue: "session_continue",
+        session_detach: "session_detach",
       },
       auditResults: {
         success: "success",
@@ -992,6 +1014,10 @@ const messages: Record<Language, Messages> = {
         statuses: {
           attached: "已附着",
           ready: "可恢复",
+          busy: "忙碌中",
+          waiting: "等待下一步",
+          idle: "空闲",
+          detached: "未附着",
           unavailable: "不可用",
         },
       },
@@ -1103,6 +1129,8 @@ const messages: Record<Language, Messages> = {
         exportMarkdown: "导出为 Markdown",
         moveToQuarantine: "移入隔离区",
         resumeSession: "恢复会话",
+        attachSession: "附着会话",
+        detachSession: "分离会话",
         continueSession: "继续运行",
       },
       sections: {
@@ -1147,6 +1175,10 @@ const messages: Record<Language, Messages> = {
       statuses: {
         attached: "已附着",
         detached: "未附着",
+        busy: "忙碌中",
+        waiting: "等待下一步",
+        idle: "空闲",
+        unavailable: "不可用",
         searchHit: "搜索命中",
       },
       cleanupReview: {
@@ -1355,8 +1387,10 @@ const messages: Record<Language, Messages> = {
         config_snippet_apply: "配置片段已应用",
         config_snippet_export: "配置片段已导出",
         config_snippet_import: "配置片段已导入",
+        session_attach: "附着会话",
         session_resume: "恢复会话",
         session_continue: "继续运行",
+        session_detach: "分离会话",
       },
       auditResults: {
         success: "成功",

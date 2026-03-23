@@ -89,7 +89,7 @@
 | `SES-01` | P1 | todo | 启动新会话 | UI 或 CLI 可启动受支持助手的新会话，集成测试通过 |
 | `SES-02` | P0 | partial | 恢复既有会话 | 当前已支持 `Codex / Claude Code` 真实 resume，snapshot 和 UI 可观测最近结果；其余助手待补控制适配器 |
 | `SES-03` | P0 | partial | 继续运行中的会话 | 当前已支持 `Codex / Claude Code` continue prompt 并落审计；统一 attach / detach 仍未完成 |
-| `SES-04` | P0 | todo | attach / detach | 会话控制测试覆盖附着与分离 |
+| `SES-04` | P0 | done | attach / detach | 会话控制测试覆盖附着与分离 |
 | `SES-05` | P1 | todo | pause / resume | 生命周期状态测试通过 |
 | `SES-06` | P1 | todo | session process control | 能读取并展示进程状态、退出码与运行时长 |
 | `SES-07` | P0 | partial | one-click resume | Web 详情页已接恢复按钮、继续提示和最近控制结果；真实执行目前只覆盖 `Codex / Claude Code` |
@@ -102,7 +102,7 @@
 | --- | --- | --- | --- | --- |
 | `MON-01` | P0 | done | active session cockpit | 总览页已展示可控会话、最近控制结果和刷新动作，并有 Web / E2E 测试覆盖刷新后的状态更新 |
 | `MON-02` | P1 | todo | live HUD | 实时面板测试覆盖 token、事件、进度更新 |
-| `MON-03` | P0 | todo | busy / waiting / idle 状态识别 | 适配器状态机测试通过 |
+| `MON-03` | P0 | done | busy / waiting / idle 状态识别 | 适配器状态机测试通过 |
 | `MON-04` | P1 | todo | live TODO / project monitor | TODO 变化触发 UI 刷新和审计事件 |
 | `MON-05` | P1 | todo | SSE / WebSocket 实时事件 | 前后端流式测试通过 |
 | `MON-06` | P1 | todo | running session diagnostics | 异常会话诊断卡片和日志导出测试通过 |

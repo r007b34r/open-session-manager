@@ -8,7 +8,9 @@ type SessionDetailProps = {
   session?: SessionDetailRecord;
   canSoftDelete?: boolean;
   exportPath?: string;
+  onAttachSession?: (sessionId: string) => void;
   onContinueSession?: (sessionId: string, prompt: string) => void;
+  onDetachSession?: (sessionId: string) => void;
   onExportMarkdown?: (sessionId: string) => void;
   onResumeSession?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
@@ -22,7 +24,9 @@ export function SessionDetail({
   session,
   canSoftDelete = false,
   exportPath,
+  onAttachSession,
   onContinueSession,
+  onDetachSession,
   onExportMarkdown,
   onResumeSession,
   onSoftDelete,
@@ -55,6 +59,13 @@ export function SessionDetail({
   const ruleArtifact = buildRuleArtifact(session);
   const skillArtifact = buildSkillArtifact(session);
   const activeArtifact = liftView === "rule" ? ruleArtifact : skillArtifact;
+  const sessionControl = session.sessionControl;
+  const runtimeStatus = translateSessionControlStatus(copy.sessionDetail.statuses, sessionControl);
+  const canContinue =
+    Boolean(onContinueSession) &&
+    Boolean(sessionControl?.available) &&
+    Boolean(sessionControl?.attached) &&
+    continuePrompt.trim().length > 0;
 
   return (
     <section className="panel detail-panel">
@@ -120,7 +131,7 @@ export function SessionDetail({
           {copy.sessionDetail.actions.moveToQuarantine}
         </button>
       </div>
-      {session.sessionControl?.supported && !session.sessionControl.available ? (
+      {sessionControl?.supported && !sessionControl.available ? (
         <p className="action-hint">{copy.sessionDetail.controlUnavailable}</p>
       ) : null}
       {!canSoftDelete ? (
@@ -180,29 +191,26 @@ export function SessionDetail({
       <div className="detail-card-grid">
         <section className="detail-card">
           <h3>{copy.sessionDetail.sections.sessionControl}</h3>
-          {session.sessionControl ? (
+          {sessionControl ? (
             <div className="detail-control-stack">
               <ul className="detail-list">
                 <li>
-                  {copy.sessionDetail.fields.controller}: {session.sessionControl.controller}
+                  {copy.sessionDetail.fields.controller}: {sessionControl.controller}
                 </li>
                 <li>
                   {copy.sessionDetail.fields.command}:{" "}
-                  {session.sessionControl.command || unknownValue}
+                  {sessionControl.command || unknownValue}
                 </li>
                 <li>
-                  {copy.sessionDetail.fields.controlStatus}:{" "}
-                  {session.sessionControl.attached
-                    ? copy.sessionDetail.statuses.attached
-                    : copy.sessionDetail.statuses.detached}
+                  {copy.sessionDetail.fields.controlStatus}: {runtimeStatus}
                 </li>
                 <li>
                   {copy.sessionDetail.fields.lastResumeAt}:{" "}
-                  {session.sessionControl.lastResumedAt ?? unknownValue}
+                  {sessionControl.lastResumedAt ?? unknownValue}
                 </li>
                 <li>
                   {copy.sessionDetail.fields.lastContinueAt}:{" "}
-                  {session.sessionControl.lastContinuedAt ?? unknownValue}
+                  {sessionControl.lastContinuedAt ?? unknownValue}
                 </li>
               </ul>
               <label className="search-label" htmlFor="session-continue-prompt">
@@ -216,13 +224,29 @@ export function SessionDetail({
                 value={continuePrompt}
               />
               <div className="action-row">
+                {!sessionControl.attached ? (
+                  <button
+                    className="action-button action-button-secondary"
+                    disabled={!onAttachSession || !sessionControl.available}
+                    onClick={() => onAttachSession?.(session.sessionId)}
+                    type="button"
+                  >
+                    {copy.sessionDetail.actions.attachSession}
+                  </button>
+                ) : null}
+                {sessionControl.attached ? (
+                  <button
+                    className="action-button"
+                    disabled={!onDetachSession || !sessionControl.available}
+                    onClick={() => onDetachSession?.(session.sessionId)}
+                    type="button"
+                  >
+                    {copy.sessionDetail.actions.detachSession}
+                  </button>
+                ) : null}
                 <button
                   className="action-button action-button-secondary"
-                  disabled={
-                    !onContinueSession ||
-                    !session.sessionControl.available ||
-                    continuePrompt.trim().length === 0
-                  }
+                  disabled={!canContinue}
                   onClick={() => {
                     const trimmed = continuePrompt.trim();
                     if (!trimmed) {
@@ -236,21 +260,21 @@ export function SessionDetail({
                   {copy.sessionDetail.actions.continueSession}
                 </button>
               </div>
-              {session.sessionControl.lastPrompt ? (
+              {sessionControl.lastPrompt ? (
                 <p className="action-success">
                   {copy.sessionDetail.fields.lastPrompt}:{" "}
-                  <span>{session.sessionControl.lastPrompt}</span>
+                  <span>{sessionControl.lastPrompt}</span>
                 </p>
               ) : null}
-              {session.sessionControl.lastResponse ? (
+              {sessionControl.lastResponse ? (
                 <p className="action-success">
                   {copy.sessionDetail.fields.lastResponse}:{" "}
-                  <span>{session.sessionControl.lastResponse}</span>
+                  <span>{sessionControl.lastResponse}</span>
                 </p>
               ) : null}
-              {session.sessionControl.lastError ? (
+              {sessionControl.lastError ? (
                 <p className="action-hint">
-                  {copy.sessionDetail.fields.lastError}: {session.sessionControl.lastError}
+                  {copy.sessionDetail.fields.lastError}: {sessionControl.lastError}
                 </p>
               ) : null}
             </div>
@@ -519,4 +543,42 @@ function highlightSearchTerms(text: string, terms: string[]) {
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function translateSessionControlStatus(
+  statuses: {
+    attached: string;
+    detached: string;
+    busy: string;
+    waiting: string;
+    idle: string;
+    unavailable: string;
+    searchHit: string;
+  },
+  control?: SessionDetailRecord["sessionControl"]
+) {
+  if (!control) {
+    return statuses.unavailable;
+  }
+
+  switch (control.runtimeState) {
+    case "busy":
+      return statuses.busy;
+    case "waiting":
+      return statuses.waiting;
+    case "idle":
+      return statuses.idle;
+    case "detached":
+      return statuses.detached;
+    case "unavailable":
+      return statuses.unavailable;
+    default:
+      break;
+  }
+
+  if (!control.available) {
+    return statuses.unavailable;
+  }
+
+  return control.attached ? statuses.attached : statuses.detached;
 }

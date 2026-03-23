@@ -12,6 +12,7 @@ import {
   applyGitProjectCommit,
   applyGitProjectPush,
   applyMarkdownExport,
+  recordSessionContinue,
   applySoftDelete,
   fetchDashboardSnapshot,
   type DashboardSnapshot,
@@ -593,5 +594,32 @@ describe("desktop actions", () => {
       repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
       remote: undefined,
     });
+  });
+});
+
+describe("session control fallback", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    invokeMock.mockReset();
+    Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+  });
+
+  it("detached 会话不能直接继续运行", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+
+    const nextSnapshot = recordSessionContinue(current, {
+      sessionId: "ses-001",
+      prompt: "Continue while detached",
+    });
+    const target = nextSnapshot.sessions.find((session) => session.sessionId === "ses-001");
+
+    expect(target?.sessionControl?.attached).toBe(false);
+    expect(target?.sessionControl?.lastPrompt).toBeUndefined();
+    expect(
+      nextSnapshot.auditEvents.some((event) => event.type === "session_continue"),
+    ).toBe(false);
   });
 });

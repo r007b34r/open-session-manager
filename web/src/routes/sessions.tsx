@@ -22,9 +22,11 @@ type SessionsRouteProps = {
   onSelectSession?: (sessionId: string) => void;
   onSaveExportRoot?: (path: string) => void;
   onResetExportRoot?: () => void;
+  onAttachSession?: (sessionId: string) => void;
   onExportMarkdown?: (sessionId: string) => void;
   onResumeSession?: (sessionId: string) => void;
   onContinueSession?: (sessionId: string, prompt: string) => void;
+  onDetachSession?: (sessionId: string) => void;
   onSoftDelete?: (sessionId: string) => void;
 };
 
@@ -39,9 +41,11 @@ export function SessionsRoute({
   onSelectSession,
   onSaveExportRoot,
   onResetExportRoot,
+  onAttachSession,
   onExportMarkdown,
   onResumeSession,
   onContinueSession,
+  onDetachSession,
   onSoftDelete
 }: SessionsRouteProps) {
   const { copy } = useI18n();
@@ -266,7 +270,9 @@ export function SessionsRoute({
             selectedSession ? exportedSessionIds.has(selectedSession.sessionId) : false
           }
           exportPath={selectedExportPath}
+          onAttachSession={onAttachSession}
           onContinueSession={onContinueSession}
+          onDetachSession={onDetachSession}
           onExportMarkdown={onExportMarkdown}
           onResumeSession={onResumeSession}
           onSoftDelete={onSoftDelete}

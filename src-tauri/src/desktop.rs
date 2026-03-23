@@ -7,8 +7,10 @@ use crate::{
     actions::config_writeback::ConfigWritebackUpdate,
     commands::{
         actions::{
+            attach_existing_session as attach_existing_session_action,
             commit_git_project as commit_git_project_action,
             continue_existing_session as continue_existing_session_action, delete_session,
+            detach_existing_session as detach_existing_session_action,
             export_session, resume_existing_session as resume_existing_session_action,
             push_git_project as push_git_project_action,
             switch_git_project_branch as switch_git_project_branch_action,
@@ -35,8 +37,10 @@ pub fn run() -> Result<(), String> {
         .invoke_handler(tauri::generate_handler![
             load_dashboard_snapshot,
             commit_git_project,
+            attach_existing_session,
             export_session_markdown,
             push_git_project,
+            detach_existing_session,
             resume_existing_session,
             continue_existing_session,
             soft_delete_session,
@@ -217,6 +221,25 @@ pub async fn resume_existing_session(session_id: String) -> Result<DashboardSnap
 }
 
 #[tauri::command]
+pub async fn attach_existing_session(session_id: String) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        attach_existing_session_action(&indexed.session, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 pub async fn continue_existing_session(
     session_id: String,
     prompt: String,
@@ -230,6 +253,25 @@ pub async fn continue_existing_session(
         let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
 
         continue_existing_session_action(&indexed.session, &prompt, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn detach_existing_session(session_id: String) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        detach_existing_session_action(&indexed.session, &actor, &connection)
             .map_err(|error| error.to_string())?;
 
         build_snapshot_with_runtime(&context, &paths)
@@ -471,7 +513,9 @@ mod tests {
     use serde_json::Value;
 
     use super::{
-        ConfigWritebackPayload, commit_git_project, continue_existing_session,
+        ConfigWritebackPayload, attach_existing_session, commit_git_project,
+        continue_existing_session,
+        detach_existing_session,
         expand_session_detail,
         export_session_markdown, get_session_detail, list_session_inventory,
         ListSessionInventoryRequest,
@@ -500,11 +544,17 @@ mod tests {
         let resume = resume_existing_session("session-id".to_string());
         assert_future(&resume);
 
+        let attach = attach_existing_session("session-id".to_string());
+        assert_future(&attach);
+
         let continue_session = continue_existing_session(
             "session-id".to_string(),
             "Continue with verification".to_string(),
         );
         assert_future(&continue_session);
+
+        let detach = detach_existing_session("session-id".to_string());
+        assert_future(&detach);
 
         let save = save_dashboard_preferences(Some("D:/OSM/exports".to_string()));
         assert_future(&save);

@@ -88,6 +88,59 @@ describe("ActiveSessionCockpit", () => {
       screen.getByRole("button", { name: /refreshing cockpit/i })
     ).toBeDisabled();
   });
+
+  it("shows busy, waiting, and idle runtime states", async () => {
+    const { ActiveSessionCockpit } = await import("./active-session-cockpit");
+
+    renderWithI18n(
+      <ActiveSessionCockpit
+        isRefreshing={false}
+        onRefresh={vi.fn()}
+        sessions={[
+          buildSession({
+            sessionId: "ses-busy",
+            title: "Busy Codex rollout",
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "codex",
+              command: "codex",
+              attached: true,
+              runtimeState: "busy"
+            } as any
+          }),
+          buildSession({
+            sessionId: "ses-waiting",
+            title: "Waiting Claude audit",
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "claude-code",
+              command: "claude",
+              attached: true,
+              runtimeState: "waiting"
+            } as any
+          }),
+          buildSession({
+            sessionId: "ses-idle",
+            title: "Idle cleanup review",
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "codex",
+              command: "codex",
+              attached: true,
+              runtimeState: "idle"
+            } as any
+          })
+        ]}
+      />
+    );
+
+    expect(screen.getByText(/^busy$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^waiting$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^idle$/i)).toBeInTheDocument();
+  });
 });
 
 function renderWithI18n(node: ReactNode) {

@@ -21,6 +21,13 @@ export type TranscriptTodo = {
 
 export type CostSource = "reported" | "estimated" | "mixed" | "unknown";
 
+export type SessionRuntimeState =
+  | "busy"
+  | "waiting"
+  | "idle"
+  | "detached"
+  | "unavailable";
+
 export type SessionUsageRecord = {
   model?: string;
   inputTokens: number;
@@ -39,6 +46,7 @@ export type SessionControlRecord = {
   controller: string;
   command: string;
   attached: boolean;
+  runtimeState?: SessionRuntimeState;
   lastCommand?: string;
   lastPrompt?: string;
   lastResponse?: string;
@@ -1023,6 +1031,7 @@ export function recordSessionResume(
         ...resolveSessionControlState(session),
         attached: true,
         available: true,
+        runtimeState: "waiting",
         lastResponse: "READY from demo resume",
         lastResumedAt: new Date().toISOString(),
       },
@@ -1047,6 +1056,11 @@ export function recordSessionContinue(
   current: DashboardSnapshot,
   input: SessionContinueInput,
 ): DashboardSnapshot {
+  const session = current.sessions.find((item) => item.sessionId === input.sessionId);
+  if (!session || !resolveSessionControlState(session).attached) {
+    return current;
+  }
+
   const nextSessions = current.sessions.map((session) => {
     if (session.sessionId !== input.sessionId) {
       return session;
@@ -1058,6 +1072,7 @@ export function recordSessionContinue(
         ...resolveSessionControlState(session),
         attached: true,
         available: true,
+        runtimeState: "waiting",
         lastPrompt: input.prompt,
         lastResponse: `READY from demo continue: ${input.prompt}`,
         lastContinuedAt: new Date().toISOString(),
@@ -1073,6 +1088,75 @@ export function recordSessionContinue(
         "session_continue",
         input.sessionId,
         `Sent a follow-up prompt to ${input.sessionId}.`,
+      ),
+      ...current.auditEvents,
+    ],
+  };
+}
+
+export function recordSessionAttach(
+  current: DashboardSnapshot,
+  sessionId: string,
+): DashboardSnapshot {
+  const nextSessions = current.sessions.map((session) => {
+    if (session.sessionId !== sessionId) {
+      return session;
+    }
+
+    return {
+      ...session,
+      sessionControl: {
+        ...resolveSessionControlState(session),
+        attached: true,
+        available: true,
+        runtimeState: "busy",
+        lastResponse: "Session attached for follow-up prompts.",
+      },
+    };
+  });
+
+  return {
+    ...current,
+    sessions: nextSessions,
+    auditEvents: [
+      createAuditEvent(
+        "session_attach",
+        sessionId,
+        `Attached ${sessionId} for follow-up prompts.`,
+      ),
+      ...current.auditEvents,
+    ],
+  };
+}
+
+export function recordSessionDetach(
+  current: DashboardSnapshot,
+  sessionId: string,
+): DashboardSnapshot {
+  const nextSessions = current.sessions.map((session) => {
+    if (session.sessionId !== sessionId) {
+      return session;
+    }
+
+    return {
+      ...session,
+      sessionControl: {
+        ...resolveSessionControlState(session),
+        attached: false,
+        runtimeState: "detached",
+        lastResponse: "Session detached from follow-up prompts.",
+      },
+    };
+  });
+
+  return {
+    ...current,
+    sessions: nextSessions,
+    auditEvents: [
+      createAuditEvent(
+        "session_detach",
+        sessionId,
+        `Detached ${sessionId} from follow-up prompts.`,
       ),
       ...current.auditEvents,
     ],
@@ -1153,6 +1237,26 @@ export async function applySessionResume(
   return current;
 }
 
+export async function applySessionAttach(
+  current: DashboardSnapshot,
+  sessionId: string,
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "attach_existing_session",
+    { sessionId },
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordSessionAttach(current, sessionId));
+  }
+
+  return current;
+}
+
 export async function applySessionContinue(
   current: DashboardSnapshot,
   input: SessionContinueInput,
@@ -1168,6 +1272,26 @@ export async function applySessionContinue(
 
   if (shouldUseDemoData()) {
     return normalizeDashboardSnapshot(recordSessionContinue(current, input));
+  }
+
+  return current;
+}
+
+export async function applySessionDetach(
+  current: DashboardSnapshot,
+  sessionId: string,
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "detach_existing_session",
+    { sessionId },
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordSessionDetach(current, sessionId));
   }
 
   return current;
@@ -1473,6 +1597,7 @@ function normalizeSessionControlRecord(
 ): SessionControlRecord {
   return {
     ...control,
+    runtimeState: normalizeSessionRuntimeState(control.runtimeState, control),
     lastCommand:
       typeof control.lastCommand === "string" ? control.lastCommand : undefined,
     lastPrompt:
@@ -1517,6 +1642,7 @@ function buildDemoSessionControl(
       controller: "codex",
       command: "codex",
       attached: false,
+      runtimeState: "detached",
     };
   }
 
@@ -1530,6 +1656,7 @@ function buildDemoSessionControl(
       controller: "claude-code",
       command: "claude",
       attached: false,
+      runtimeState: "detached",
     };
   }
 
@@ -1539,7 +1666,7 @@ function buildDemoSessionControl(
 function resolveSessionControlState(
   session: Pick<SessionDetailRecord, "assistant" | "sessionControl">,
 ): SessionControlRecord {
-  return (
+  const control =
     session.sessionControl ??
     buildDemoSessionControl(session) ?? {
       supported: false,
@@ -1547,8 +1674,13 @@ function resolveSessionControlState(
       controller: "unsupported",
       command: "",
       attached: false,
-    }
-  );
+      runtimeState: "unavailable",
+    };
+
+  return {
+    ...control,
+    runtimeState: normalizeSessionRuntimeState(control.runtimeState, control),
+  };
 }
 
 function compareSessionsByActivity(
@@ -1995,6 +2127,16 @@ function isCostSource(value: unknown): value is CostSource {
   );
 }
 
+function isSessionRuntimeState(value: unknown): value is SessionRuntimeState {
+  return (
+    value === "busy" ||
+    value === "waiting" ||
+    value === "idle" ||
+    value === "detached" ||
+    value === "unavailable"
+  );
+}
+
 function normalizeOptionalCost(value: unknown) {
   return typeof value === "number" ? value : undefined;
 }
@@ -2008,6 +2150,39 @@ function normalizeCostSource(
   }
 
   return typeof costUsd === "number" ? "reported" : "unknown";
+}
+
+function normalizeSessionRuntimeState(
+  value: unknown,
+  control: Pick<
+    SessionControlRecord,
+    "attached" | "available" | "lastError" | "lastResponse"
+  >,
+): SessionRuntimeState {
+  if (isSessionRuntimeState(value)) {
+    return value;
+  }
+
+  if (!control.available) {
+    return "unavailable";
+  }
+
+  if (!control.attached) {
+    return "detached";
+  }
+
+  if (typeof control.lastError === "string" && control.lastError.trim()) {
+    return "waiting";
+  }
+
+  if (
+    typeof control.lastResponse === "string" &&
+    /ready|awaiting|waiting for/i.test(control.lastResponse)
+  ) {
+    return "waiting";
+  }
+
+  return "busy";
 }
 
 function normalizeSessionUsageRecord(

@@ -22,6 +22,8 @@ use super::{ActionError, ActionResult, AuditWriteRequest, write_audit_event};
 
 const DEFAULT_RESUME_PROMPT: &str =
     "Resume this session and reply with a one-line status summary ending with READY.";
+const ATTACH_RESPONSE: &str = "Session attached for follow-up prompts.";
+const DETACH_RESPONSE: &str = "Session detached from follow-up prompts.";
 
 pub struct SessionControlRequest<'a> {
     pub session: &'a SessionRecord,
@@ -67,6 +69,14 @@ pub fn continue_session(request: &SessionControlRequest<'_>) -> ActionResult<Ses
     execute_session_control(request, "continue", prompt, "session_continue")
 }
 
+pub fn attach_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
+    update_session_attachment(request, true, "session_attach", ATTACH_RESPONSE)
+}
+
+pub fn detach_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
+    update_session_attachment(request, false, "session_detach", DETACH_RESPONSE)
+}
+
 fn execute_session_control(
     request: &SessionControlRequest<'_>,
     operation: &str,
@@ -81,6 +91,15 @@ fn execute_session_control(
         )));
     }
 
+    let mut state = load_session_control_state(request.connection, &request.session.session_id)?
+        .unwrap_or_else(|| default_session_control_state(request.session, controller.controller));
+
+    if operation == "continue" && !state.attached {
+        return Err(ActionError::Precondition(
+            "continue requires an attached session; attach or resume it first".to_string(),
+        ));
+    }
+
     let prepared = match controller.controller {
         "codex" => build_codex_command(&controller, request.session, prompt),
         "claude-code" => build_claude_command(&controller, request.session, prompt),
@@ -93,21 +112,6 @@ fn execute_session_control(
     let response = prepared.execute()?;
     let now = Utc::now().to_rfc3339();
     let rendered_command = prepared.render();
-
-    let mut state = load_session_control_state(request.connection, &request.session.session_id)?
-        .unwrap_or(SessionControlStateRow {
-            session_id: request.session.session_id.clone(),
-            assistant: request.session.assistant.clone(),
-            controller: controller.controller.to_string(),
-            available: true,
-            attached: false,
-            last_command: None,
-            last_prompt: None,
-            last_response: None,
-            last_error: None,
-            last_resumed_at: None,
-            last_continued_at: None,
-        });
 
     state.assistant = request.session.assistant.clone();
     state.controller = controller.controller.to_string();
@@ -169,6 +173,83 @@ fn execute_session_control(
     })
 }
 
+fn update_session_attachment(
+    request: &SessionControlRequest<'_>,
+    attached: bool,
+    audit_event_type: &str,
+    response: &str,
+) -> ActionResult<SessionControlResult> {
+    let controller = resolve_controller(request.session)?;
+    if !command_is_available(&controller.command) {
+        return Err(ActionError::Execution(format!(
+            "assistant command is not available on PATH: {}",
+            controller.command
+        )));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let operation = if attached { "attach" } else { "detach" };
+    let rendered_command = format!("osm {operation} {}", request.session.session_id);
+    let mut state = load_session_control_state(request.connection, &request.session.session_id)?
+        .unwrap_or_else(|| default_session_control_state(request.session, controller.controller));
+
+    state.assistant = request.session.assistant.clone();
+    state.controller = controller.controller.to_string();
+    state.available = true;
+    state.attached = attached;
+    state.last_command = Some(rendered_command.clone());
+    state.last_response = Some(response.to_string());
+    state.last_error = None;
+    if attached {
+        state.last_resumed_at = Some(now.clone());
+    }
+
+    upsert_session_control_state(request.connection, &state)?;
+    insert_session_control_event(
+        request.connection,
+        &SessionControlEventRow {
+            event_id: session_control_event_id(&request.session.session_id, operation, &now),
+            session_id: request.session.session_id.clone(),
+            operation: operation.to_string(),
+            created_at: now.clone(),
+            prompt: None,
+            response: Some(response.to_string()),
+            result: "success".to_string(),
+            error_message: None,
+            command: Some(rendered_command.clone()),
+        },
+    )?;
+    write_audit_event(
+        request.connection,
+        AuditWriteRequest {
+            event_type: audit_event_type,
+            target_type: "session",
+            target_id: &request.session.session_id,
+            actor: request.actor,
+            before_state: None,
+            after_state: Some(
+                json!({
+                    "controller": controller.controller,
+                    "command": rendered_command,
+                    "response": response,
+                    "attached": attached,
+                })
+                .to_string(),
+            ),
+            result: "success",
+        },
+    )?;
+
+    Ok(SessionControlResult {
+        session_id: request.session.session_id.clone(),
+        controller: controller.controller.to_string(),
+        command: controller.command,
+        prompt: String::new(),
+        response: response.to_string(),
+        attached,
+    })
+}
+
 fn resolve_controller(session: &SessionRecord) -> ActionResult<ResolvedController> {
     let working_dir = session_working_dir(session);
 
@@ -188,6 +269,25 @@ fn resolve_controller(session: &SessionRecord) -> ActionResult<ResolvedControlle
         assistant => Err(ActionError::Precondition(format!(
             "session control is not supported for assistant `{assistant}`"
         ))),
+    }
+}
+
+fn default_session_control_state(
+    session: &SessionRecord,
+    controller: &str,
+) -> SessionControlStateRow {
+    SessionControlStateRow {
+        session_id: session.session_id.clone(),
+        assistant: session.assistant.clone(),
+        controller: controller.to_string(),
+        available: true,
+        attached: false,
+        last_command: None,
+        last_prompt: None,
+        last_response: None,
+        last_error: None,
+        last_resumed_at: None,
+        last_continued_at: None,
     }
 }
 

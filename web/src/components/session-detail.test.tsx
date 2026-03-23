@@ -85,6 +85,91 @@ describe("SessionDetail", () => {
     );
   });
 
+  it("detached 会话必须先附着，继续按钮才可用", async () => {
+    const user = userEvent.setup();
+
+    renderWithI18n(
+      <SessionDetail
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: false
+          }
+        })}
+      />
+    );
+
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue while detached"
+    );
+
+    expect(
+      screen.getByRole("button", { name: /continue session/i })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /attach session/i })
+    ).toBeInTheDocument();
+  });
+
+  it("用 busy、waiting、idle 文案展示运行态", () => {
+    const { rerender } = renderWithI18n(
+      <SessionDetail
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: true,
+            runtimeState: "busy"
+          } as any
+        })}
+      />
+    );
+
+    expect(screen.getByText(/control status: busy/i)).toBeInTheDocument();
+
+    rerender(
+      <I18nProvider language="en" setLanguage={vi.fn()}>
+        <SessionDetail
+          session={buildSessionDetailRecord({
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "codex",
+              command: "codex",
+              attached: true,
+              runtimeState: "waiting"
+            } as any
+          })}
+        />
+      </I18nProvider>
+    );
+    expect(screen.getByText(/control status: waiting/i)).toBeInTheDocument();
+
+    rerender(
+      <I18nProvider language="en" setLanguage={vi.fn()}>
+        <SessionDetail
+          session={buildSessionDetailRecord({
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "codex",
+              command: "codex",
+              attached: true,
+              runtimeState: "idle"
+            } as any
+          })}
+        />
+      </I18nProvider>
+    );
+    expect(screen.getByText(/control status: idle/i)).toBeInTheDocument();
+  });
+
   it("要求在移入隔离区前显式确认 cleanup 审查", async () => {
     const user = userEvent.setup();
     const onSoftDelete = vi.fn();

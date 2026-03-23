@@ -33,7 +33,9 @@ use super::{
         switch_branch,
     },
     restore::restore_session,
-    session_control::{SessionControlRequest, continue_session, resume_session},
+    session_control::{
+        SessionControlRequest, attach_session, continue_session, detach_session, resume_session,
+    },
     write_audit_event,
 };
 
@@ -1464,6 +1466,153 @@ fn continues_attached_session_and_persists_audit_event() {
             .contains("-r claude-ses-1"),
         "fake claude command should receive resume args"
     );
+}
+
+#[test]
+fn attaches_and_detaches_supported_session() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-attach-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "attach123".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        attach_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("attach session");
+
+        let attached: i64 = connection
+            .query_row(
+                "SELECT attached FROM session_control_state WHERE session_id = ?1",
+                [session.session_id.as_str()],
+                |row| row.get(0),
+            )
+            .expect("attached state should exist after attach");
+        assert_eq!(attached, 1);
+
+        detach_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("detach session");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+    });
+
+    let attached: i64 = connection
+        .query_row(
+            "SELECT attached FROM session_control_state WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| row.get(0),
+        )
+        .expect("attached state should persist");
+    assert_eq!(attached, 0);
+    assert!(query_event_types(&connection).contains(&"session_attach".to_string()));
+    assert!(query_event_types(&connection).contains(&"session_detach".to_string()));
+}
+
+#[test]
+fn refuses_continue_for_detached_session() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-detached-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "detach456".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        let error = continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue with detached session"),
+        })
+        .expect_err("continue should require attach or resume first");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+
+        match error {
+            ActionError::Precondition(message) => {
+                assert!(message.contains("attach") || message.contains("resume"));
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    });
 }
 
 #[test]

@@ -440,7 +440,7 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      within(cockpitPanel as HTMLElement).getByText(/^attached$/i),
+      within(cockpitPanel as HTMLElement).getByText(/^waiting$/i),
     ).toBeInTheDocument();
   });
 
@@ -918,6 +918,26 @@ describe("App", () => {
       await screen.findByText(
         /ready from demo continue: continue with the next verification step\./i,
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("未附着的会话在详情页不能直接继续运行", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/sessions";
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /retention-first queue/i });
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue while detached",
+    );
+
+    expect(
+      screen.getByRole("button", { name: /continue session/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /attach session/i }),
     ).toBeInTheDocument();
   });
 

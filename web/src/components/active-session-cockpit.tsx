@@ -102,10 +102,34 @@ function translateCockpitStatus(
   statuses: {
     attached: string;
     ready: string;
+    busy: string;
+    waiting: string;
+    idle: string;
+    detached: string;
     unavailable: string;
   },
   control: NonNullable<SessionDetailRecord["sessionControl"]>
 ) {
+  if (control.runtimeState === "busy") {
+    return statuses.busy;
+  }
+
+  if (control.runtimeState === "waiting") {
+    return statuses.waiting;
+  }
+
+  if (control.runtimeState === "idle") {
+    return statuses.idle;
+  }
+
+  if (control.runtimeState === "detached") {
+    return statuses.detached;
+  }
+
+  if (control.runtimeState === "unavailable") {
+    return statuses.unavailable;
+  }
+
   if (control.attached) {
     return statuses.attached;
   }

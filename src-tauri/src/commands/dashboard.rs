@@ -169,6 +169,7 @@ pub struct SessionControlRecord {
     pub controller: String,
     pub command: String,
     pub attached: bool,
+    pub runtime_state: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_command: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1188,6 +1189,13 @@ fn build_session_control_record(
     let persisted = connection
         .and_then(|db| load_session_control_state(db, &session.session_id).ok())
         .flatten();
+    let runtime_state = derive_session_control_runtime_state(
+        session,
+        available,
+        persisted.as_ref().is_some_and(|state| state.attached),
+        persisted.as_ref().and_then(|state| state.last_response.as_deref()),
+        persisted.as_ref().and_then(|state| state.last_error.as_deref()),
+    );
 
     SessionControlRecord {
         supported,
@@ -1195,6 +1203,7 @@ fn build_session_control_record(
         controller,
         command,
         attached: persisted.as_ref().is_some_and(|state| state.attached),
+        runtime_state: runtime_state.to_string(),
         last_command: persisted
             .as_ref()
             .and_then(|state| state.last_command.clone()),
@@ -1214,6 +1223,32 @@ fn build_session_control_record(
             .as_ref()
             .and_then(|state| state.last_continued_at.clone()),
     }
+}
+
+fn derive_session_control_runtime_state(
+    session: &SessionRecord,
+    available: bool,
+    attached: bool,
+    last_response: Option<&str>,
+    last_error: Option<&str>,
+) -> &'static str {
+    if !available {
+        return "unavailable";
+    }
+
+    if !attached {
+        return "detached";
+    }
+
+    if session.ended_at.is_some() || matches_terminal_status(&session.status) {
+        return "idle";
+    }
+
+    if last_error.is_some() || last_response.is_some_and(looks_like_ready_response) {
+        return "waiting";
+    }
+
+    "busy"
 }
 
 fn dashboard_command_is_available(command: &str) -> bool {
@@ -2304,6 +2339,20 @@ fn looks_like_error_message(value: &str) -> bool {
         || lowered.contains("missing configuration")
 }
 
+fn looks_like_ready_response(value: &str) -> bool {
+    let lowered = value.to_ascii_lowercase();
+    lowered.contains("ready")
+        || lowered.contains("awaiting")
+        || lowered.contains("waiting for")
+}
+
+fn matches_terminal_status(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "completed" | "done" | "finished" | "failed" | "exited" | "stopped"
+    )
+}
+
 fn format_bytes(bytes: u64) -> String {
     const KIB: f64 = 1024.0;
     const MIB: f64 = KIB * 1024.0;
@@ -2340,9 +2389,11 @@ fn normalize_project_path(value: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use std::{
+        env,
         fs,
         path::PathBuf,
         process::Command,
+        sync::{Mutex, OnceLock},
         sync::atomic::{AtomicU64, Ordering},
         thread,
         time::Duration,
@@ -2351,14 +2402,21 @@ mod tests {
     use rusqlite::Connection;
     use serde_json::Value;
 
-    use crate::discovery::DiscoveryContext;
+    use crate::{
+        discovery::DiscoveryContext,
+        domain::session::SessionRecord,
+        storage::sqlite::{
+            SessionControlStateRow, bootstrap_database, upsert_session_control_state,
+        },
+    };
 
     use super::{
         build_fixture_dashboard_snapshot, build_local_dashboard_snapshot,
-        build_local_dashboard_snapshot_with_audit,
+        build_local_dashboard_snapshot_with_audit, build_session_control_record,
     };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     #[test]
     fn local_snapshot_skips_invalid_session_files_and_keeps_valid_sessions() {
@@ -2869,6 +2927,147 @@ mod tests {
     }
 
     #[test]
+    fn builds_session_control_runtime_states() {
+        let sandbox = temp_root();
+        let project_root = sandbox.join("project");
+        let command_path = if cfg!(windows) {
+            sandbox.join("codex.cmd")
+        } else {
+            sandbox.join("codex")
+        };
+
+        fs::create_dir_all(&project_root).expect("create project root");
+        write_fake_command(&command_path);
+
+        let connection = Connection::open_in_memory().expect("open sqlite");
+        bootstrap_database(&connection).expect("bootstrap schema");
+
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock env guard");
+        let original_command = env::var_os("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        unsafe {
+            env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", &command_path);
+        }
+
+        let detached_session = build_control_session(
+            "codex-detached-state",
+            project_root.display().to_string(),
+            "running",
+        );
+        let busy_session = build_control_session(
+            "codex-busy-state",
+            project_root.display().to_string(),
+            "running",
+        );
+        let waiting_session = build_control_session(
+            "codex-waiting-state",
+            project_root.display().to_string(),
+            "running",
+        );
+        let idle_session = build_control_session(
+            "codex-idle-state",
+            project_root.display().to_string(),
+            "completed",
+        );
+
+        for state in [
+            SessionControlStateRow {
+                session_id: detached_session.session_id.clone(),
+                assistant: "codex".to_string(),
+                controller: "codex".to_string(),
+                available: true,
+                attached: false,
+                last_command: None,
+                last_prompt: None,
+                last_response: None,
+                last_error: None,
+                last_resumed_at: None,
+                last_continued_at: None,
+            },
+            SessionControlStateRow {
+                session_id: busy_session.session_id.clone(),
+                assistant: "codex".to_string(),
+                controller: "codex".to_string(),
+                available: true,
+                attached: true,
+                last_command: Some("codex exec resume codex-busy-state".to_string()),
+                last_prompt: Some("Continue working".to_string()),
+                last_response: Some("Working on the requested changes".to_string()),
+                last_error: None,
+                last_resumed_at: Some("2026-03-23T03:00:00Z".to_string()),
+                last_continued_at: None,
+            },
+            SessionControlStateRow {
+                session_id: waiting_session.session_id.clone(),
+                assistant: "codex".to_string(),
+                controller: "codex".to_string(),
+                available: true,
+                attached: true,
+                last_command: Some("codex exec resume codex-waiting-state".to_string()),
+                last_prompt: Some("Summarize status".to_string()),
+                last_response: Some("READY from fake codex".to_string()),
+                last_error: None,
+                last_resumed_at: Some("2026-03-23T03:01:00Z".to_string()),
+                last_continued_at: None,
+            },
+            SessionControlStateRow {
+                session_id: idle_session.session_id.clone(),
+                assistant: "codex".to_string(),
+                controller: "codex".to_string(),
+                available: true,
+                attached: true,
+                last_command: Some("codex exec resume codex-idle-state".to_string()),
+                last_prompt: Some("Wrap up".to_string()),
+                last_response: Some("READY from fake codex".to_string()),
+                last_error: None,
+                last_resumed_at: Some("2026-03-23T03:02:00Z".to_string()),
+                last_continued_at: Some("2026-03-23T03:03:00Z".to_string()),
+            },
+        ] {
+            upsert_session_control_state(&connection, &state).expect("seed control state");
+        }
+
+        let detached = serde_json::to_value(build_session_control_record(
+            &detached_session,
+            Some(&connection),
+        ))
+        .expect("serialize detached control");
+        let busy =
+            serde_json::to_value(build_session_control_record(&busy_session, Some(&connection)))
+                .expect("serialize busy control");
+        let waiting = serde_json::to_value(build_session_control_record(
+            &waiting_session,
+            Some(&connection),
+        ))
+        .expect("serialize waiting control");
+        let idle =
+            serde_json::to_value(build_session_control_record(&idle_session, Some(&connection)))
+                .expect("serialize idle control");
+
+        assert_eq!(
+            detached.get("runtimeState").and_then(Value::as_str),
+            Some("detached")
+        );
+        assert_eq!(busy.get("runtimeState").and_then(Value::as_str), Some("busy"));
+        assert_eq!(
+            waiting.get("runtimeState").and_then(Value::as_str),
+            Some("waiting")
+        );
+        assert_eq!(idle.get("runtimeState").and_then(Value::as_str), Some("idle"));
+
+        match original_command {
+            Some(value) => unsafe {
+                env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", value);
+            },
+            None => unsafe {
+                env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+            },
+        }
+    }
+
+    #[test]
     fn local_snapshot_reuses_cached_index_for_unchanged_sessions() {
         let sandbox = temp_root();
         let home_dir = sandbox.join("home");
@@ -3102,6 +3301,42 @@ mod tests {
 
         fs::create_dir_all(&root).expect("create temp root");
         root
+    }
+
+    fn build_control_session(session_id: &str, project_path: String, status: &str) -> SessionRecord {
+        SessionRecord {
+            session_id: session_id.to_string(),
+            installation_id: None,
+            assistant: "codex".to_string(),
+            environment: "windows".to_string(),
+            project_path: Some(project_path),
+            source_path: format!("C:/Users/Max/.codex/sessions/{session_id}.jsonl"),
+            started_at: Some("2026-03-23T03:00:00Z".to_string()),
+            ended_at: None,
+            last_activity_at: Some("2026-03-23T03:05:00Z".to_string()),
+            message_count: 10,
+            tool_count: 3,
+            status: status.to_string(),
+            raw_format: "codex-jsonl".to_string(),
+            content_hash: format!("{session_id}-hash"),
+        }
+    }
+
+    fn write_fake_command(command_path: &std::path::Path) {
+        if cfg!(windows) {
+            fs::write(command_path, "@echo off\r\necho ok\r\n").expect("write fake command");
+            return;
+        }
+
+        fs::write(command_path, "#!/bin/sh\nprintf 'ok\\n'\n").expect("write fake command");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            fs::set_permissions(command_path, fs::Permissions::from_mode(0o755))
+                .expect("chmod fake command");
+        }
     }
 
     fn git(repo_root: &std::path::Path, args: &[&str]) -> String {

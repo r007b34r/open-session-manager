@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
+  applySessionAttach,
   applyConfigWriteback,
   applyDashboardPreferences,
   applyGitProjectBranchSwitch,
@@ -9,6 +10,7 @@ import {
   applyMarkdownExport,
   recordLocalAuditEvent,
   applySessionContinue,
+  applySessionDetach,
   applySessionResume,
   applySoftDelete,
   fetchDashboardSnapshot,
@@ -202,12 +204,36 @@ export function App() {
     });
   };
 
+  const handleSessionAttach = (sessionId: string) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applySessionAttach(snapshot, sessionId).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
   const handleSessionContinue = (sessionId: string, prompt: string) => {
     if (!snapshot) {
       return;
     }
 
     void applySessionContinue(snapshot, { sessionId, prompt }).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
+  const handleSessionDetach = (sessionId: string) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applySessionDetach(snapshot, sessionId).then((nextSnapshot) => {
       startTransition(() => {
         setSnapshot(nextSnapshot);
       });
@@ -340,7 +366,9 @@ export function App() {
               handleResetExportRoot,
               handleExportMarkdown,
               handleSessionResume,
+              handleSessionAttach,
               handleSessionContinue,
+              handleSessionDetach,
               handleSoftDelete,
               handleSaveConfig,
               handleAuditEvent,
@@ -372,7 +400,9 @@ function renderRoute(
   onResetExportRoot: () => void,
   onExportMarkdown: (sessionId: string) => void,
   onResumeSession: (sessionId: string) => void,
+  onAttachSession: (sessionId: string) => void,
   onContinueSession: (sessionId: string, prompt: string) => void,
+  onDetachSession: (sessionId: string) => void,
   onSoftDelete: (sessionId: string) => void,
   onSaveConfig: (input: ConfigWritebackInput) => void,
   onAuditEvent: (input: LocalAuditEventInput) => void,
@@ -410,11 +440,13 @@ function renderRoute(
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         latestMarkdownExportPaths={latestMarkdownExportPaths}
+        onAttachSession={onAttachSession}
         onExportMarkdown={onExportMarkdown}
         onResetExportRoot={onResetExportRoot}
         onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
         onContinueSession={onContinueSession}
+        onDetachSession={onDetachSession}
         onSoftDelete={onSoftDelete}
         onResumeSession={onResumeSession}
         runtime={snapshot.runtime}
@@ -437,11 +469,13 @@ function renderRoute(
       <SessionsRoute
         exportedSessionIds={exportedSessionIds}
         latestMarkdownExportPaths={latestMarkdownExportPaths}
+        onAttachSession={onAttachSession}
         onExportMarkdown={onExportMarkdown}
         onResetExportRoot={onResetExportRoot}
         onSaveExportRoot={onSaveExportRoot}
         onSelectSession={onSelectSession}
         onContinueSession={onContinueSession}
+        onDetachSession={onDetachSession}
         onSoftDelete={onSoftDelete}
         onResumeSession={onResumeSession}
         runtime={snapshot.runtime}
