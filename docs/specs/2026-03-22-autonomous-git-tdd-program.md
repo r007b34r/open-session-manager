@@ -126,7 +126,7 @@
 | `GIT-01` | P0 | done | diff viewer | 已有独立前端 diff 组件测试，覆盖字段标签、前后值、风险 badge 和空 diff 提示 |
 | `GIT-02` | P1 | done | commit / push / branch switch | Git 操作链路有保护和回显，集成测试通过 |
 | `GIT-03` | P1 | done | global git status dashboard | 多项目状态面板测试通过 |
-| `GIT-04` | P1 | todo | commit history view | 历史视图支持筛选与详情 |
+| `GIT-04` | P1 | done | commit history view | 历史视图支持筛选与详情 |
 | `GIT-05` | P1 | done | project grouping | Sessions 与 Config 页面已按项目分组展示，并有 Web / App 测试覆盖 |
 | `GIT-06` | P1 | todo | file explorer | 文件树和路径预览测试通过 |
 | `GIT-07` | P1 | todo | file preview / editor | 预览与只读编辑模式测试通过 |

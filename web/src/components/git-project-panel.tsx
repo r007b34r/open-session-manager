@@ -27,6 +27,8 @@ export function GitProjectPanel({
   const { copy } = useI18n();
   const [commitDrafts, setCommitDrafts] = useState<Record<string, string>>({});
   const [branchDrafts, setBranchDrafts] = useState<Record<string, string>>({});
+  const [historyFilters, setHistoryFilters] = useState<Record<string, string>>({});
+  const [expandedCommits, setExpandedCommits] = useState<Record<string, string | undefined>>({});
   const latestGitEvents = buildLatestGitEventMap(auditEvents);
 
   return (
@@ -46,9 +48,13 @@ export function GitProjectPanel({
           {projects.map((project) => {
             const commitMessage = commitDrafts[project.repoRoot] ?? "";
             const branchDraft = branchDrafts[project.repoRoot] ?? "";
+            const historyFilter = historyFilters[project.repoRoot] ?? "";
             const latestEvent = latestGitEvents.get(project.repoRoot);
             const branchSwitchBlocked = project.dirty;
             const pushDisabled = project.dirty || project.ahead === 0;
+            const filteredCommits = project.recentCommits.filter((commit) =>
+              matchesCommitFilter(commit, historyFilter)
+            );
 
             return (
               <article className="config-card" key={project.repoRoot}>
@@ -99,12 +105,59 @@ export function GitProjectPanel({
                 {project.recentCommits.length > 0 ? (
                   <>
                     <strong>{copy.overview.git.fields.recentCommits}</strong>
+                    <label className="git-action-group">
+                      <span>{copy.overview.git.actions.historyFilter}</span>
+                      <input
+                        type="text"
+                        value={historyFilter}
+                        onChange={(event) =>
+                          setHistoryFilters((current) => ({
+                            ...current,
+                            [project.repoRoot]: event.target.value
+                          }))
+                        }
+                      />
+                    </label>
                     <ul className="detail-list">
-                      {project.recentCommits.map((commit) => (
+                      {filteredCommits.map((commit) => {
+                        const expandedCommit = expandedCommits[project.repoRoot];
+                        const isExpanded = expandedCommit === commit.sha;
+
+                        return (
                         <li key={`${project.repoRoot}:${commit.sha}`}>
-                          {commit.summary}
+                          <div className="config-card-topline">
+                            <span>{commit.summary}</span>
+                            <button
+                              type="button"
+                              aria-expanded={isExpanded}
+                              onClick={() =>
+                                setExpandedCommits((current) => ({
+                                  ...current,
+                                  [project.repoRoot]: isExpanded ? undefined : commit.sha
+                                }))
+                              }
+                            >
+                              {isExpanded
+                                ? `${copy.overview.git.actions.hideDetails} ${commit.sha}`
+                                : `${copy.overview.git.actions.showDetails} ${commit.sha}`}
+                            </button>
+                          </div>
+                          {isExpanded ? (
+                            <div className="git-action-note">
+                              <p>
+                                <strong>{copy.overview.git.fields.commitSha}</strong>: {commit.sha}
+                              </p>
+                              <p>
+                                <strong>{copy.overview.git.fields.commitAuthor}</strong>: {commit.author}
+                              </p>
+                              <p>
+                                <strong>{copy.overview.git.fields.commitAuthoredAt}</strong>: {commit.authoredAt}
+                              </p>
+                            </div>
+                          ) : null}
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </>
                 ) : null}
@@ -219,4 +272,18 @@ function translateGitStatus(
   value: string
 ) {
   return statuses[value as keyof typeof statuses] ?? value;
+}
+
+function matchesCommitFilter(
+  commit: GitProjectRecord["recentCommits"][number],
+  filterValue: string
+) {
+  const normalizedFilter = filterValue.trim().toLowerCase();
+  if (!normalizedFilter) {
+    return true;
+  }
+
+  return [commit.summary, commit.author, commit.sha].some((value) =>
+    value.toLowerCase().includes(normalizedFilter)
+  );
 }

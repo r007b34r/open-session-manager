@@ -127,6 +127,9 @@ type Messages = {
         aheadBehind: string;
         latestCommit: string;
         recentCommits: string;
+        commitSha: string;
+        commitAuthor: string;
+        commitAuthoredAt: string;
         lastAction: string;
       };
       actions: {
@@ -135,6 +138,9 @@ type Messages = {
         branchName: string;
         switchButton: string;
         pushButton: string;
+        historyFilter: string;
+        showDetails: string;
+        hideDetails: string;
       };
       guardrails: {
         cleanBeforeSwitch: string;
@@ -543,6 +549,9 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "Ahead/Behind",
           latestCommit: "Latest commit",
           recentCommits: "Recent commits",
+          commitSha: "SHA",
+          commitAuthor: "Author",
+          commitAuthoredAt: "Authored at",
           lastAction: "Last action",
         },
         actions: {
@@ -551,6 +560,9 @@ const messages: Record<Language, Messages> = {
           branchName: "Target branch",
           switchButton: "Switch branch",
           pushButton: "Push branch",
+          historyFilter: "Filter history",
+          showDetails: "Show details for",
+          hideDetails: "Hide details for",
         },
         guardrails: {
           cleanBeforeSwitch:
@@ -1044,6 +1056,9 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "领先/落后",
           latestCommit: "最近提交",
           recentCommits: "最近提交历史",
+          commitSha: "SHA",
+          commitAuthor: "作者",
+          commitAuthoredAt: "提交时间",
           lastAction: "最近动作",
         },
         actions: {
@@ -1052,6 +1067,9 @@ const messages: Record<Language, Messages> = {
           branchName: "目标分支",
           switchButton: "切换分支",
           pushButton: "推送当前分支",
+          historyFilter: "筛选历史",
+          showDetails: "展开详情",
+          hideDetails: "收起详情",
         },
         guardrails: {
           cleanBeforeSwitch: "先清掉本地脏区，再切换分支。",
