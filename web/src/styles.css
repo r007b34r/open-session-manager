@@ -967,6 +967,26 @@ a {
   font-size: 1.3rem;
 }
 
+.table-group-stack,
+.config-group-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.table-project-group,
+.config-project-group {
+  display: grid;
+  gap: 10px;
+}
+
+.table-group-heading,
+.config-group-heading {
+  margin: 0;
+  font-family: "Rockwell", "Georgia", serif;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
 .config-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1075,6 +1095,50 @@ a {
 .config-snippet-library {
   display: grid;
   gap: 10px;
+}
+
+.mcp-viewer-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.mcp-viewer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mcp-server-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(31, 39, 34, 0.1);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 252, 245, 0.96), rgba(246, 239, 225, 0.98));
+  padding: 18px;
+}
+
+.mcp-config-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.mcp-config-preview strong {
+  font-size: 0.9rem;
+}
+
+.mcp-config-preview pre {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 .config-preset-chip {
@@ -1198,6 +1262,7 @@ a {
 @media (max-width: 1100px) {
   .overview-grid,
   .config-grid,
+  .mcp-viewer-grid,
   .content-grid,
   .detail-card-grid,
   .hero-shell,

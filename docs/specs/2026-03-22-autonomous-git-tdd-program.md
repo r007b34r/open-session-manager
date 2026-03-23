@@ -127,7 +127,7 @@
 | `GIT-02` | P1 | todo | commit / push / branch switch | Git 操作链路有保护和回显，集成测试通过 |
 | `GIT-03` | P1 | todo | global git status dashboard | 多项目状态面板测试通过 |
 | `GIT-04` | P1 | todo | commit history view | 历史视图支持筛选与详情 |
-| `GIT-05` | P1 | todo | project grouping | 会话和配置按项目聚合，UI 测试通过 |
+| `GIT-05` | P1 | done | project grouping | Sessions 与 Config 页面已按项目分组展示，并有 Web / App 测试覆盖 |
 | `GIT-06` | P1 | todo | file explorer | 文件树和路径预览测试通过 |
 | `GIT-07` | P1 | todo | file preview / editor | 预览与只读编辑模式测试通过 |
 | `GIT-08` | P1 | done | browser preview | `web/package.json` 已提供正式 `preview/browser` 脚本，Playwright E2E 统一复用 build 后的 preview 链路 |
@@ -155,7 +155,7 @@
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
 | `MCP-01` | P1 | done | MCP server 暴露 OSM 会话数据 | `mcp` 子命令已通过 `stdio` 暴露 `list/search/get` tools，并有端到端测试覆盖 |
-| `MCP-02` | P1 | todo | MCP server viewer | UI 可查看 server 列表、状态和配置 |
+| `MCP-02` | P1 | done | MCP server viewer | Config 页面已展示 MCP server 列表、状态、传输方式、命令与原始配置片段 |
 | `MCP-03` | P1 | todo | unified MCP management | 增删改查与校验测试通过 |
 | `MCP-04` | P1 | todo | prompts panel | prompt 浏览、编辑和版本切换测试通过 |
 | `MCP-05` | P1 | todo | skills panel / installer | 本地 skills 发现、安装和启停测试通过 |

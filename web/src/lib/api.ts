@@ -71,6 +71,19 @@ export type ConfigRiskRecord = {
   maskedSecret: string;
   officialOrProxy: string;
   risks: string[];
+  mcpServers?: ConfigMcpServerRecord[];
+};
+
+export type ConfigMcpServerRecord = {
+  serverId: string;
+  name: string;
+  enabled: boolean;
+  status: string;
+  transport: string;
+  command?: string;
+  args: string[];
+  url?: string;
+  configJson: string;
 };
 
 export type AuditEventRecord = {
@@ -409,7 +422,8 @@ const fallbackSnapshot: DashboardSnapshot = {
       baseUrl: "https://relay.cch.example/v1",
       maskedSecret: "***6789",
       officialOrProxy: "Proxy",
-      risks: ["third_party_base_url", "dangerous_sandbox", "dangerous_approval_policy"]
+      risks: ["third_party_base_url", "dangerous_sandbox", "dangerous_approval_policy"],
+      mcpServers: []
     },
     {
       artifactId: "cfg-002",
@@ -421,7 +435,8 @@ const fallbackSnapshot: DashboardSnapshot = {
       baseUrl: "https://relay.anthropic-proxy.example/v1",
       maskedSecret: "***4321",
       officialOrProxy: "Proxy",
-      risks: ["dangerous_permissions", "shell_hook"]
+      risks: ["dangerous_permissions", "shell_hook"],
+      mcpServers: []
     },
     {
       artifactId: "cfg-003",
@@ -433,7 +448,18 @@ const fallbackSnapshot: DashboardSnapshot = {
       baseUrl: "https://openrouter.ai/api/v1",
       maskedSecret: "***3456",
       officialOrProxy: "Proxy",
-      risks: ["third_party_provider", "dangerous_permissions"]
+      risks: ["third_party_provider", "dangerous_permissions"],
+      mcpServers: [
+        {
+          serverId: "cfg-003:filesystem",
+          name: "filesystem",
+          enabled: true,
+          status: "enabled",
+          transport: "embedded",
+          args: [],
+          configJson: '{\n  "enabled": true\n}'
+        }
+      ]
     },
     {
       artifactId: "cfg-004",
@@ -445,7 +471,20 @@ const fallbackSnapshot: DashboardSnapshot = {
       baseUrl: "https://copilot.enterprise-relay.example",
       maskedSecret: "***7890",
       officialOrProxy: "Proxy",
-      risks: ["third_party_base_url", "dangerous_permissions"]
+      risks: ["third_party_base_url", "dangerous_permissions"],
+      mcpServers: [
+        {
+          serverId: "cfg-004:filesystem",
+          name: "filesystem",
+          enabled: true,
+          status: "configured",
+          transport: "stdio",
+          command: "node",
+          args: ["mcp-filesystem.js"],
+          configJson:
+            '{\n  "command": "node",\n  "args": ["mcp-filesystem.js"]\n}'
+        }
+      ]
     },
     {
       artifactId: "cfg-005",
@@ -461,6 +500,18 @@ const fallbackSnapshot: DashboardSnapshot = {
         "third_party_provider",
         "third_party_base_url",
         "dangerous_permissions"
+      ],
+      mcpServers: [
+        {
+          serverId: "cfg-005:postgres",
+          name: "postgres",
+          enabled: true,
+          status: "configured",
+          transport: "stdio",
+          command: "uvx",
+          args: ["mcp-postgres"],
+          configJson: '{\n  "command": "uvx",\n  "args": ["mcp-postgres"]\n}'
+        }
       ]
     }
   ],
@@ -1011,6 +1062,9 @@ function normalizeDashboardSnapshot(
 
   return {
     ...snapshot,
+    configs: Array.isArray(snapshot.configs)
+      ? snapshot.configs.filter(isConfigRiskRecord).map(normalizeConfigRiskRecord)
+      : [],
     doctorFindings: Array.isArray(snapshot.doctorFindings)
       ? snapshot.doctorFindings.filter(isDoctorFindingRecord)
       : [],
@@ -1206,8 +1260,62 @@ function isAuditEventRecord(value: unknown): value is AuditEventRecord {
     typeof value.actor === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.result === "string" &&
-    typeof value.detail === "string"
+      typeof value.detail === "string"
   );
+}
+
+function isConfigRiskRecord(value: unknown): value is ConfigRiskRecord {
+  return (
+    isRecord(value) &&
+    typeof value.artifactId === "string" &&
+    typeof value.assistant === "string" &&
+    typeof value.scope === "string" &&
+    typeof value.path === "string" &&
+    typeof value.provider === "string" &&
+    typeof value.baseUrl === "string" &&
+    typeof value.maskedSecret === "string" &&
+    typeof value.officialOrProxy === "string" &&
+    Array.isArray(value.risks)
+  );
+}
+
+function normalizeConfigRiskRecord(config: ConfigRiskRecord): ConfigRiskRecord {
+  return {
+    ...config,
+    mcpServers: Array.isArray(config.mcpServers)
+      ? config.mcpServers.filter(isConfigMcpServerRecord).map(normalizeConfigMcpServerRecord)
+      : []
+  };
+}
+
+function isConfigMcpServerRecord(value: unknown): value is ConfigMcpServerRecord {
+  return (
+    isRecord(value) &&
+    typeof value.serverId === "string" &&
+    typeof value.name === "string" &&
+    typeof value.enabled === "boolean" &&
+    typeof value.status === "string" &&
+    typeof value.transport === "string" &&
+    Array.isArray(value.args) &&
+    value.args.every((item) => typeof item === "string")
+  );
+}
+
+function normalizeConfigMcpServerRecord(
+  server: ConfigMcpServerRecord
+): ConfigMcpServerRecord {
+  return {
+    ...server,
+    command: typeof server.command === "string" ? server.command : undefined,
+    args: Array.isArray(server.args)
+      ? server.args.filter((item) => typeof item === "string")
+      : [],
+    url: typeof server.url === "string" ? server.url : undefined,
+    configJson:
+      typeof server.configJson === "string"
+        ? server.configJson
+        : JSON.stringify(server, null, 2)
+  };
 }
 
 function isSessionControlRecord(value: unknown): value is SessionControlRecord {

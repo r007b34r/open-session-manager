@@ -276,6 +276,22 @@ type Messages = {
       maskedKey: string;
       newKey: string;
     };
+    viewer: {
+      kicker: string;
+      title: string;
+      description: string;
+      empty: string;
+      fields: {
+        assistant: string;
+        scope: string;
+        configPath: string;
+        command: string;
+        url: string;
+        config: string;
+      };
+      statuses: Record<"configured" | "enabled" | "disabled", string>;
+      transports: Record<"stdio" | "http" | "sse" | "embedded", string>;
+    };
     review: {
       title: string;
       description: string;
@@ -642,6 +658,32 @@ const messages: Record<Language, Messages> = {
         endpoint: "Endpoint",
         maskedKey: "Masked Key",
         newKey: "New Key"
+      },
+      viewer: {
+        kicker: "MCP Inventory",
+        title: "MCP Server Viewer",
+        description:
+          "Review every detected MCP server, its transport, and the raw config fragment before trusting it.",
+        empty: "No MCP server configuration was detected in the current config set.",
+        fields: {
+          assistant: "Assistant",
+          scope: "Scope",
+          configPath: "Config Path",
+          command: "Command",
+          url: "URL",
+          config: "Config"
+        },
+        statuses: {
+          configured: "Configured",
+          enabled: "Enabled",
+          disabled: "Disabled"
+        },
+        transports: {
+          stdio: "Stdio",
+          http: "HTTP",
+          sse: "SSE",
+          embedded: "Embedded"
+        }
       },
       review: {
         title: "Review changes",
@@ -1048,6 +1090,31 @@ const messages: Record<Language, Messages> = {
         endpoint: "端点",
         maskedKey: "脱敏密钥",
         newKey: "新密钥"
+      },
+      viewer: {
+        kicker: "MCP 清单",
+        title: "MCP 服务查看器",
+        description: "把当前检测到的 MCP 服务、传输方式和原始配置片段直接展示出来，方便审查。",
+        empty: "当前配置集合里没有检测到 MCP 服务配置。",
+        fields: {
+          assistant: "助手",
+          scope: "范围",
+          configPath: "配置路径",
+          command: "命令",
+          url: "URL",
+          config: "配置"
+        },
+        statuses: {
+          configured: "已配置",
+          enabled: "已启用",
+          disabled: "已禁用"
+        },
+        transports: {
+          stdio: "Stdio",
+          http: "HTTP",
+          sse: "SSE",
+          embedded: "内嵌"
+        }
       },
       review: {
         title: "审查改动",

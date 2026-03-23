@@ -1,6 +1,7 @@
 import { useState, type SetStateAction } from "react";
 
 import type {
+  ConfigMcpServerRecord,
   ConfigRiskRecord,
   ConfigWritebackInput,
   LocalAuditEventInput
@@ -38,6 +39,8 @@ export function ConfigRiskPanel({
 }: ConfigRiskPanelProps) {
   const { copy, translateProxyMode, translateRiskFlag, translateScope } =
     useI18n();
+  const groupedConfigs = buildConfigGroups(configs);
+  const mcpViewerEntries = buildMcpViewerEntries(configs);
   const [draft, setDraft] = useState<ConfigWritebackInput | null>(null);
   const [savedSnippets, setSavedSnippets] = useState<StoredConfigSnippetRecord[]>(() =>
     loadSavedConfigSnippets()
@@ -86,9 +89,13 @@ export function ConfigRiskPanel({
         <p className="panel-copy">{copy.configRisk.description}</p>
       </div>
 
-      <div className="config-grid">
-        {configs.map((config) => (
-          <article className="config-card" key={config.artifactId}>
+      <div className="config-group-stack">
+        {groupedConfigs.map((group) => (
+          <section className="config-project-group" key={group.label}>
+            <h3 className="config-group-heading">{group.label}</h3>
+            <div className="config-grid">
+              {group.configs.map((config) => (
+                <article className="config-card" key={config.artifactId}>
             <div className="config-card-topline">
               <span className="badge badge-neutral">{config.assistant}</span>
               <span className="badge badge-risk">
@@ -472,11 +479,170 @@ export function ConfigRiskPanel({
                 </span>
               ))}
             </div>
-          </article>
+                </article>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
+
+      <section className="mcp-viewer-panel">
+        <div className="panel-header">
+          <div>
+            <p className="section-kicker">{copy.configRisk.viewer.kicker}</p>
+            <h2>{copy.configRisk.viewer.title}</h2>
+          </div>
+          <p className="panel-copy">{copy.configRisk.viewer.description}</p>
+        </div>
+
+        {mcpViewerEntries.length === 0 ? (
+          <p className="panel-copy">{copy.configRisk.viewer.empty}</p>
+        ) : (
+          <div className="mcp-viewer-grid">
+            {mcpViewerEntries.map((entry) => (
+              <article className="mcp-server-card" key={entry.serverId}>
+                <div className="config-card-topline">
+                  <strong>{entry.name}</strong>
+                  <div className="badge-row">
+                    <span className="badge badge-neutral">
+                      {translateMcpStatus(copy.configRisk.viewer.statuses, entry.status)}
+                    </span>
+                    <span className="badge badge-safe">
+                      {translateMcpTransport(
+                        copy.configRisk.viewer.transports,
+                        entry.transport
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <dl className="config-meta">
+                  <div>
+                    <dt>{copy.configRisk.viewer.fields.assistant}</dt>
+                    <dd>{entry.assistant}</dd>
+                  </div>
+                  <div>
+                    <dt>{copy.configRisk.viewer.fields.scope}</dt>
+                    <dd>{translateScope(entry.scope)}</dd>
+                  </div>
+                  <div>
+                    <dt>{copy.configRisk.viewer.fields.configPath}</dt>
+                    <dd>{entry.path}</dd>
+                  </div>
+                  {entry.commandLine ? (
+                    <div>
+                      <dt>{copy.configRisk.viewer.fields.command}</dt>
+                      <dd>{entry.commandLine}</dd>
+                    </div>
+                  ) : null}
+                  {entry.url ? (
+                    <div>
+                      <dt>{copy.configRisk.viewer.fields.url}</dt>
+                      <dd>{entry.url}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                <div className="mcp-config-preview">
+                  <strong>{copy.configRisk.viewer.fields.config}</strong>
+                  <pre>{entry.configJson}</pre>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </section>
   );
+}
+
+type McpViewerEntry = ConfigMcpServerRecord & {
+  assistant: string;
+  scope: string;
+  path: string;
+  commandLine: string;
+};
+
+function buildMcpViewerEntries(configs: ConfigRiskRecord[]): McpViewerEntry[] {
+  return configs
+    .flatMap((config) =>
+      (config.mcpServers ?? []).map((server) => ({
+        ...server,
+        assistant: config.assistant,
+        scope: config.scope,
+        path: config.path,
+        commandLine: buildMcpCommandLine(server)
+      }))
+    )
+    .sort((left, right) => {
+      const nameDelta = left.name.localeCompare(right.name);
+      if (nameDelta !== 0) {
+        return nameDelta;
+      }
+
+      return left.assistant.localeCompare(right.assistant);
+    });
+}
+
+function buildMcpCommandLine(server: ConfigMcpServerRecord) {
+  return [server.command, ...server.args].filter(Boolean).join(" ");
+}
+
+function buildConfigGroups(configs: ConfigRiskRecord[]) {
+  const groups = new Map<string, ConfigRiskRecord[]>();
+
+  for (const config of configs) {
+    const label = deriveConfigGroupLabel(config);
+    const existing = groups.get(label);
+    if (existing) {
+      existing.push(config);
+    } else {
+      groups.set(label, [config]);
+    }
+  }
+
+  return [...groups.entries()].map(([label, groupedConfigs]) => ({
+    label,
+    configs: groupedConfigs
+  }));
+}
+
+function deriveConfigGroupLabel(config: ConfigRiskRecord) {
+  const normalizedPath = config.path.replace(/\\/g, "/");
+  const suffixes = [
+    "/.github/copilot/settings.local.json",
+    "/.github/copilot/settings.json",
+    "/.factory/settings.local.json",
+    "/.factory/settings.json",
+    "/.opencode/opencode.json"
+  ];
+  const loweredPath = normalizedPath.toLowerCase();
+
+  for (const suffix of suffixes) {
+    if (loweredPath.endsWith(suffix.toLowerCase())) {
+      const trimmed = normalizedPath.slice(0, -suffix.length);
+      return trimmed || normalizedPath;
+    }
+  }
+
+  const lastSlash = normalizedPath.lastIndexOf("/");
+  if (lastSlash > 1) {
+    return normalizedPath.slice(0, lastSlash);
+  }
+
+  return normalizedPath;
+}
+
+function translateMcpStatus(
+  messages: Record<"configured" | "enabled" | "disabled", string>,
+  value: string
+) {
+  return messages[value as keyof typeof messages] ?? value;
+}
+
+function translateMcpTransport(
+  messages: Record<"stdio" | "http" | "sse" | "embedded", string>,
+  value: string
+) {
+  return messages[value as keyof typeof messages] ?? value;
 }
 
 function isEditableAssistant(assistant: string) {

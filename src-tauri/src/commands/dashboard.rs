@@ -202,6 +202,24 @@ pub struct ConfigRiskRecord {
     pub masked_secret: String,
     pub official_or_proxy: String,
     pub risks: Vec<String>,
+    #[serde(default)]
+    pub mcp_servers: Vec<ConfigMcpServerRecord>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigMcpServerRecord {
+    pub server_id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub status: String,
+    pub transport: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    pub args: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    pub config_json: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1068,9 +1086,10 @@ fn build_config_records(
             .base_url
             .clone()
             .unwrap_or_else(|| "not_configured".to_string());
+        let artifact_id = audit.config.artifact_id.clone();
 
         configs.push(ConfigRiskRecord {
-            artifact_id: audit.config.artifact_id,
+            artifact_id: artifact_id.clone(),
             assistant: audit.config.assistant,
             scope: normalize_scope(&audit.config.scope),
             path: audit.config.path,
@@ -1088,10 +1107,135 @@ fn build_config_records(
                 .into_iter()
                 .map(|risk| risk.code)
                 .collect::<Vec<_>>(),
+            mcp_servers: parse_config_mcp_servers(&artifact_id, &audit.config.mcp_json),
         });
     }
 
     Ok(configs)
+}
+
+fn parse_config_mcp_servers(
+    config_artifact_id: &str,
+    mcp_json: &str,
+) -> Vec<ConfigMcpServerRecord> {
+    let Ok(parsed) = serde_json::from_str::<Value>(mcp_json) else {
+        return Vec::new();
+    };
+
+    let Some(servers) = extract_mcp_server_map(&parsed) else {
+        return Vec::new();
+    };
+
+    let mut entries = servers
+        .iter()
+        .filter_map(|(name, raw)| {
+            let raw_object = raw.as_object()?;
+            let enabled = raw_object
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            let command = raw_object
+                .get("command")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
+            let args = raw_object
+                .get("args")
+                .and_then(Value::as_array)
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(ToOwned::to_owned)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let url = raw_object
+                .get("url")
+                .or_else(|| raw_object.get("serverUrl"))
+                .or_else(|| raw_object.get("endpoint"))
+                .or_else(|| raw_object.get("baseUrl"))
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
+            let transport = infer_mcp_transport(raw_object, command.as_deref(), url.as_deref());
+            let status = infer_mcp_status(enabled, command.as_deref(), url.as_deref());
+
+            Some(ConfigMcpServerRecord {
+                server_id: format!("{config_artifact_id}:{name}"),
+                name: name.clone(),
+                enabled,
+                status,
+                transport,
+                command,
+                args,
+                url,
+                config_json: serde_json::to_string_pretty(raw).unwrap_or_else(|_| raw.to_string()),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    entries.sort_by(|left, right| left.name.cmp(&right.name));
+    entries
+}
+
+fn extract_mcp_server_map(value: &Value) -> Option<&serde_json::Map<String, Value>> {
+    let object = value.as_object()?;
+
+    if let Some(servers) = object.get("servers").and_then(Value::as_object) {
+        return Some(servers);
+    }
+
+    if let Some(servers) = object.get("mcpServers").and_then(Value::as_object) {
+        return Some(servers);
+    }
+
+    Some(object)
+}
+
+fn infer_mcp_transport(
+    raw: &serde_json::Map<String, Value>,
+    command: Option<&str>,
+    url: Option<&str>,
+) -> String {
+    if let Some(transport) = raw.get("transport").and_then(Value::as_str) {
+        return normalize_mcp_transport(transport);
+    }
+
+    if command.is_some() {
+        return "stdio".to_string();
+    }
+
+    if let Some(url) = url {
+        let lowered = url.to_ascii_lowercase();
+        if lowered.contains("/sse") {
+            return "sse".to_string();
+        }
+
+        return "http".to_string();
+    }
+
+    "embedded".to_string()
+}
+
+fn normalize_mcp_transport(value: &str) -> String {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "stdio" => "stdio".to_string(),
+        "sse" => "sse".to_string(),
+        "http" | "streamable-http" | "streamable_http" => "http".to_string(),
+        "embedded" | "local" => "embedded".to_string(),
+        _ => value.trim().to_ascii_lowercase(),
+    }
+}
+
+fn infer_mcp_status(enabled: bool, command: Option<&str>, url: Option<&str>) -> String {
+    if !enabled {
+        return "disabled".to_string();
+    }
+
+    if command.is_some() || url.is_some() {
+        return "configured".to_string();
+    }
+
+    "enabled".to_string()
 }
 
 fn derive_project_config_targets(sessions: &[SessionDetailRecord]) -> Vec<ConfigAuditTarget> {

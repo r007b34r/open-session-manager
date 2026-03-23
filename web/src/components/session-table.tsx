@@ -20,6 +20,7 @@ export function SessionTable({
   searchMatchReasons
 }: SessionTableProps) {
   const { copy, translateProgressState } = useI18n();
+  const sessionGroups = buildSessionGroups(sessions);
 
   const selectSession = (sessionId: string) => {
     onSelectSession?.(sessionId);
@@ -54,85 +55,123 @@ export function SessionTable({
             <p className="panel-copy">{copy.sessionTable.emptyBody}</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">{copy.sessionTable.columns.session}</th>
-                <th scope="col">{copy.sessionTable.columns.assistant}</th>
-                <th scope="col">{copy.sessionTable.columns.progress}</th>
-                <th scope="col">{copy.sessionTable.columns.value}</th>
-                <th scope="col">{copy.sessionTable.columns.lastActivity}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((session) => {
-                const isSelected = session.sessionId === selectedSessionId;
-                const snippet = searchSnippets?.get(session.sessionId);
-                const matchReasons = searchMatchReasons?.get(session.sessionId) ?? [];
+          <div className="table-group-stack">
+            {sessionGroups.map((group) => (
+              <section className="table-project-group" key={group.label}>
+                <h3 className="table-group-heading">{group.label}</h3>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{copy.sessionTable.columns.session}</th>
+                      <th scope="col">{copy.sessionTable.columns.assistant}</th>
+                      <th scope="col">{copy.sessionTable.columns.progress}</th>
+                      <th scope="col">{copy.sessionTable.columns.value}</th>
+                      <th scope="col">{copy.sessionTable.columns.lastActivity}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.sessions.map((session) => {
+                      const isSelected = session.sessionId === selectedSessionId;
+                      const snippet = searchSnippets?.get(session.sessionId);
+                      const matchReasons =
+                        searchMatchReasons?.get(session.sessionId) ?? [];
 
-                return (
-                  <tr
-                    className={isSelected ? "is-selected" : ""}
-                    key={session.sessionId}
-                    onClick={() => selectSession(session.sessionId)}
-                    onKeyDown={(event) => handleRowKeyDown(event, session.sessionId)}
-                    tabIndex={0}
-                  >
-                    <td>
-                      <button
-                        aria-pressed={isSelected}
-                        className={
-                          isSelected
-                            ? "session-row-button is-selected"
-                            : "session-row-button"
-                        }
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          selectSession(session.sessionId);
-                        }}
-                        type="button"
-                      >
-                        <span className="session-link">{session.title}</span>
-                        <span className="session-meta-stack">
-                          <span className="session-meta">{session.environment}</span>
-                          <span className="session-meta session-meta-id">
-                            {shortenSessionId(session.sessionId)}
-                          </span>
-                        </span>
-                        {snippet ? (
-                          <span className="session-search-snippet">{snippet}</span>
-                        ) : null}
-                        {matchReasons.length > 0 ? (
-                          <span className="session-search-reasons">
-                            {matchReasons.map((reason) => (
-                              <span className="badge badge-neutral" key={reason}>
-                                {copy.sessions.matchReasonLabels[reason] ?? reason}
+                      return (
+                        <tr
+                          className={isSelected ? "is-selected" : ""}
+                          key={session.sessionId}
+                          onClick={() => selectSession(session.sessionId)}
+                          onKeyDown={(event) => handleRowKeyDown(event, session.sessionId)}
+                          tabIndex={0}
+                        >
+                          <td>
+                            <button
+                              aria-pressed={isSelected}
+                              className={
+                                isSelected
+                                  ? "session-row-button is-selected"
+                                  : "session-row-button"
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                selectSession(session.sessionId);
+                              }}
+                              type="button"
+                            >
+                              <span className="session-link">{session.title}</span>
+                              <span className="session-meta-stack">
+                                <span className="session-meta">{session.environment}</span>
+                                <span className="session-meta session-meta-id">
+                                  {shortenSessionId(session.sessionId)}
+                                </span>
                               </span>
-                            ))}
-                          </span>
-                        ) : null}
-                      </button>
-                    </td>
-                    <td>{session.assistant}</td>
-                    <td>
-                      <span className="progress-badge">
-                        {translateProgressState(session.progressState)}
-                      </span>
-                      <span className="progress-percent">
-                        {session.progressPercent}%
-                      </span>
-                    </td>
-                    <td>{session.valueScore}</td>
-                    <td>{session.lastActivityAt}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                              {snippet ? (
+                                <span className="session-search-snippet">{snippet}</span>
+                              ) : null}
+                              {matchReasons.length > 0 ? (
+                                <span className="session-search-reasons">
+                                  {matchReasons.map((reason) => (
+                                    <span className="badge badge-neutral" key={reason}>
+                                      {copy.sessions.matchReasonLabels[reason] ?? reason}
+                                    </span>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </button>
+                          </td>
+                          <td>{session.assistant}</td>
+                          <td>
+                            <span className="progress-badge">
+                              {translateProgressState(session.progressState)}
+                            </span>
+                            <span className="progress-percent">
+                              {session.progressPercent}%
+                            </span>
+                          </td>
+                          <td>{session.valueScore}</td>
+                          <td>{session.lastActivityAt}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </section>
+            ))}
+          </div>
         )}
       </div>
     </section>
   );
+}
+
+function buildSessionGroups(sessions: SessionListItem[]) {
+  const groups = new Map<string, SessionListItem[]>();
+
+  for (const session of sessions) {
+    const label = normalizeSessionGroupLabel(session);
+    const existing = groups.get(label);
+    if (existing) {
+      existing.push(session);
+    } else {
+      groups.set(label, [session]);
+    }
+  }
+
+  return [...groups.entries()].map(([label, groupedSessions]) => ({
+    label,
+    sessions: groupedSessions
+  }));
+}
+
+function normalizeSessionGroupLabel(session: SessionListItem) {
+  if ("projectPath" in session && typeof session.projectPath === "string") {
+    const projectPath = session.projectPath.trim();
+    if (projectPath.length > 0) {
+      return projectPath;
+    }
+  }
+
+  return session.environment;
 }
 
 function shortenSessionId(value: string) {

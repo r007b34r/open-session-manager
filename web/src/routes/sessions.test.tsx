@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import type { DashboardRuntime, SessionDetailRecord } from "../lib/api";
@@ -119,6 +119,62 @@ describe("SessionsRoute", () => {
     expect(
       screen.queryByRole("button", { name: /review cleanup handoff template/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("groups visible sessions by project path", async () => {
+    renderWithI18n(
+      <SessionsRoute
+        exportedSessionIds={new Set()}
+        latestMarkdownExportPaths={new Map()}
+        runtime={buildRuntime()}
+        sessions={[
+          ...buildSessions(),
+          {
+            sessionId: "ses-003",
+            title: "Review release packaging",
+            assistant: "OpenCode",
+            progressState: "In Progress",
+            progressPercent: 40,
+            lastActivityAt: "2026-03-15 07:20",
+            environment: "Windows 11",
+            valueScore: 61,
+            summary: "Package notes are still in progress.",
+            projectPath: "/home/max/src/open-session-manager",
+            sourcePath: "C:/Users/Max/AppData/Local/OpenCode/ses-003.json",
+            tags: ["release"],
+            riskFlags: [],
+            keyArtifacts: ["release-checklist.md"],
+            transcriptHighlights: [],
+            todoItems: []
+          }
+        ]}
+      />
+    );
+
+    const alphaGroup = screen
+      .getByRole("heading", { name: "/home/max/src/open-session-manager" })
+      .closest("section");
+    const opsGroup = screen
+      .getByRole("heading", { name: "C:/Users/Max/Desktop/ops" })
+      .closest("section");
+
+    expect(alphaGroup).not.toBeNull();
+    expect(opsGroup).not.toBeNull();
+    expect(
+      within(alphaGroup as HTMLElement).getByRole("button", {
+        name: /refactor wsl collector handshake/i
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(alphaGroup as HTMLElement).getByRole("button", {
+        name: /review release packaging/i
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(opsGroup as HTMLElement).getByRole("button", {
+        name: /audit anthropic relay settings/i
+      })
+    ).toBeInTheDocument();
   });
 });
 

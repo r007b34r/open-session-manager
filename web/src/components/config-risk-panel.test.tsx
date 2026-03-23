@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 describe("ConfigRiskPanel", () => {
@@ -297,5 +297,129 @@ describe("ConfigRiskPanel", () => {
         target: "cfg-004"
       })
     );
+  });
+
+  it("renders a viewer for discovered MCP server configs", async () => {
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        configs={[
+          {
+            artifactId: "cfg-003",
+            assistant: "GitHub Copilot CLI",
+            scope: "Global",
+            path: "~/.copilot/config.json",
+            provider: "github",
+            model: "gpt-5",
+            baseUrl: "https://copilot.enterprise-relay.example",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_base_url", "dangerous_permissions"],
+            mcpServers: [
+              {
+                serverId: "cfg-003:filesystem",
+                name: "filesystem",
+                enabled: true,
+                status: "configured",
+                transport: "stdio",
+                command: "node",
+                args: ["mcp-filesystem.js"],
+                configJson:
+                  '{\n  "command": "node",\n  "args": ["mcp-filesystem.js"]\n}'
+              }
+            ]
+          },
+          {
+            artifactId: "cfg-004",
+            assistant: "OpenCode",
+            scope: "Project",
+            path: ".opencode/opencode.json",
+            provider: "openrouter",
+            model: "openrouter/anthropic/claude-sonnet-4",
+            baseUrl: "https://openrouter.ai/api/v1",
+            maskedSecret: "***3456",
+            officialOrProxy: "Proxy",
+            risks: ["dangerous_permissions"],
+            mcpServers: [
+              {
+                serverId: "cfg-004:filesystem",
+                name: "filesystem",
+                enabled: true,
+                status: "enabled",
+                transport: "embedded",
+                args: [],
+                configJson: '{\n  "enabled": true\n}'
+              }
+            ]
+          }
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", { name: /mcp server viewer/i })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("filesystem")).toHaveLength(2);
+    expect(screen.getAllByText("GitHub Copilot CLI")).toHaveLength(2);
+    expect(screen.getByText("node mcp-filesystem.js")).toBeInTheDocument();
+    expect(screen.getByText("Configured")).toBeInTheDocument();
+    expect(screen.getByText("Embedded")).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('"enabled": true'))
+    ).toBeInTheDocument();
+  });
+
+  it("groups project-scoped configs under the same project root", async () => {
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        configs={[
+          {
+            artifactId: "cfg-201",
+            assistant: "GitHub Copilot CLI",
+            scope: "Project",
+            path: "C:/Projects/alpha/.github/copilot/settings.local.json",
+            provider: "github",
+            model: "gpt-5",
+            baseUrl: "https://api.githubcopilot.com",
+            maskedSecret: "***7890",
+            officialOrProxy: "Official",
+            risks: [],
+            mcpServers: []
+          },
+          {
+            artifactId: "cfg-202",
+            assistant: "Factory Droid",
+            scope: "Project",
+            path: "C:/Projects/alpha/.factory/settings.local.json",
+            provider: "openrouter",
+            model: "openrouter/anthropic/claude-sonnet-4",
+            baseUrl: "https://openrouter.ai/api/v1",
+            maskedSecret: "***3456",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_provider"],
+            mcpServers: []
+          }
+        ]}
+      />
+    );
+
+    const alphaGroup = screen
+      .getByRole("heading", { name: "C:/Projects/alpha" })
+      .closest("section");
+
+    expect(alphaGroup).not.toBeNull();
+    expect(
+      within(alphaGroup as HTMLElement).getByText(
+        "C:/Projects/alpha/.github/copilot/settings.local.json"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(alphaGroup as HTMLElement).getByText(
+        "C:/Projects/alpha/.factory/settings.local.json"
+      )
+    ).toBeInTheDocument();
   });
 });
