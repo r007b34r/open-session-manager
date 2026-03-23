@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const invokeMock = vi.fn();
 
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: invokeMock
+  invoke: invokeMock,
 }));
 
 import {
@@ -14,7 +14,7 @@ import {
   applyMarkdownExport,
   applySoftDelete,
   fetchDashboardSnapshot,
-  type DashboardSnapshot
+  type DashboardSnapshot,
 } from "./api";
 
 describe("fetchDashboardSnapshot", () => {
@@ -28,7 +28,7 @@ describe("fetchDashboardSnapshot", () => {
   it("优先读取真实快照接口", async () => {
     const realSnapshot = {
       metrics: [
-        { label: "indexed_sessions", value: "1", note: "fixture_note" }
+        { label: "indexed_sessions", value: "1", note: "fixture_note" },
       ],
       sessions: [
         {
@@ -45,7 +45,7 @@ describe("fetchDashboardSnapshot", () => {
           sourcePath: "C:/Users/Max/.codex/sessions/older.jsonl",
           tags: ["real"],
           riskFlags: [],
-          keyArtifacts: ["artifact"]
+          keyArtifacts: ["artifact"],
         },
         {
           sessionId: "real-001",
@@ -61,18 +61,18 @@ describe("fetchDashboardSnapshot", () => {
           sourcePath: "C:/Users/Max/.codex/sessions/demo.jsonl",
           tags: ["real"],
           riskFlags: [],
-          keyArtifacts: ["artifact"]
-        }
+          keyArtifacts: ["artifact"],
+        },
       ],
       configs: [],
       doctorFindings: [],
       auditEvents: [],
-      runtime: buildRuntime()
+      runtime: buildRuntime(),
     };
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => realSnapshot
+      json: async () => realSnapshot,
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -83,19 +83,53 @@ describe("fetchDashboardSnapshot", () => {
         {
           ...realSnapshot.sessions[1],
           transcriptHighlights: [],
-          todoItems: []
+          todoItems: [],
         },
         {
           ...realSnapshot.sessions[0],
           transcriptHighlights: [],
-          todoItems: []
-        }
+          todoItems: [],
+        },
       ],
       usageOverview: buildEmptyUsageOverview(),
-      usageTimeline: []
+      usageTimeline: [],
     } satisfies DashboardSnapshot);
     expect(fetchMock).toHaveBeenCalledWith("/dashboard-snapshot.json", {
-      cache: "no-store"
+      cache: "no-store",
+    });
+  });
+
+  it("保留审计事件里的 resume artifact 路径", async () => {
+    const realSnapshot = {
+      metrics: [],
+      sessions: [],
+      configs: [],
+      doctorFindings: [],
+      auditEvents: [
+        {
+          eventId: "evt-resume-artifact",
+          type: "restore",
+          target: "ses-001",
+          actor: "r007b34r",
+          createdAt: "2026-03-23T05:00:00Z",
+          result: "success",
+          detail: "Restored session.",
+          resumeArtifactPath: "C:/OSM/exports/resume-ses-001.json",
+        },
+      ],
+      runtime: buildRuntime(),
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => realSnapshot,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const snapshot = await fetchDashboardSnapshot();
+
+    expect(snapshot.auditEvents[0]).toMatchObject({
+      resumeArtifactPath: "C:/OSM/exports/resume-ses-001.json",
     });
   });
 
@@ -121,27 +155,27 @@ describe("fetchDashboardSnapshot", () => {
 
     expect(snapshot.sessions).toHaveLength(3);
     expect(snapshot.configs.map((config) => config.assistant)).toEqual(
-      expect.arrayContaining(["GitHub Copilot CLI", "Factory Droid"])
+      expect.arrayContaining(["GitHub Copilot CLI", "Factory Droid"]),
     );
   });
 
   it("桌面模式下优先调用 Tauri 原生命令读取快照", async () => {
     const nativeSnapshot: DashboardSnapshot = {
       metrics: [
-        { label: "indexed_sessions", value: "2", note: "native_snapshot" }
+        { label: "indexed_sessions", value: "2", note: "native_snapshot" },
       ],
       sessions: [],
       configs: [],
       doctorFindings: [],
       auditEvents: [],
-      runtime: buildRuntime()
+      runtime: buildRuntime(),
     };
     const fetchMock = vi.fn();
 
     vi.stubGlobal("fetch", fetchMock);
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
@@ -149,7 +183,7 @@ describe("fetchDashboardSnapshot", () => {
       ...nativeSnapshot,
       gitProjects: [],
       usageOverview: buildEmptyUsageOverview(),
-      usageTimeline: []
+      usageTimeline: [],
     });
     expect(invokeMock).toHaveBeenCalledWith("load_dashboard_snapshot", {});
     expect(fetchMock).not.toHaveBeenCalled();
@@ -182,8 +216,8 @@ describe("fetchDashboardSnapshot", () => {
             cacheWriteTokens: 0,
             reasoningTokens: 0,
             totalTokens: 240,
-            costSource: "unknown"
-          }
+            costSource: "unknown",
+          },
         },
         {
           sessionId: "real-usage-zero",
@@ -194,7 +228,8 @@ describe("fetchDashboardSnapshot", () => {
           lastActivityAt: "2026-03-15T09:00:00Z",
           environment: "linux",
           valueScore: 85,
-          summary: "Usage exists and the provider explicitly reported zero cost.",
+          summary:
+            "Usage exists and the provider explicitly reported zero cost.",
           projectPath: "/home/max/demo",
           sourcePath: "/home/max/.local/share/opencode/demo.json",
           tags: ["real"],
@@ -209,9 +244,9 @@ describe("fetchDashboardSnapshot", () => {
             reasoningTokens: 0,
             totalTokens: 40,
             costUsd: 0,
-            costSource: "reported"
-          }
-        }
+            costSource: "reported",
+          },
+        },
       ],
       configs: [],
       doctorFindings: [],
@@ -226,34 +261,37 @@ describe("fetchDashboardSnapshot", () => {
           cacheWriteTokens: 0,
           reasoningTokens: 0,
           totalTokens: 280,
-          costSource: "unknown"
-        }
+          costSource: "unknown",
+        },
       ],
-      runtime: buildRuntime()
+      runtime: buildRuntime(),
     };
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => realSnapshot
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => realSnapshot,
+      }),
+    );
 
     const snapshot = await fetchDashboardSnapshot();
     const unknownCostSession = snapshot.sessions.find(
-      (session) => session.sessionId === "real-usage-unknown"
+      (session) => session.sessionId === "real-usage-unknown",
     );
     const zeroCostSession = snapshot.sessions.find(
-      (session) => session.sessionId === "real-usage-zero"
+      (session) => session.sessionId === "real-usage-zero",
     );
     const codexUsage = snapshot.usageOverview.assistants.find(
-      (assistant) => assistant.assistant === "Codex"
+      (assistant) => assistant.assistant === "Codex",
     );
     const openCodeUsage = snapshot.usageOverview.assistants.find(
-      (assistant) => assistant.assistant === "OpenCode"
+      (assistant) => assistant.assistant === "OpenCode",
     );
 
     expect(unknownCostSession?.usage).toMatchObject({
       model: "gpt-5-codex",
-      totalTokens: 240
+      totalTokens: 240,
     });
     expect(unknownCostSession?.usage?.costUsd).toBeUndefined();
     expect((unknownCostSession?.usage as any)?.costSource).toBe("unknown");
@@ -273,8 +311,8 @@ describe("fetchDashboardSnapshot", () => {
         sessionsWithUsage: 2,
         totalTokens: 280,
         costUsd: undefined,
-        costSource: "unknown"
-      })
+        costSource: "unknown",
+      }),
     ]);
   });
 });
@@ -287,7 +325,7 @@ function buildRuntime() {
     exportRootSource: "default" as const,
     quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
     preferencesPath:
-      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json",
   };
 }
 
@@ -302,9 +340,9 @@ function buildEmptyUsageOverview() {
       reasoningTokens: 0,
       totalTokens: 0,
       costUsd: undefined,
-      costSource: "unknown"
+      costSource: "unknown",
     },
-    assistants: []
+    assistants: [],
   };
 }
 
@@ -330,23 +368,23 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:30",
           result: "success",
-          detail: "Exported from native runtime."
+          detail: "Exported from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
     await expect(applyMarkdownExport(current, "ses-001")).resolves.toEqual(
-      nativeSnapshot
+      nativeSnapshot,
     );
     expect(invokeMock).toHaveBeenCalledWith("export_session_markdown", {
-      sessionId: "ses-001"
+      sessionId: "ses-001",
     });
   });
 
@@ -355,7 +393,9 @@ describe("desktop actions", () => {
     const current = await fetchDashboardSnapshot();
     const nativeSnapshot: DashboardSnapshot = {
       ...current,
-      sessions: current.sessions.filter((session) => session.sessionId !== "ses-003"),
+      sessions: current.sessions.filter(
+        (session) => session.sessionId !== "ses-003",
+      ),
       auditEvents: [
         {
           eventId: "evt-native-delete",
@@ -364,23 +404,23 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:31",
           result: "success",
-          detail: "Deleted from native runtime."
+          detail: "Deleted from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
     await expect(applySoftDelete(current, "ses-003")).resolves.toEqual(
-      nativeSnapshot
+      nativeSnapshot,
     );
     expect(invokeMock).toHaveBeenCalledWith("soft_delete_session", {
-      sessionId: "ses-003"
+      sessionId: "ses-003",
     });
   });
 
@@ -397,9 +437,9 @@ describe("desktop actions", () => {
               baseUrl: "https://github.com/api/copilot",
               maskedSecret: "***4321",
               officialOrProxy: "Official",
-              risks: ["dangerous_permissions"]
+              risks: ["dangerous_permissions"],
             }
-          : config
+          : config,
       ),
       auditEvents: [
         {
@@ -409,15 +449,15 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:32",
           result: "success",
-          detail: "Updated config from native runtime."
+          detail: "Updated config from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
@@ -430,8 +470,8 @@ describe("desktop actions", () => {
         provider: "github",
         model: "gpt-5-mini",
         baseUrl: "https://github.com/api/copilot",
-        secret: "ghu_new_secret_123454321"
-      })
+        secret: "ghu_new_secret_123454321",
+      }),
     ).resolves.toEqual(nativeSnapshot);
     expect(invokeMock).toHaveBeenCalledWith("write_config_artifact", {
       artifactId: "cfg-004",
@@ -441,7 +481,7 @@ describe("desktop actions", () => {
       provider: "github",
       model: "gpt-5-mini",
       baseUrl: "https://github.com/api/copilot",
-      secret: "ghu_new_secret_123454321"
+      secret: "ghu_new_secret_123454321",
     });
   });
 
@@ -458,27 +498,27 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:33",
           result: "success",
-          detail: "Committed from native runtime."
+          detail: "Committed from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
     await expect(
       applyGitProjectCommit(current, {
         repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
-        message: "feat: native git commit"
-      })
+        message: "feat: native git commit",
+      }),
     ).resolves.toEqual(nativeSnapshot);
     expect(invokeMock).toHaveBeenCalledWith("commit_git_project", {
       repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
-      message: "feat: native git commit"
+      message: "feat: native git commit",
     });
   });
 
@@ -495,27 +535,27 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:34",
           result: "success",
-          detail: "Switched from native runtime."
+          detail: "Switched from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
     await expect(
       applyGitProjectBranchSwitch(current, {
         repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
-        branch: "feature/native-branch"
-      })
+        branch: "feature/native-branch",
+      }),
     ).resolves.toEqual(nativeSnapshot);
     expect(invokeMock).toHaveBeenCalledWith("switch_git_project_branch", {
       repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
-      branch: "feature/native-branch"
+      branch: "feature/native-branch",
     });
   });
 
@@ -532,26 +572,26 @@ describe("desktop actions", () => {
           actor: "r007b34r",
           createdAt: "2026-03-15 15:35",
           result: "success",
-          detail: "Pushed from native runtime."
+          detail: "Pushed from native runtime.",
         },
-        ...current.auditEvents
-      ]
+        ...current.auditEvents,
+      ],
     };
 
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       configurable: true,
-      value: {}
+      value: {},
     });
     invokeMock.mockResolvedValueOnce(nativeSnapshot);
 
     await expect(
       applyGitProjectPush(current, {
-        repoRoot: "C:/Users/Max/Desktop/2026年3月15日"
-      })
+        repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+      }),
     ).resolves.toEqual(nativeSnapshot);
     expect(invokeMock).toHaveBeenCalledWith("push_git_project", {
       repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
-      remote: undefined
+      remote: undefined,
     });
   });
 });

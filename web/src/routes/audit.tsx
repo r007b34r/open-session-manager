@@ -33,7 +33,10 @@ export function AuditRoute({ events }: AuditRouteProps) {
               <span>{event.actor}</span>
               <span>{event.createdAt}</span>
             </div>
-            {event.outputPath || event.quarantinedPath || event.manifestPath ? (
+            {event.outputPath ||
+            event.quarantinedPath ||
+            event.manifestPath ||
+            event.resumeArtifactPath ? (
               <dl className="audit-paths">
                 {event.outputPath ? (
                   <div>
@@ -51,6 +54,12 @@ export function AuditRoute({ events }: AuditRouteProps) {
                   <div>
                     <dt>{copy.audit.pathLabels.manifestPath}</dt>
                     <dd>{event.manifestPath}</dd>
+                  </div>
+                ) : null}
+                {event.resumeArtifactPath ? (
+                  <div>
+                    <dt>{copy.audit.pathLabels.resumeArtifactPath}</dt>
+                    <dd>{event.resumeArtifactPath}</dd>
                   </div>
                 ) : null}
               </dl>

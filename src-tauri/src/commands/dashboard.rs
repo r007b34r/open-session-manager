@@ -271,6 +271,8 @@ pub struct AuditEventRecord {
     pub quarantined_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manifest_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resume_artifact_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -1648,6 +1650,7 @@ fn build_audit_record(event: AuditEvent) -> AuditEventRecord {
         output_path: paths.output_path,
         quarantined_path: paths.quarantined_path,
         manifest_path: paths.manifest_path,
+        resume_artifact_path: paths.resume_artifact_path,
     }
 }
 
@@ -1677,6 +1680,7 @@ struct AuditEventPaths {
     output_path: Option<String>,
     quarantined_path: Option<String>,
     manifest_path: Option<String>,
+    resume_artifact_path: Option<String>,
 }
 
 fn parse_audit_paths(after_state: &Option<String>) -> AuditEventPaths {
@@ -1699,6 +1703,10 @@ fn parse_audit_paths(after_state: &Option<String>) -> AuditEventPaths {
             .map(ToOwned::to_owned),
         manifest_path: parsed
             .get("manifest_path")
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        resume_artifact_path: parsed
+            .get("resume_artifact_path")
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
     }
@@ -2990,7 +2998,11 @@ mod tests {
         let sandbox = temp_root();
         let home_dir = sandbox.join("home");
         let repo_root = sandbox.join("repos").join("git-demo");
-        let codex_root = home_dir.join(".codex").join("sessions").join("2026").join("03");
+        let codex_root = home_dir
+            .join(".codex")
+            .join("sessions")
+            .join("2026")
+            .join("03");
 
         fs::create_dir_all(&repo_root).expect("create repo root");
         fs::create_dir_all(&codex_root).expect("create codex root");
@@ -2998,7 +3010,10 @@ mod tests {
         git(&repo_root, &["init"]);
         git(&repo_root, &["branch", "-M", "main"]);
         git(&repo_root, &["config", "user.name", "OSM Test"]);
-        git(&repo_root, &["config", "user.email", "osm-test@example.com"]);
+        git(
+            &repo_root,
+            &["config", "user.email", "osm-test@example.com"],
+        );
 
         fs::write(repo_root.join("README.md"), "# git demo\n").expect("seed readme");
         git(&repo_root, &["add", "."]);
@@ -3049,18 +3064,9 @@ mod tests {
             })
             .expect("repo record should exist");
 
-        assert_eq!(
-            project.get("branch").and_then(Value::as_str),
-            Some("main")
-        );
-        assert_eq!(
-            project.get("status").and_then(Value::as_str),
-            Some("dirty")
-        );
-        assert_eq!(
-            project.get("sessionCount").and_then(Value::as_u64),
-            Some(1)
-        );
+        assert_eq!(project.get("branch").and_then(Value::as_str), Some("main"));
+        assert_eq!(project.get("status").and_then(Value::as_str), Some("dirty"));
+        assert_eq!(project.get("sessionCount").and_then(Value::as_u64), Some(1));
         assert_eq!(
             project.get("untrackedFiles").and_then(Value::as_u64),
             Some(1)

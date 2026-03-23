@@ -3,12 +3,12 @@ import {
   useContext,
   type Dispatch,
   type PropsWithChildren,
-  type SetStateAction
+  type SetStateAction,
 } from "react";
 import type {
   ReviewDiffField,
   ReviewDiffSeverity,
-  ReviewWarningCode
+  ReviewWarningCode,
 } from "./review-flow";
 
 export const LANGUAGE_STORAGE_KEY = "open-session-manager.language";
@@ -284,7 +284,10 @@ type Messages = {
       description: string;
       restoreDetectedValues: string;
       options: Record<
-        "github_official" | "google_ai_studio" | "openai_official" | "openrouter_official",
+        | "github_official"
+        | "google_ai_studio"
+        | "openai_official"
+        | "openrouter_official",
         string
       >;
     };
@@ -370,6 +373,7 @@ type Messages = {
       outputPath: string;
       quarantinedPath: string;
       manifestPath: string;
+      resumeArtifactPath: string;
     };
   };
   data: {
@@ -405,7 +409,7 @@ const messages: Record<Language, Messages> = {
       loadingKicker: "Loading",
       loadingTitle: "Preparing governance snapshot",
       loadingBody:
-        "Collecting sessions, config risks, and cleanup recommendations."
+        "Collecting sessions, config risks, and cleanup recommendations.",
     },
     root: {
       eyebrow: "Bootstrap",
@@ -419,17 +423,17 @@ const messages: Record<Language, Messages> = {
         overview: "Overview",
         sessions: "Sessions",
         configs: "Configs",
-        audit: "Audit"
+        audit: "Audit",
       },
       languageNames: {
         en: "English",
-        "zh-CN": "中文"
+        "zh-CN": "中文",
       },
       themeNames: {
         system: "System",
         light: "Light",
-        dark: "Dark"
-      }
+        dark: "Dark",
+      },
     },
     overview: {
       adoptionKicker: "Upstream Intake",
@@ -440,7 +444,8 @@ const messages: Record<Language, Messages> = {
       doctorTitle: "Environment doctor",
       doctorDescription:
         "Recoverable discovery problems are surfaced here so they can be fixed without relying on noisy terminal output.",
-      doctorEmpty: "No recoverable discovery problems were detected in the current snapshot.",
+      doctorEmpty:
+        "No recoverable discovery problems were detected in the current snapshot.",
       adoptedTitle: "Adopted",
       adoptedBadge: "Landed in product",
       researchTitle: "Researched next",
@@ -452,7 +457,8 @@ const messages: Record<Language, Messages> = {
       usageTotalsTitle: "Totals",
       usageAssistantsTitle: "By assistant",
       usageTimelineTitle: "Daily timeline",
-      usageTimelineEmpty: "No usage timeline is available for the current snapshot.",
+      usageTimelineEmpty:
+        "No usage timeline is available for the current snapshot.",
       breakdown: {
         modelsTitle: "Model breakdown",
         platformsTitle: "Platform breakdown",
@@ -461,15 +467,15 @@ const messages: Record<Language, Messages> = {
         fields: {
           configCount: "Configs",
           assistantCount: "Assistants",
-          proxyCount: "Proxy configs"
-        }
+          proxyCount: "Proxy configs",
+        },
       },
       costUnavailable: "Cost unavailable",
       costSources: {
         reported: "Reported by session log",
         estimated: "Estimated from local price catalog",
         mixed: "Mixed reported and estimated cost",
-        unknown: "Cost source unavailable"
+        unknown: "Cost source unavailable",
       },
       usageFields: {
         sessionsWithUsage: "Sessions with usage",
@@ -477,37 +483,39 @@ const messages: Record<Language, Messages> = {
         totalCost: "Total cost",
         cacheRead: "Cache read",
         assistant: "Assistant",
-        sessionCount: "Sessions"
+        sessionCount: "Sessions",
       },
       cockpit: {
         kicker: "Active Control",
         title: "Active session cockpit",
         description:
           "Watch the assistants that can be resumed locally, along with their latest control response and runtime status.",
-        empty: "No controllable sessions are available in the current snapshot.",
+        empty:
+          "No controllable sessions are available in the current snapshot.",
         noRecentResponse: "No recent control response",
         actions: {
           refresh: "Refresh cockpit",
-          refreshing: "Refreshing cockpit"
+          refreshing: "Refreshing cockpit",
         },
         fields: {
           command: "Command",
           lastSeen: "Last seen",
           lastResponse: "Last response",
-          lastError: "Last error"
+          lastError: "Last error",
         },
         statuses: {
           attached: "Attached",
           ready: "Ready",
-          unavailable: "Unavailable"
-        }
+          unavailable: "Unavailable",
+        },
       },
       git: {
         kicker: "Git Governance",
         title: "Git workspace status",
         description:
           "Track which session-backed projects have local modifications, diverged history, or a clean branch before you merge or clean anything up.",
-        empty: "No Git-backed project paths were detected in the current snapshot.",
+        empty:
+          "No Git-backed project paths were detected in the current snapshot.",
         fields: {
           branch: "Branch",
           sessions: "Sessions",
@@ -517,26 +525,27 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "Ahead/Behind",
           latestCommit: "Latest commit",
           recentCommits: "Recent commits",
-          lastAction: "Last action"
+          lastAction: "Last action",
         },
         actions: {
           commitMessage: "Commit message",
           commitButton: "Commit changes",
           branchName: "Target branch",
           switchButton: "Switch branch",
-          pushButton: "Push branch"
+          pushButton: "Push branch",
         },
         guardrails: {
-          cleanBeforeSwitch: "Clean up local changes before switching branches.",
+          cleanBeforeSwitch:
+            "Clean up local changes before switching branches.",
           cleanBeforePush: "Push stays locked until the working tree is clean.",
-          nothingToPush: "No outgoing commits are waiting to be pushed."
+          nothingToPush: "No outgoing commits are waiting to be pushed.",
         },
         statuses: {
           clean: "Clean",
           dirty: "Dirty",
-          diverged: "Diverged"
-        }
-      }
+          diverged: "Diverged",
+        },
+      },
     },
     sessions: {
       searchLabel: "Search sessions",
@@ -544,7 +553,8 @@ const messages: Record<Language, Messages> = {
       searchSummary: "ranked local matches",
       filterSummary: "sessions match the current filters",
       searchSummaryPending: "Updating matches...",
-      searchSummaryEmpty: "Type to search across titles, summaries, transcript highlights, and todos.",
+      searchSummaryEmpty:
+        "Type to search across titles, summaries, transcript highlights, and todos.",
       filters: {
         reset: "Reset filters",
         labels: {
@@ -552,7 +562,7 @@ const messages: Record<Language, Messages> = {
           project: "Project",
           risk: "Risk",
           export: "Export",
-          control: "Control"
+          control: "Control",
         },
         options: {
           allAssistants: "All assistants",
@@ -565,8 +575,8 @@ const messages: Record<Language, Messages> = {
           needsExport: "Needs export",
           allControls: "All control states",
           controllable: "Controllable only",
-          attached: "Attached only"
-        }
+          attached: "Attached only",
+        },
       },
       matchReasonLabels: {
         title: "Title",
@@ -579,8 +589,8 @@ const messages: Record<Language, Messages> = {
         risk: "Risk",
         artifact: "Artifact",
         transcript: "Transcript",
-        todo: "To-do"
-      }
+        todo: "To-do",
+      },
     },
     sessionTable: {
       kicker: "Session Explorer",
@@ -595,8 +605,8 @@ const messages: Record<Language, Messages> = {
         assistant: "Assistant",
         progress: "Progress",
         value: "Value",
-        lastActivity: "Last Activity"
-      }
+        lastActivity: "Last Activity",
+      },
     },
     sessionDetail: {
       kicker: "Session Detail",
@@ -613,7 +623,7 @@ const messages: Record<Language, Messages> = {
         exportMarkdown: "Export Markdown",
         moveToQuarantine: "Move to Quarantine",
         resumeSession: "Resume Session",
-        continueSession: "Continue Session"
+        continueSession: "Continue Session",
       },
       sections: {
         sessionControl: "Session Control",
@@ -625,7 +635,7 @@ const messages: Record<Language, Messages> = {
         todoSnapshot: "Todo Snapshot",
         keyArtifacts: "Key Artifacts",
         riskFlags: "Risk Flags",
-        topicLabels: "Topic Labels"
+        topicLabels: "Topic Labels",
       },
       fields: {
         controller: "Controller",
@@ -652,12 +662,12 @@ const messages: Record<Language, Messages> = {
         cacheWriteTokens: "Cache write",
         reasoningTokens: "Reasoning",
         totalTokens: "Total tokens",
-        costUsd: "Cost (USD)"
+        costUsd: "Cost (USD)",
       },
       statuses: {
         attached: "Attached",
         detached: "Detached",
-        searchHit: "Search hit"
+        searchHit: "Search hit",
       },
       cleanupReview: {
         title: "Review cleanup before quarantine",
@@ -666,8 +676,8 @@ const messages: Record<Language, Messages> = {
         confirmLabel: "I exported the valuable parts and want to continue.",
         actions: {
           confirm: "Confirm move to quarantine",
-          back: "Back to details"
-        }
+          back: "Back to details",
+        },
       },
       knowledgeLift: {
         description:
@@ -675,13 +685,15 @@ const messages: Record<Language, Messages> = {
         previewLabel: "Knowledge lift preview",
         views: {
           rule: "Rule Artifact",
-          skill: "Skill Artifact"
-        }
+          skill: "Skill Artifact",
+        },
       },
       noRiskFlags: "no active risk flags",
-      noTranscriptHighlights: "No transcript highlights were extracted for this session.",
+      noTranscriptHighlights:
+        "No transcript highlights were extracted for this session.",
       noTodoItems: "No todo evidence was captured for this session.",
-      noSessionControl: "No session control adapter is available for this assistant."
+      noSessionControl:
+        "No session control adapter is available for this assistant.",
     },
     configRisk: {
       kicker: "Config Center",
@@ -691,7 +703,7 @@ const messages: Record<Language, Messages> = {
       actions: {
         editConfig: "Edit Config",
         saveConfig: "Save Config",
-        cancelEdit: "Cancel"
+        cancelEdit: "Cancel",
       },
       presets: {
         title: "Provider Presets",
@@ -702,8 +714,8 @@ const messages: Record<Language, Messages> = {
           github_official: "GitHub Official",
           google_ai_studio: "Google AI Studio",
           openai_official: "OpenAI Official",
-          openrouter_official: "OpenRouter Official"
-        }
+          openrouter_official: "OpenRouter Official",
+        },
       },
       snippets: {
         title: "Snippet Library",
@@ -717,8 +729,8 @@ const messages: Record<Language, Messages> = {
         actions: {
           saveSnippet: "Save Snippet",
           prepareExport: "Prepare Export",
-          applyImportedSnippet: "Apply Imported Snippet"
-        }
+          applyImportedSnippet: "Apply Imported Snippet",
+        },
       },
       fields: {
         scope: "Scope",
@@ -726,33 +738,34 @@ const messages: Record<Language, Messages> = {
         model: "Model",
         endpoint: "Endpoint",
         maskedKey: "Masked Key",
-        newKey: "New Key"
+        newKey: "New Key",
       },
       viewer: {
         kicker: "MCP Inventory",
         title: "MCP Server Viewer",
         description:
           "Review every detected MCP server, its transport, and the raw config fragment before trusting it.",
-        empty: "No MCP server configuration was detected in the current config set.",
+        empty:
+          "No MCP server configuration was detected in the current config set.",
         fields: {
           assistant: "Assistant",
           scope: "Scope",
           configPath: "Config Path",
           command: "Command",
           url: "URL",
-          config: "Config"
+          config: "Config",
         },
         statuses: {
           configured: "Configured",
           enabled: "Enabled",
-          disabled: "Disabled"
+          disabled: "Disabled",
         },
         transports: {
           stdio: "Stdio",
           http: "HTTP",
           sse: "SSE",
-          embedded: "Embedded"
-        }
+          embedded: "Embedded",
+        },
       },
       review: {
         title: "Review changes",
@@ -766,26 +779,27 @@ const messages: Record<Language, Messages> = {
         actions: {
           review: "Review Changes",
           apply: "Apply Reviewed Changes",
-          back: "Back to editing"
+          back: "Back to editing",
         },
         severityLabels: {
           safe: "Safe",
-          warning: "Warning"
+          warning: "Warning",
         },
         fieldLabels: {
           provider: "Provider",
           model: "Model",
           baseUrl: "Endpoint",
-          secret: "Key"
+          secret: "Key",
         },
         warningMessages: {
           provider_changed: "Provider routing will change for this config.",
-          endpoint_changed: "Endpoint change will redirect requests to a different base URL.",
+          endpoint_changed:
+            "Endpoint change will redirect requests to a different base URL.",
           secret_changed: "A new secret will be written to disk.",
           existing_risks:
-            "This config already carries risky flags that should be reviewed again."
-        }
-      }
+            "This config already carries risky flags that should be reviewed again.",
+        },
+      },
     },
     runtimePanel: {
       kicker: "Storage Paths",
@@ -797,26 +811,26 @@ const messages: Record<Language, Messages> = {
       customExportRootHint: "Using a custom export folder override.",
       actions: {
         saveExportRoot: "Save Export Folder",
-        resetExportRoot: "Use Default Folder"
+        resetExportRoot: "Use Default Folder",
       },
       fields: {
         exportRoot: "Current export folder",
         auditDb: "Audit database",
         quarantineRoot: "Quarantine root",
-        preferencesFile: "Preferences file"
-      }
+        preferencesFile: "Preferences file",
+      },
     },
     audit: {
       kicker: "Audit Center",
       title: "Trace every destructive operation",
       description:
-        "Export, quarantine, and restore actions stay attached to an actor, timestamp, and target."
-      ,
+        "Export, quarantine, and restore actions stay attached to an actor, timestamp, and target.",
       pathLabels: {
         outputPath: "Output path",
         quarantinedPath: "Quarantine path",
-        manifestPath: "Backup manifest"
-      }
+        manifestPath: "Backup manifest",
+        resumeArtifactPath: "Resume artifact",
+      },
     },
     data: {
       unknownValue: "Unknown",
@@ -824,7 +838,7 @@ const messages: Record<Language, Messages> = {
         indexed_sessions: "Indexed Sessions",
         high_value_candidates: "High-Value Candidates",
         risky_configs: "Risky Configs",
-        cold_storage_saved: "Cold Storage Saved"
+        cold_storage_saved: "Cold Storage Saved",
       },
       metricNotes: {
         across_windows_linux_and_wsl_surfaces:
@@ -833,21 +847,21 @@ const messages: Record<Language, Messages> = {
         relay_wide_permissions_or_shell_hooks:
           "Relay, wide permissions, or shell hooks",
         potential_reclaim_from_soft_delete_queue:
-          "Potential reclaim from soft-delete queue"
+          "Potential reclaim from soft-delete queue",
       },
       progressStates: {
         new: "New",
         in_progress: "In Progress",
         blocked: "Blocked",
-        completed: "Completed"
+        completed: "Completed",
       },
       scopes: {
         global: "Global",
-        project: "Project"
+        project: "Project",
       },
       proxyModes: {
         proxy: "Proxy",
-        official: "Official"
+        official: "Official",
       },
       riskFlags: {
         stale_followup_needed: "stale_followup_needed",
@@ -861,7 +875,7 @@ const messages: Record<Language, Messages> = {
         dangerous_sandbox: "dangerous_sandbox",
         dangerous_approval_policy: "dangerous_approval_policy",
         third_party_provider: "third_party_provider",
-        missing_primary_secret: "missing_primary_secret"
+        missing_primary_secret: "missing_primary_secret",
       },
       auditTypes: {
         export_markdown: "export_markdown",
@@ -872,19 +886,19 @@ const messages: Record<Language, Messages> = {
         config_snippet_export: "Config snippet exported",
         config_snippet_import: "Config snippet imported",
         session_resume: "session_resume",
-        session_continue: "session_continue"
+        session_continue: "session_continue",
       },
       auditResults: {
         success: "success",
-        failed: "failed"
-      }
-    }
+        failed: "failed",
+      },
+    },
   },
   "zh-CN": {
     app: {
       loadingKicker: "加载中",
       loadingTitle: "正在准备治理快照",
-      loadingBody: "正在汇总会话、配置风险和清理建议。"
+      loadingBody: "正在汇总会话、配置风险和清理建议。",
     },
     root: {
       eyebrow: "本地优先",
@@ -898,25 +912,27 @@ const messages: Record<Language, Messages> = {
         overview: "总览",
         sessions: "会话",
         configs: "配置",
-        audit: "审计"
+        audit: "审计",
       },
       languageNames: {
         en: "English",
-        "zh-CN": "中文"
+        "zh-CN": "中文",
       },
       themeNames: {
         system: "跟随系统",
         light: "浅色",
-        dark: "深色"
-      }
+        dark: "深色",
+      },
     },
     overview: {
       adoptionKicker: "上游吸收",
       adoptionTitle: "已经落到产品里的能力",
-      adoptionDescription: "这些能力已经在界面和导出链路里可见，不只是文档记录。",
+      adoptionDescription:
+        "这些能力已经在界面和导出链路里可见，不只是文档记录。",
       doctorKicker: "环境诊断",
       doctorTitle: "环境诊断",
-      doctorDescription: "可恢复的发现问题会在这里展示，不再依赖终端噪声提醒用户。",
+      doctorDescription:
+        "可恢复的发现问题会在这里展示，不再依赖终端噪声提醒用户。",
       doctorEmpty: "当前快照里没有发现可恢复的发现问题。",
       adoptedTitle: "已吸收",
       adoptedBadge: "已落地",
@@ -938,15 +954,15 @@ const messages: Record<Language, Messages> = {
         fields: {
           configCount: "配置数",
           assistantCount: "助手数",
-          proxyCount: "代理配置"
-        }
+          proxyCount: "代理配置",
+        },
       },
       costUnavailable: "成本不可用",
       costSources: {
         reported: "来自会话日志上报",
         estimated: "来自本地价格目录估算",
         mixed: "混合了上报值与估算值",
-        unknown: "成本来源不可用"
+        unknown: "成本来源不可用",
       },
       usageFields: {
         sessionsWithUsage: "含用量数据的会话",
@@ -954,34 +970,36 @@ const messages: Record<Language, Messages> = {
         totalCost: "总成本",
         cacheRead: "缓存读取",
         assistant: "助手",
-        sessionCount: "会话数"
+        sessionCount: "会话数",
       },
       cockpit: {
         kicker: "活跃控制",
         title: "活跃会话总览",
-        description: "把当前可恢复的助手会话、最近控制结果和运行时状态集中放到首页查看。",
+        description:
+          "把当前可恢复的助手会话、最近控制结果和运行时状态集中放到首页查看。",
         empty: "当前快照里没有可直接控制的会话。",
         noRecentResponse: "还没有最近一次控制响应",
         actions: {
           refresh: "刷新总览",
-          refreshing: "正在刷新总览"
+          refreshing: "正在刷新总览",
         },
         fields: {
           command: "命令",
           lastSeen: "最近时间",
           lastResponse: "最近响应",
-          lastError: "最近错误"
+          lastError: "最近错误",
         },
         statuses: {
           attached: "已附着",
           ready: "可恢复",
-          unavailable: "不可用"
-        }
+          unavailable: "不可用",
+        },
       },
       git: {
         kicker: "Git 治理",
         title: "Git 工作区状态",
-        description: "把会话关联项目的分支、脏区和最近提交集中展示，方便判断该清理、续做还是先合并。",
+        description:
+          "把会话关联项目的分支、脏区和最近提交集中展示，方便判断该清理、续做还是先合并。",
         empty: "当前快照里还没有检测到可归入 Git 的项目路径。",
         fields: {
           branch: "分支",
@@ -992,26 +1010,26 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "领先/落后",
           latestCommit: "最近提交",
           recentCommits: "最近提交历史",
-          lastAction: "最近动作"
+          lastAction: "最近动作",
         },
         actions: {
           commitMessage: "提交说明",
           commitButton: "提交当前变更",
           branchName: "目标分支",
           switchButton: "切换分支",
-          pushButton: "推送当前分支"
+          pushButton: "推送当前分支",
         },
         guardrails: {
           cleanBeforeSwitch: "先清掉本地脏区，再切换分支。",
           cleanBeforePush: "工作区未清理前，不允许推送。",
-          nothingToPush: "当前没有待推送的提交。"
+          nothingToPush: "当前没有待推送的提交。",
         },
         statuses: {
           clean: "干净",
           dirty: "脏区未清",
-          diverged: "分叉"
-        }
-      }
+          diverged: "分叉",
+        },
+      },
     },
     sessions: {
       searchLabel: "搜索会话",
@@ -1027,7 +1045,7 @@ const messages: Record<Language, Messages> = {
           project: "项目",
           risk: "风险",
           export: "导出",
-          control: "控制"
+          control: "控制",
         },
         options: {
           allAssistants: "全部助手",
@@ -1040,8 +1058,8 @@ const messages: Record<Language, Messages> = {
           needsExport: "仍需导出",
           allControls: "全部控制状态",
           controllable: "仅可控制",
-          attached: "仅已附着"
-        }
+          attached: "仅已附着",
+        },
       },
       matchReasonLabels: {
         title: "标题",
@@ -1054,8 +1072,8 @@ const messages: Record<Language, Messages> = {
         risk: "风险",
         artifact: "产物",
         transcript: "高亮",
-        todo: "待办"
-      }
+        todo: "待办",
+      },
     },
     sessionTable: {
       kicker: "会话浏览",
@@ -1068,14 +1086,15 @@ const messages: Record<Language, Messages> = {
         assistant: "助手",
         progress: "进度",
         value: "价值",
-        lastActivity: "最后活动"
-      }
+        lastActivity: "最后活动",
+      },
     },
     sessionDetail: {
       kicker: "会话详情",
       emptyTitle: "请选择一个会话",
       emptyBody: "选择左侧条目后，可查看摘要、证据和清理准备情况。",
-      cleanupRequirement: "必须先导出 Markdown，确认核心内容已保留后才能移入隔离区。",
+      cleanupRequirement:
+        "必须先导出 Markdown，确认核心内容已保留后才能移入隔离区。",
       controlUnavailable:
         "只有本机已安装且当前运行时能找到对应助手命令时，才允许执行会话恢复与继续运行。",
       continuePlaceholder: "向当前会话继续发送一条跟进提示",
@@ -1084,7 +1103,7 @@ const messages: Record<Language, Messages> = {
         exportMarkdown: "导出为 Markdown",
         moveToQuarantine: "移入隔离区",
         resumeSession: "恢复会话",
-        continueSession: "继续运行"
+        continueSession: "继续运行",
       },
       sections: {
         sessionControl: "会话控制",
@@ -1096,7 +1115,7 @@ const messages: Record<Language, Messages> = {
         todoSnapshot: "待办快照",
         keyArtifacts: "关键产物",
         riskFlags: "风险标记",
-        topicLabels: "主题标签"
+        topicLabels: "主题标签",
       },
       fields: {
         controller: "控制器",
@@ -1123,12 +1142,12 @@ const messages: Record<Language, Messages> = {
         cacheWriteTokens: "缓存写入",
         reasoningTokens: "推理 Token",
         totalTokens: "总 Token",
-        costUsd: "成本（USD）"
+        costUsd: "成本（USD）",
       },
       statuses: {
         attached: "已附着",
         detached: "未附着",
-        searchHit: "搜索命中"
+        searchHit: "搜索命中",
       },
       cleanupReview: {
         title: "移入隔离区前的清理审查",
@@ -1136,21 +1155,22 @@ const messages: Record<Language, Messages> = {
         confirmLabel: "我已经导出有价值内容，并确认继续。",
         actions: {
           confirm: "确认移入隔离区",
-          back: "返回详情"
-        }
+          back: "返回详情",
+        },
       },
       knowledgeLift: {
-        description: "把当前会话中的摘要、待办、风险和证据整理成可复用的规则或技能 Markdown。",
+        description:
+          "把当前会话中的摘要、待办、风险和证据整理成可复用的规则或技能 Markdown。",
         previewLabel: "知识提炼预览",
         views: {
           rule: "规则工件",
-          skill: "技能工件"
-        }
+          skill: "技能工件",
+        },
       },
       noRiskFlags: "当前没有风险标记",
       noTranscriptHighlights: "当前没有提取到可展示的会话高亮。",
       noTodoItems: "当前没有捕获到待办证据。",
-      noSessionControl: "当前助手还没有接入会话控制适配器。"
+      noSessionControl: "当前助手还没有接入会话控制适配器。",
     },
     configRisk: {
       kicker: "配置中心",
@@ -1159,22 +1179,24 @@ const messages: Record<Language, Messages> = {
       actions: {
         editConfig: "编辑配置",
         saveConfig: "保存配置",
-        cancelEdit: "取消"
+        cancelEdit: "取消",
       },
       presets: {
         title: "预设模板",
-        description: "先套用一组已知安全的 provider 模板，再只调整仍需覆盖的字段。",
+        description:
+          "先套用一组已知安全的 provider 模板，再只调整仍需覆盖的字段。",
         restoreDetectedValues: "恢复检测值",
         options: {
           github_official: "GitHub 官方",
           google_ai_studio: "Google AI Studio",
           openai_official: "OpenAI 官方",
-          openrouter_official: "OpenRouter 官方"
-        }
+          openrouter_official: "OpenRouter 官方",
+        },
       },
       snippets: {
         title: "片段库",
-        description: "把可复用的 provider 片段保存下来，导出为 JSON，或把共享片段重新导入到当前草稿。",
+        description:
+          "把可复用的 provider 片段保存下来，导出为 JSON，或把共享片段重新导入到当前草稿。",
         snippetName: "片段名称",
         exportJson: "片段导出 JSON",
         importJson: "片段导入 JSON",
@@ -1183,8 +1205,8 @@ const messages: Record<Language, Messages> = {
         actions: {
           saveSnippet: "保存片段",
           prepareExport: "准备导出",
-          applyImportedSnippet: "应用导入片段"
-        }
+          applyImportedSnippet: "应用导入片段",
+        },
       },
       fields: {
         scope: "范围",
@@ -1192,12 +1214,13 @@ const messages: Record<Language, Messages> = {
         model: "模型",
         endpoint: "端点",
         maskedKey: "脱敏密钥",
-        newKey: "新密钥"
+        newKey: "新密钥",
       },
       viewer: {
         kicker: "MCP 清单",
         title: "MCP 服务查看器",
-        description: "把当前检测到的 MCP 服务、传输方式和原始配置片段直接展示出来，方便审查。",
+        description:
+          "把当前检测到的 MCP 服务、传输方式和原始配置片段直接展示出来，方便审查。",
         empty: "当前配置集合里没有检测到 MCP 服务配置。",
         fields: {
           assistant: "助手",
@@ -1205,19 +1228,19 @@ const messages: Record<Language, Messages> = {
           configPath: "配置路径",
           command: "命令",
           url: "URL",
-          config: "配置"
+          config: "配置",
         },
         statuses: {
           configured: "已配置",
           enabled: "已启用",
-          disabled: "已禁用"
+          disabled: "已禁用",
         },
         transports: {
           stdio: "Stdio",
           http: "HTTP",
           sse: "SSE",
-          embedded: "内嵌"
-        }
+          embedded: "内嵌",
+        },
       },
       review: {
         title: "审查改动",
@@ -1230,43 +1253,44 @@ const messages: Record<Language, Messages> = {
         actions: {
           review: "审查改动",
           apply: "应用已审查改动",
-          back: "返回编辑"
+          back: "返回编辑",
         },
         severityLabels: {
           safe: "安全",
-          warning: "警告"
+          warning: "警告",
         },
         fieldLabels: {
           provider: "提供商",
           model: "模型",
           baseUrl: "端点",
-          secret: "密钥"
+          secret: "密钥",
         },
         warningMessages: {
           provider_changed: "这次改动会切换当前配置使用的 provider 路由。",
           endpoint_changed: "端点改动会把请求重定向到新的 Base URL。",
           secret_changed: "新的密钥将被写入本地磁盘。",
-          existing_risks: "当前配置本身已经带有风险标记，请再次确认。"
-        }
-      }
+          existing_risks: "当前配置本身已经带有风险标记，请再次确认。",
+        },
+      },
     },
     runtimePanel: {
       kicker: "存储路径",
       title: "导出与保留设置",
-      description: "可以直接修改 Markdown 导出目录，并确认审计库和隔离区当前落在哪里。",
+      description:
+        "可以直接修改 Markdown 导出目录，并确认审计库和隔离区当前落在哪里。",
       exportRootLabel: "Markdown 导出目录",
       defaultExportRootHint: "当前使用默认导出目录。",
       customExportRootHint: "当前使用自定义导出目录。",
       actions: {
         saveExportRoot: "保存导出目录",
-        resetExportRoot: "恢复默认目录"
+        resetExportRoot: "恢复默认目录",
       },
       fields: {
         exportRoot: "当前导出目录",
         auditDb: "审计数据库",
         quarantineRoot: "隔离区目录",
-        preferencesFile: "偏好设置文件"
-      }
+        preferencesFile: "偏好设置文件",
+      },
     },
     audit: {
       kicker: "审计中心",
@@ -1275,8 +1299,9 @@ const messages: Record<Language, Messages> = {
       pathLabels: {
         outputPath: "输出路径",
         quarantinedPath: "隔离路径",
-        manifestPath: "备份清单"
-      }
+        manifestPath: "备份清单",
+        resumeArtifactPath: "恢复工件",
+      },
     },
     data: {
       unknownValue: "未知",
@@ -1284,7 +1309,7 @@ const messages: Record<Language, Messages> = {
         indexed_sessions: "已索引会话",
         high_value_candidates: "高价值候选",
         risky_configs: "高风险配置",
-        cold_storage_saved: "可回收冷存储"
+        cold_storage_saved: "可回收冷存储",
       },
       metricNotes: {
         across_windows_linux_and_wsl_surfaces:
@@ -1292,22 +1317,21 @@ const messages: Record<Language, Messages> = {
         worth_exporting_before_cleanup: "建议在清理前优先导出",
         relay_wide_permissions_or_shell_hooks:
           "存在中转地址、宽权限或 shell hook",
-        potential_reclaim_from_soft_delete_queue:
-          "软删除队列可释放的潜在空间"
+        potential_reclaim_from_soft_delete_queue: "软删除队列可释放的潜在空间",
       },
       progressStates: {
         new: "新建",
         in_progress: "进行中",
         blocked: "阻塞",
-        completed: "已完成"
+        completed: "已完成",
       },
       scopes: {
         global: "全局",
-        project: "项目"
+        project: "项目",
       },
       proxyModes: {
         proxy: "中转",
-        official: "官方"
+        official: "官方",
       },
       riskFlags: {
         stale_followup_needed: "需要后续跟进",
@@ -1321,7 +1345,7 @@ const messages: Record<Language, Messages> = {
         dangerous_sandbox: "高危沙箱设置",
         dangerous_approval_policy: "高危审批策略",
         third_party_provider: "第三方提供商",
-        missing_primary_secret: "缺少主凭据"
+        missing_primary_secret: "缺少主凭据",
       },
       auditTypes: {
         export_markdown: "导出 Markdown",
@@ -1332,20 +1356,20 @@ const messages: Record<Language, Messages> = {
         config_snippet_export: "配置片段已导出",
         config_snippet_import: "配置片段已导入",
         session_resume: "恢复会话",
-        session_continue: "继续运行"
+        session_continue: "继续运行",
       },
       auditResults: {
         success: "成功",
-        failed: "失败"
-      }
-    }
-  }
+        failed: "失败",
+      },
+    },
+  },
 };
 
 export function detectLanguage(navigatorLike?: NavigatorLike): Language {
   const candidates = [
     ...(navigatorLike?.languages ?? []),
-    navigatorLike?.language ?? ""
+    navigatorLike?.language ?? "",
   ];
 
   for (const candidate of candidates) {
@@ -1365,7 +1389,7 @@ export function getInitialLanguage(): Language {
 
   try {
     const stored = coerceLanguage(
-      window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+      window.localStorage.getItem(LANGUAGE_STORAGE_KEY),
     );
     if (stored) {
       return stored;
@@ -1384,7 +1408,7 @@ export function getMessages(language: Language): Messages {
 export function I18nProvider({
   children,
   language,
-  setLanguage
+  setLanguage,
 }: PropsWithChildren<{
   language: Language;
   setLanguage: Dispatch<SetStateAction<Language>>;
@@ -1420,7 +1444,7 @@ function coerceLanguage(value?: string | null): Language | null {
 
 function createContextValue(
   language: Language,
-  setLanguage: Dispatch<SetStateAction<Language>>
+  setLanguage: Dispatch<SetStateAction<Language>>,
 ): I18nContextValue {
   const copy = getMessages(language);
 
@@ -1428,8 +1452,10 @@ function createContextValue(
     language,
     setLanguage,
     copy,
-    translateMetricLabel: (value) => translateLookup(copy.data.metricLabels, value),
-    translateMetricNote: (value) => translateLookup(copy.data.metricNotes, value),
+    translateMetricLabel: (value) =>
+      translateLookup(copy.data.metricLabels, value),
+    translateMetricNote: (value) =>
+      translateLookup(copy.data.metricNotes, value),
     translateProgressState: (value) =>
       translateLookup(copy.data.progressStates, value),
     translateScope: (value) => translateLookup(copy.data.scopes, value),
@@ -1437,7 +1463,7 @@ function createContextValue(
     translateRiskFlag: (value) => translateLookup(copy.data.riskFlags, value),
     translateAuditType: (value) => translateLookup(copy.data.auditTypes, value),
     translateAuditResult: (value) =>
-      translateLookup(copy.data.auditResults, value)
+      translateLookup(copy.data.auditResults, value),
   };
 }
 
@@ -1454,5 +1480,5 @@ function normalizeLookupKey(value: string) {
 }
 
 const I18nContext = createContext<I18nContextValue>(
-  createContextValue("en", () => undefined)
+  createContextValue("en", () => undefined),
 );

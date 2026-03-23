@@ -26,10 +26,10 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /open session manager/i })
+      await screen.findByRole("heading", { name: /open session manager/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText(/inspect local coding-agent sessions/i)
+      await screen.findByText(/inspect local coding-agent sessions/i),
     ).toBeInTheDocument();
   });
 
@@ -39,7 +39,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /开放会话管理器/i })
+      await screen.findByRole("heading", { name: /开放会话管理器/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "总览" })).toBeInTheDocument();
   });
@@ -50,13 +50,13 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /open session manager/i })
+      await screen.findByRole("heading", { name: /open session manager/i }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "中文" }));
 
     expect(
-      await screen.findByRole("heading", { name: /开放会话管理器/i })
+      await screen.findByRole("heading", { name: /开放会话管理器/i }),
     ).toBeInTheDocument();
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("zh-CN");
   });
@@ -89,16 +89,14 @@ describe("App", () => {
     render(<App />);
 
     const moveButton = await screen.findByRole("button", {
-      name: /move to quarantine/i
+      name: /move to quarantine/i,
     });
     expect(moveButton).toBeDisabled();
 
-    await user.click(
-      screen.getByRole("button", { name: /export markdown/i })
-    );
+    await user.click(screen.getByRole("button", { name: /export markdown/i }));
 
     expect(
-      await screen.findByRole("button", { name: /move to quarantine/i })
+      await screen.findByRole("button", { name: /move to quarantine/i }),
     ).toBeEnabled();
   });
 
@@ -111,11 +109,9 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(screen.getByRole("button", { name: /export markdown/i }));
 
+    expect(await screen.findByText(/session-ses-001\.md/i)).toBeInTheDocument();
     expect(
-      await screen.findByText(/session-ses-001\.md/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue(/documents\/opensessionmanager\/exports/i)
+      screen.getByDisplayValue(/documents\/opensessionmanager\/exports/i),
     ).toBeInTheDocument();
   });
 
@@ -125,16 +121,22 @@ describe("App", () => {
 
     render(<App />);
 
-    const exportRootInput = await screen.findByLabelText(/markdown export folder/i);
+    const exportRootInput = await screen.findByLabelText(
+      /markdown export folder/i,
+    );
     await user.clear(exportRootInput);
     await user.type(exportRootInput, "D:/OSM/exports");
-    await user.click(screen.getByRole("button", { name: /save export folder/i }));
+    await user.click(
+      screen.getByRole("button", { name: /save export folder/i }),
+    );
     await user.click(screen.getByRole("button", { name: /export markdown/i }));
 
     expect(
-      await screen.findByDisplayValue("D:/OSM/exports")
+      await screen.findByDisplayValue("D:/OSM/exports"),
     ).toBeInTheDocument();
-    expect(screen.getByText(/d:\/osm\/exports\/session-ses-001\.md/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/d:\/osm\/exports\/session-ses-001\.md/i),
+    ).toBeInTheDocument();
   });
 
   it("在 Sessions 页里切换会话时保留列表并展示目标详情", async () => {
@@ -145,15 +147,17 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(
-      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i }),
     );
 
     expect(window.location.hash).toBe("#/sessions/ses-002");
     expect(
-      await screen.findByRole("heading", { name: /audit anthropic relay settings/i })
+      await screen.findByRole("heading", {
+        name: /audit anthropic relay settings/i,
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("searchbox", { name: /search sessions/i })
+      screen.getByRole("searchbox", { name: /search sessions/i }),
     ).toBeInTheDocument();
   });
 
@@ -168,7 +172,9 @@ describe("App", () => {
 
     expect(window.location.hash).toBe("#/sessions/ses-002");
     expect(
-      await screen.findByRole("heading", { name: /audit anthropic relay settings/i })
+      await screen.findByRole("heading", {
+        name: /audit anthropic relay settings/i,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -178,24 +184,26 @@ describe("App", () => {
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: /audit anthropic relay settings/i });
+    await screen.findByRole("heading", {
+      name: /audit anthropic relay settings/i,
+    });
     await user.clear(
-      screen.getByRole("searchbox", { name: /search sessions/i })
+      screen.getByRole("searchbox", { name: /search sessions/i }),
     );
     await user.type(
       screen.getByRole("searchbox", { name: /search sessions/i }),
-      "definitely-no-match"
+      "definitely-no-match",
     );
 
     await waitFor(() => {
       expect(
         screen.queryByRole("heading", {
-          name: /audit anthropic relay settings/i
-        })
+          name: /audit anthropic relay settings/i,
+        }),
       ).not.toBeInTheDocument();
     });
     expect(
-      screen.getByRole("heading", { name: /select a session/i })
+      screen.getByRole("heading", { name: /select a session/i }),
     ).toBeInTheDocument();
   });
 
@@ -207,16 +215,18 @@ describe("App", () => {
     await screen.findByRole("searchbox", { name: /search sessions/i });
     await user.type(
       screen.getByRole("searchbox", { name: /search sessions/i }),
-      "ops"
+      "ops",
     );
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", { name: /refactor wsl collector handshake/i })
+        screen.queryByRole("button", {
+          name: /refactor wsl collector handshake/i,
+        }),
       ).not.toBeInTheDocument();
     });
     expect(
-      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i }),
     ).toBeInTheDocument();
   });
 
@@ -229,18 +239,20 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.selectOptions(
       screen.getByRole("combobox", { name: /assistant/i }),
-      "Claude Code"
+      "Claude Code",
     );
     await user.selectOptions(
       screen.getByRole("combobox", { name: /risk/i }),
-      "at-risk"
+      "at-risk",
     );
 
     expect(
-      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /refactor wsl collector handshake/i })
+      screen.queryByRole("button", {
+        name: /refactor wsl collector handshake/i,
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -253,18 +265,18 @@ describe("App", () => {
     await screen.findByRole("searchbox", { name: /search sessions/i });
     await user.type(
       screen.getByRole("searchbox", { name: /search sessions/i }),
-      "manifest framing"
+      "manifest framing",
     );
 
     const sessionButton = await screen.findByRole("button", {
-      name: /refactor wsl collector handshake/i
+      name: /refactor wsl collector handshake/i,
     });
     const row = sessionButton.closest("tr");
 
     expect(row).not.toBeNull();
     await waitFor(() => {
       expect(
-        within(row as HTMLElement).getByText(/Finalize manifest framing/i)
+        within(row as HTMLElement).getByText(/Finalize manifest framing/i),
       ).toBeInTheDocument();
     });
     expect(within(row as HTMLElement).getByText(/To-do/i)).toBeInTheDocument();
@@ -278,22 +290,24 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(
-      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i }),
     );
 
     expect(
-      await screen.findByRole("heading", { name: /transcript highlights/i })
+      await screen.findByRole("heading", { name: /transcript highlights/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/mapped anthropic_base_url override/i),
+    ).toBeInTheDocument();
     const todoHeading = screen.getByRole("heading", { name: /todo snapshot/i });
     const todoSection = todoHeading.closest("section");
     expect(todoHeading).toBeInTheDocument();
     expect(todoSection).not.toBeNull();
     expect(
-      within(todoSection as HTMLElement).getByText(/review shell hook chain/i)
+      within(todoSection as HTMLElement).getByText(/review shell hook chain/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /knowledge lift/i })
+      screen.getByRole("heading", { name: /knowledge lift/i }),
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue(/kind: osm-rule/i)).toBeInTheDocument();
   });
@@ -302,13 +316,13 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /open session manager/i })
+      await screen.findByRole("heading", { name: /open session manager/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText(/daaain\/claude-code-log/i)
+      await screen.findByText(/daaain\/claude-code-log/i),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText(/viewer-style transcript detail/i)
+      await screen.findByText(/viewer-style transcript detail/i),
     ).toBeInTheDocument();
   });
 
@@ -316,7 +330,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /environment doctor/i })
+      await screen.findByRole("heading", { name: /environment doctor/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/broken-session\.jsonl/i)).toBeInTheDocument();
   });
@@ -325,7 +339,7 @@ describe("App", () => {
     render(<App />);
 
     const heading = await screen.findByRole("heading", {
-      name: /usage analytics/i
+      name: /usage analytics/i,
     });
     const panel = heading.closest("section");
 
@@ -336,13 +350,21 @@ describe("App", () => {
       .closest("article");
 
     expect(openCodeCard).not.toBeNull();
-    expect(within(openCodeCard as HTMLElement).getByText(/\$0\.02/i)).toBeInTheDocument();
-    expect(within(panel as HTMLElement).getByText(/model breakdown/i)).toBeInTheDocument();
-    expect(within(panel as HTMLElement).getByText(/platform breakdown/i)).toBeInTheDocument();
     expect(
-      within(panel as HTMLElement).getByText(/claude-sonnet-4/i)
+      within(openCodeCard as HTMLElement).getByText(/\$0\.02/i),
     ).toBeInTheDocument();
-    expect(within(panel as HTMLElement).getByText("openrouter")).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/model breakdown/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/platform breakdown/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/claude-sonnet-4/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText("openrouter"),
+    ).toBeInTheDocument();
   });
 
   it("在总览里展示 active session cockpit，并允许刷新控制状态", async () => {
@@ -364,11 +386,11 @@ describe("App", () => {
                   controller: "codex",
                   command: "codex",
                   attached: false,
-                  lastResponse: "READY from initial snapshot"
-                }
-              })
-            ]
-          })
+                  lastResponse: "READY from initial snapshot",
+                },
+              }),
+            ],
+          }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -384,25 +406,27 @@ describe("App", () => {
                   controller: "codex",
                   command: "codex",
                   attached: true,
-                  lastResponse: "READY from refreshed snapshot"
-                }
-              })
-            ]
-          })
+                  lastResponse: "READY from refreshed snapshot",
+                },
+              }),
+            ],
+          }),
       });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
 
     const cockpitHeading = await screen.findByRole("heading", {
-      name: /active session cockpit/i
+      name: /active session cockpit/i,
     });
     const cockpitPanel = cockpitHeading.closest("section");
 
     expect(cockpitHeading).toBeInTheDocument();
     expect(cockpitPanel).not.toBeNull();
     expect(
-      within(cockpitPanel as HTMLElement).getByText(/ready from initial snapshot/i)
+      within(cockpitPanel as HTMLElement).getByText(
+        /ready from initial snapshot/i,
+      ),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /refresh cockpit/i }));
@@ -411,9 +435,13 @@ describe("App", () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
     expect(
-      await within(cockpitPanel as HTMLElement).findByText(/ready from refreshed snapshot/i)
+      await within(cockpitPanel as HTMLElement).findByText(
+        /ready from refreshed snapshot/i,
+      ),
     ).toBeInTheDocument();
-    expect(within(cockpitPanel as HTMLElement).getByText(/^attached$/i)).toBeInTheDocument();
+    expect(
+      within(cockpitPanel as HTMLElement).getByText(/^attached$/i),
+    ).toBeInTheDocument();
   });
 
   it("在总览里展示多项目 Git 状态和最近提交历史", async () => {
@@ -429,14 +457,14 @@ describe("App", () => {
                 buildDashboardSession({
                   sessionId: "ses-git-001",
                   title: "Git status inventory",
-                  projectPath: "C:/Projects/osm"
+                  projectPath: "C:/Projects/osm",
                 }),
                 buildDashboardSession({
                   sessionId: "ses-git-002",
                   title: "Follow-up cleanup",
-                  projectPath: "C:/Projects/osm"
-                })
-              ]
+                  projectPath: "C:/Projects/osm",
+                }),
+              ],
             }),
             gitProjects: [
               {
@@ -458,36 +486,40 @@ describe("App", () => {
                     sha: "7fd57a6",
                     summary: "feat: add cockpit",
                     author: "r007b34r",
-                    authoredAt: "2026-03-23T03:00:00.000Z"
+                    authoredAt: "2026-03-23T03:00:00.000Z",
                   },
                   {
                     sha: "9042ddf",
                     summary: "test: widen viewport coverage",
                     author: "r007b34r",
-                    authoredAt: "2026-03-23T02:30:00.000Z"
-                  }
-                ]
-              }
-            ]
-          }) as any
-      })
+                    authoredAt: "2026-03-23T02:30:00.000Z",
+                  },
+                ],
+              },
+            ],
+          }) as any,
+      }),
     );
 
     render(<App />);
 
     const heading = await screen.findByRole("heading", {
-      name: /git workspace status/i
+      name: /git workspace status/i,
     });
     const panel = heading.closest("section");
 
     expect(panel).not.toBeNull();
     expect(
-      within(panel as HTMLElement).getByText(/feat\/usability-clarity/i)
+      within(panel as HTMLElement).getByText(/feat\/usability-clarity/i),
     ).toBeInTheDocument();
-    expect(within(panel as HTMLElement).getByText(/dirty/i)).toBeInTheDocument();
-    expect(within(panel as HTMLElement).getByText(/staged/i)).toBeInTheDocument();
     expect(
-      within(panel as HTMLElement).getByText(/test: widen viewport coverage/i)
+      within(panel as HTMLElement).getByText(/dirty/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/staged/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/test: widen viewport coverage/i),
     ).toBeInTheDocument();
   });
 
@@ -499,17 +531,19 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /git workspace status/i });
     await user.type(
       screen.getByLabelText(/commit message/i),
-      "feat: review git queue"
+      "feat: review git queue",
     );
     await user.click(screen.getByRole("button", { name: /commit changes/i }));
 
-    expect(await screen.findByText(/committed feat: review git queue\./i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/committed feat: review git queue\./i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/feat: review git queue/i)).not.toHaveLength(0);
 
     await user.click(screen.getByRole("button", { name: /push branch/i }));
 
     expect(
-      await screen.findByText(/pushed feat\/usability-clarity to origin\./i)
+      await screen.findByText(/pushed feat\/usability-clarity to origin\./i),
     ).toBeInTheDocument();
   });
 
@@ -521,13 +555,15 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /git workspace status/i });
     await user.type(
       screen.getByLabelText(/target branch/i),
-      "feature/git-guardrails"
+      "feature/git-guardrails",
     );
 
     expect(
-      screen.getByText(/clean up local changes before switching branches/i)
+      screen.getByText(/clean up local changes before switching branches/i),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /switch branch/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /switch branch/i }),
+    ).toBeDisabled();
   });
 
   it("配置快照会在自动刷新周期后热更新", async () => {
@@ -562,10 +598,10 @@ describe("App", () => {
                 maskedSecret: "***4321",
                 officialOrProxy: "Official",
                 risks: [],
-                mcpServers: []
-              }
-            ]
-          }) as any
+                mcpServers: [],
+              },
+            ],
+          }) as any,
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -584,17 +620,17 @@ describe("App", () => {
                 maskedSecret: "***4321",
                 officialOrProxy: "Official",
                 risks: [],
-                mcpServers: []
-              }
-            ]
-          }) as any
+                mcpServers: [],
+              },
+            ],
+          }) as any,
       });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /config risk center/i })
+      await screen.findByRole("heading", { name: /config risk center/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("gpt-5")).toBeInTheDocument();
     expect(refreshTick).toBeDefined();
@@ -615,14 +651,18 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: /open session manager/i });
-    await screen.findByRole("button", { name: /audit anthropic relay settings/i });
+    await screen.findByRole("button", {
+      name: /audit anthropic relay settings/i,
+    });
     await user.click(
-      screen.getByRole("button", { name: /audit anthropic relay settings/i })
+      screen.getByRole("button", { name: /audit anthropic relay settings/i }),
     );
 
     expect(window.location.hash).toBe("");
     expect(
-      await screen.findAllByRole("heading", { name: /audit anthropic relay settings/i })
+      await screen.findAllByRole("heading", {
+        name: /audit anthropic relay settings/i,
+      }),
     ).not.toHaveLength(0);
   });
 
@@ -633,14 +673,18 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: /open session manager/i })
+      await screen.findByRole("heading", { name: /open session manager/i }),
     ).toBeInTheDocument();
     await screen.findByRole("heading", { name: /config risk center/i });
 
     expect(screen.queryByText(/github copilot cli/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/factory droid/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/copilot\.enterprise-relay\.example/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/factory-relay\.example/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/copilot\.enterprise-relay\.example/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/factory-relay\.example/i),
+    ).not.toBeInTheDocument();
   });
 
   it("在 Configs 页允许编辑支持的配置并把结果回写到当前视图", async () => {
@@ -651,52 +695,60 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /config risk center/i });
     const configHeading = await screen.findByRole("heading", {
-      name: /~\/\.copilot\/config\.json/i
+      name: /~\/\.copilot\/config\.json/i,
     });
     const card = configHeading.closest("article");
 
     expect(card).not.toBeNull();
     await user.click(
-      within(card as HTMLElement).getByRole("button", { name: /edit config/i })
+      within(card as HTMLElement).getByRole("button", { name: /edit config/i }),
     );
     await user.clear(within(card as HTMLElement).getByLabelText(/^model$/i));
     await user.type(
       within(card as HTMLElement).getByLabelText(/^model$/i),
-      "gpt-5-mini"
+      "gpt-5-mini",
     );
     await user.clear(within(card as HTMLElement).getByLabelText(/endpoint/i));
     await user.type(
       within(card as HTMLElement).getByLabelText(/endpoint/i),
-      "https://github.com/api/copilot"
+      "https://github.com/api/copilot",
     );
     await user.type(
       within(card as HTMLElement).getByLabelText(/new key/i),
-      "ghu_new_secret_123454321"
-    );
-    await user.click(
-      within(card as HTMLElement).getByRole("button", { name: /review changes/i })
-    );
-    expect(
-      within(card as HTMLElement).getByRole("heading", { name: /review changes/i })
-    ).toBeInTheDocument();
-    await user.click(
-      within(card as HTMLElement).getByRole("checkbox", {
-        name: /i reviewed the masked diff and want to apply it/i
-      })
+      "ghu_new_secret_123454321",
     );
     await user.click(
       within(card as HTMLElement).getByRole("button", {
-        name: /apply reviewed changes/i
-      })
+        name: /review changes/i,
+      }),
+    );
+    expect(
+      within(card as HTMLElement).getByRole("heading", {
+        name: /review changes/i,
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(card as HTMLElement).getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i,
+      }),
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", {
+        name: /apply reviewed changes/i,
+      }),
     );
 
     await waitFor(() => {
       expect(
-        within(card as HTMLElement).getByText("https://github.com/api/copilot")
+        within(card as HTMLElement).getByText("https://github.com/api/copilot"),
       ).toBeInTheDocument();
     });
-    expect(within(card as HTMLElement).getByText("gpt-5-mini")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("***4321")).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("gpt-5-mini"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("***4321"),
+    ).toBeInTheDocument();
   });
 
   it("配置写回后会在 Audit 页展示备份 manifest 路径", async () => {
@@ -707,42 +759,81 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /config risk center/i });
     const configHeading = await screen.findByRole("heading", {
-      name: /~\/\.copilot\/config\.json/i
+      name: /~\/\.copilot\/config\.json/i,
     });
     const card = configHeading.closest("article");
 
     expect(card).not.toBeNull();
     await user.click(
-      within(card as HTMLElement).getByRole("button", { name: /edit config/i })
+      within(card as HTMLElement).getByRole("button", { name: /edit config/i }),
     );
     await user.type(
       within(card as HTMLElement).getByLabelText(/new key/i),
-      "ghu_new_secret_123454321"
-    );
-    await user.click(
-      within(card as HTMLElement).getByRole("button", { name: /review changes/i })
-    );
-    await user.click(
-      within(card as HTMLElement).getByRole("checkbox", {
-        name: /i reviewed the masked diff and want to apply it/i
-      })
+      "ghu_new_secret_123454321",
     );
     await user.click(
       within(card as HTMLElement).getByRole("button", {
-        name: /apply reviewed changes/i
-      })
+        name: /review changes/i,
+      }),
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i,
+      }),
+    );
+    await user.click(
+      within(card as HTMLElement).getByRole("button", {
+        name: /apply reviewed changes/i,
+      }),
     );
 
     await user.click(screen.getByRole("link", { name: "Audit" }));
 
-    const configAuditCard = (await screen.findByText(
-      /updated config fields for github copilot cli/i
-    )).closest("article");
+    const configAuditCard = (
+      await screen.findByText(/updated config fields for github copilot cli/i)
+    ).closest("article");
 
     expect(configAuditCard).not.toBeNull();
-    expect(within(configAuditCard as HTMLElement).getByText(/config-backups/i)).toBeInTheDocument();
     expect(
-      within(configAuditCard as HTMLElement).getByText(/cfg-004\/manifest\.json/i)
+      within(configAuditCard as HTMLElement).getByText(/config-backups/i),
+    ).toBeInTheDocument();
+    expect(
+      within(configAuditCard as HTMLElement).getByText(
+        /cfg-004\/manifest\.json/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("Audit 页展示 resume artifact 路径", async () => {
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+    window.location.hash = "#/audit";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () =>
+          ({
+            ...buildDashboardSnapshot(),
+            auditEvents: [
+              {
+                eventId: "evt-resume-artifact",
+                type: "restore",
+                target: "ses-001",
+                actor: "r007b34r",
+                createdAt: "2026-03-23T05:00:00Z",
+                result: "success",
+                detail: "Restored session with linked resume artifact.",
+                resumeArtifactPath: "C:/OSM/exports/resume-ses-001.json",
+              },
+            ],
+          }) as any,
+      }),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByText(/c:\/osm\/exports\/resume-ses-001\.json/i),
     ).toBeInTheDocument();
   });
 
@@ -755,12 +846,12 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(
       screen.getByRole("button", {
-        name: /package export and quarantine workflow/i
-      })
+        name: /package export and quarantine workflow/i,
+      }),
     );
 
     expect(
-      await screen.findByRole("heading", { name: /^usage$/i })
+      await screen.findByRole("heading", { name: /^usage$/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/gpt-5/i)).toBeInTheDocument();
     expect(screen.getByText(/\$0\.02/i)).toBeInTheDocument();
@@ -774,28 +865,32 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(screen.getByRole("button", { name: /export markdown/i }));
-    await user.click(screen.getByRole("button", { name: /move to quarantine/i }));
+    await user.click(
+      screen.getByRole("button", { name: /move to quarantine/i }),
+    );
 
     expect(
-      screen.getByRole("heading", { name: /review cleanup before quarantine/i })
+      screen.getByRole("heading", {
+        name: /review cleanup before quarantine/i,
+      }),
     ).toBeInTheDocument();
     const confirmButton = screen.getByRole("button", {
-      name: /confirm move to quarantine/i
+      name: /confirm move to quarantine/i,
     });
     expect(confirmButton).toBeDisabled();
 
     await user.click(
       screen.getByRole("checkbox", {
-        name: /i exported the valuable parts and want to continue/i
-      })
+        name: /i exported the valuable parts and want to continue/i,
+      }),
     );
     await user.click(confirmButton);
 
     await waitFor(() => {
       expect(
         screen.queryByRole("button", {
-          name: /refactor wsl collector handshake/i
-        })
+          name: /refactor wsl collector handshake/i,
+        }),
       ).not.toBeInTheDocument();
     });
   });
@@ -809,16 +904,20 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.click(screen.getByRole("button", { name: /resume session/i }));
 
-    expect(await screen.findByText(/ready from demo resume/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/ready from demo resume/i),
+    ).toBeInTheDocument();
 
     await user.type(
       screen.getByLabelText(/continue prompt/i),
-      "Continue with the next verification step."
+      "Continue with the next verification step.",
     );
     await user.click(screen.getByRole("button", { name: /continue session/i }));
 
     expect(
-      await screen.findByText(/ready from demo continue: continue with the next verification step\./i)
+      await screen.findByText(
+        /ready from demo continue: continue with the next verification step\./i,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -831,14 +930,18 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /retention-first queue/i });
     await user.type(
       screen.getByRole("searchbox", { name: /search sessions/i }),
-      "anthropic_base_url override"
+      "anthropic_base_url override",
     );
     await user.click(
-      await screen.findByRole("button", { name: /audit anthropic relay settings/i })
+      await screen.findByRole("button", {
+        name: /audit anthropic relay settings/i,
+      }),
     );
 
     expect(await screen.findByText(/search hit/i)).toBeInTheDocument();
-    expect(screen.getByText(/mapped anthropic_base_url override/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/mapped anthropic_base_url override/i),
+    ).toBeInTheDocument();
     expect(screen.getByText("override").tagName).toBe("MARK");
   });
 
@@ -849,13 +952,17 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: /config risk center/i });
-    await user.click(screen.getAllByRole("button", { name: /edit config/i })[0]);
+    await user.click(
+      screen.getAllByRole("button", { name: /edit config/i })[0],
+    );
     await user.type(screen.getByLabelText(/snippet name/i), "Shared GitHub");
     await user.click(screen.getByRole("button", { name: /save snippet/i }));
 
     await user.click(screen.getByRole("link", { name: "Audit" }));
 
-    expect(await screen.findByText(/saved config snippet shared github/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/saved config snippet shared github/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/config snippet saved/i)).toBeInTheDocument();
   });
 });
@@ -863,12 +970,12 @@ describe("App", () => {
 function mockNavigatorLanguage(language: string, languages: string[]) {
   Object.defineProperty(window.navigator, "language", {
     configurable: true,
-    value: language
+    value: language,
   });
 
   Object.defineProperty(window.navigator, "languages", {
     configurable: true,
-    value: languages
+    value: languages,
   });
 }
 
@@ -884,13 +991,13 @@ function mockMatchMedia(prefersDark: boolean) {
       removeEventListener: () => undefined,
       addListener: () => undefined,
       removeListener: () => undefined,
-      dispatchEvent: () => false
-    })
+      dispatchEvent: () => false,
+    }),
   });
 }
 
 function buildDashboardSnapshot(
-  overrides: Partial<DashboardSnapshot> = {}
+  overrides: Partial<DashboardSnapshot> = {},
 ): DashboardSnapshot {
   return {
     metrics: [],
@@ -907,21 +1014,23 @@ function buildDashboardSnapshot(
         cacheWriteTokens: 0,
         reasoningTokens: 0,
         totalTokens: 0,
-        costSource: "unknown"
+        costSource: "unknown",
       },
-      assistants: []
+      assistants: [],
     },
     usageTimeline: [],
     runtime: {
-      auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
+      auditDbPath:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
       exportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
       defaultExportRoot: "C:/Users/Max/Documents/OpenSessionManager/exports",
       exportRootSource: "default",
-      quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
+      quarantineRoot:
+        "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
       preferencesPath:
-        "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
+        "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json",
     },
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -943,6 +1052,6 @@ function buildDashboardSession(overrides: Record<string, unknown>) {
     keyArtifacts: [],
     transcriptHighlights: [],
     todoItems: [],
-    ...overrides
+    ...overrides,
   };
 }

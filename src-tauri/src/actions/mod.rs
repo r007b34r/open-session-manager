@@ -13,6 +13,7 @@ use std::{
 use chrono::Utc;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::{audit::config_audit::AuditError, domain::audit::AuditEvent};
@@ -81,6 +82,8 @@ pub struct QuarantineManifest {
     pub quarantined_path: PathBuf,
     pub manifest_path: PathBuf,
     pub deleted_at: String,
+    #[serde(default)]
+    pub resume_artifact_path: Option<PathBuf>,
     #[serde(default)]
     pub related_assets: Vec<QuarantineAsset>,
 }
@@ -267,6 +270,31 @@ pub fn latest_session_end_hook_failed(
     }
 }
 
+pub fn latest_export_resume_artifact_path(
+    connection: &Connection,
+    session_id: &str,
+) -> ActionResult<Option<PathBuf>> {
+    let latest_after_state =
+        latest_successful_session_event_after_state(connection, session_id, "export_markdown")?;
+
+    let Some(after_state) = latest_after_state else {
+        return Ok(None);
+    };
+
+    if let Some(path) = parse_path_from_json_state(&after_state, "resume_artifact_path") {
+        return Ok(Some(path));
+    }
+
+    let output_path = parse_path_from_json_state(&after_state, "output_path");
+    let fallback = output_path.and_then(|output_path| {
+        output_path
+            .parent()
+            .map(|parent| parent.join(format!("resume-{}.json", safe_managed_name(session_id))))
+    });
+
+    Ok(fallback.filter(|path| path.exists()))
+}
+
 pub fn move_path(source: &Path, destination: &Path) -> ActionResult<()> {
     if let Some(parent) = destination.parent() {
         fs::create_dir_all(parent)?;
@@ -376,6 +404,36 @@ fn has_successful_session_event(
             |row| row.get::<_, i64>(0),
         )
         .map_err(Into::into)
+}
+
+fn latest_successful_session_event_after_state(
+    connection: &Connection,
+    session_id: &str,
+    event_type: &str,
+) -> ActionResult<Option<String>> {
+    let latest_result = connection.query_row(
+        "SELECT after_state
+         FROM audit_events
+         WHERE event_type = ?1
+           AND target_type = 'session'
+           AND target_id = ?2
+           AND result = 'success'
+         ORDER BY created_at DESC
+         LIMIT 1",
+        params![event_type, session_id],
+        |row| row.get::<_, Option<String>>(0),
+    );
+
+    match latest_result {
+        Ok(after_state) => Ok(after_state),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(error) => Err(ActionError::Sql(error)),
+    }
+}
+
+fn parse_path_from_json_state(payload: &str, field: &str) -> Option<PathBuf> {
+    let parsed = serde_json::from_str::<Value>(payload).ok()?;
+    parsed.get(field).and_then(Value::as_str).map(PathBuf::from)
 }
 
 #[cfg(test)]

@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
     process::Command,
     sync::{
@@ -10,7 +9,7 @@ use std::{
 };
 
 use rusqlite::Connection;
-use serde_json::to_string_pretty;
+use serde_json::{Value, to_string_pretty};
 
 use crate::{
     audit::{
@@ -22,7 +21,7 @@ use crate::{
 };
 
 use super::{
-    ActionError, AuditWriteRequest, QuarantineManifest, write_audit_event,
+    ActionError, AuditWriteRequest, QuarantineManifest,
     config_writeback::{
         ConfigRollbackRequest, ConfigWritebackRequest, ConfigWritebackUpdate,
         rollback_config_writeback, write_config,
@@ -35,6 +34,7 @@ use super::{
     },
     restore::restore_session,
     session_control::{SessionControlRequest, continue_session, resume_session},
+    write_audit_event,
 };
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
@@ -101,6 +101,54 @@ fn exports_soft_deletes_restores_and_audits_session() {
     assert!(exported.contains("title: \"整理 agent 会话\""));
     assert!(exported.contains("## Summary"));
     assert!(exported.contains("## Progress"));
+    let resume_artifact_path = export_root.join("resume-ses-archive-1.json");
+    assert_eq!(export_result.resume_artifact_path, resume_artifact_path);
+    let resume_artifact: Value = serde_json::from_str(
+        &fs::read_to_string(&resume_artifact_path).expect("read resume artifact"),
+    )
+    .expect("parse resume artifact");
+    assert_eq!(
+        resume_artifact
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .expect("resume artifact session id"),
+        "ses-archive-1"
+    );
+    assert_eq!(
+        resume_artifact
+            .get("assistant")
+            .and_then(Value::as_str)
+            .expect("resume artifact assistant"),
+        "codex"
+    );
+    assert_eq!(
+        resume_artifact
+            .get("exportPath")
+            .and_then(Value::as_str)
+            .expect("resume artifact export path"),
+        export_result.output_path.display().to_string()
+    );
+    assert_eq!(
+        resume_artifact
+            .get("checklistPath")
+            .and_then(Value::as_str)
+            .expect("resume artifact checklist path"),
+        export_result.cleanup_checklist_path.display().to_string()
+    );
+    assert_eq!(
+        resume_artifact
+            .get("nextFocus")
+            .and_then(Value::as_str)
+            .expect("resume artifact next focus"),
+        "已扫描本地会话并生成清理建议。"
+    );
+    assert_eq!(
+        resume_artifact
+            .get("resumeCue")
+            .and_then(Value::as_str)
+            .expect("resume artifact resume cue"),
+        "已扫描本地会话并生成清理建议。"
+    );
 
     let manifest = soft_delete_session(&SoftDeleteRequest {
         session: &session,
@@ -113,6 +161,17 @@ fn exports_soft_deletes_restores_and_audits_session() {
     assert!(!source_path.exists());
     assert!(manifest.quarantined_path.exists());
     assert!(manifest.manifest_path.exists());
+    let manifest_json: Value = serde_json::from_str(
+        &fs::read_to_string(&manifest.manifest_path).expect("read manifest json"),
+    )
+    .expect("parse manifest json");
+    assert_eq!(
+        manifest_json
+            .get("resume_artifact_path")
+            .and_then(Value::as_str)
+            .expect("manifest resume artifact path"),
+        resume_artifact_path.display().to_string()
+    );
 
     restore_session(
         &manifest.manifest_path,
@@ -136,6 +195,26 @@ fn exports_soft_deletes_restores_and_audits_session() {
     assert!(event_types.contains(&"cleanup_checklist".to_string()));
     assert!(event_types.contains(&"soft_delete".to_string()));
     assert!(event_types.contains(&"restore".to_string()));
+    let restore_after_state: String = connection
+        .query_row(
+            "SELECT after_state
+             FROM audit_events
+             WHERE event_type = 'restore'
+             ORDER BY created_at DESC
+             LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .expect("load restore after_state");
+    let restore_after_state: Value =
+        serde_json::from_str(&restore_after_state).expect("parse restore after_state");
+    assert_eq!(
+        restore_after_state
+            .get("resume_artifact_path")
+            .and_then(Value::as_str)
+            .expect("restore resume artifact path"),
+        resume_artifact_path.display().to_string()
+    );
 
     fs::remove_dir_all(&sandbox).expect("cleanup sandbox");
 }
@@ -282,6 +361,7 @@ fn refuses_restore_when_manifest_is_outside_the_managed_quarantine_root() {
         quarantined_path: payload_path,
         manifest_path: manifest_path.clone(),
         deleted_at: "2026-03-15T10:00:00Z".to_string(),
+        resume_artifact_path: None,
         related_assets: Vec::new(),
     };
     fs::write(
@@ -329,6 +409,7 @@ fn refuses_restore_when_original_path_is_outside_allowed_session_roots() {
         quarantined_path: payload_path,
         manifest_path: manifest_path.clone(),
         deleted_at: "2026-03-15T11:00:00Z".to_string(),
+        resume_artifact_path: None,
         related_assets: Vec::new(),
     };
     fs::write(
@@ -835,7 +916,9 @@ fn exports_cleanup_checklist_and_runs_session_end_hook_when_present() {
     .expect("parse cleanup checklist");
 
     assert_eq!(
-        checklist.get("sessionId").and_then(serde_json::Value::as_str),
+        checklist
+            .get("sessionId")
+            .and_then(serde_json::Value::as_str),
         Some("codex-cleanup-hook")
     );
     assert_eq!(
@@ -1448,7 +1531,10 @@ fn switches_git_branch_with_dirty_worktree_guardrail() {
     .expect("switch branch");
 
     assert_eq!(result.branch, "feature/git-panel");
-    assert_eq!(git(&repo_root, &["branch", "--show-current"]), "feature/git-panel");
+    assert_eq!(
+        git(&repo_root, &["branch", "--show-current"]),
+        "feature/git-panel"
+    );
     assert!(query_event_types(&connection).contains(&"git_branch_switch".to_string()));
 }
 
@@ -1464,7 +1550,12 @@ fn pushes_git_project_to_upstream_and_records_audit_event() {
     init_git_repo(&repo_root);
     git(
         &repo_root,
-        &["remote", "add", "origin", remote_root.to_str().expect("remote path")],
+        &[
+            "remote",
+            "add",
+            "origin",
+            remote_root.to_str().expect("remote path"),
+        ],
     );
     git(&repo_root, &["push", "-u", "origin", "main"]);
 
@@ -1578,10 +1669,10 @@ fn with_path_prefix<T>(bin_dir: &Path, action: impl FnOnce() -> T) -> T {
 
     let original_path = env::var_os("PATH");
     let joined = match &original_path {
-        Some(path) => env::join_paths(
-            std::iter::once(bin_dir.to_path_buf()).chain(env::split_paths(path)),
-        )
-        .expect("join PATH"),
+        Some(path) => {
+            env::join_paths(std::iter::once(bin_dir.to_path_buf()).chain(env::split_paths(path)))
+                .expect("join PATH")
+        }
         None => env::join_paths([bin_dir.to_path_buf()]).expect("set PATH"),
     };
     unsafe {

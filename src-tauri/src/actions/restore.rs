@@ -85,6 +85,7 @@ pub fn restore_session(
                 json!({
                     "quarantined_path": quarantined_path,
                     "manifest_path": actual_manifest_path,
+                    "resume_artifact_path": manifest.resume_artifact_path,
                     "related_assets": related_assets.len(),
                 })
                 .to_string(),
@@ -92,6 +93,7 @@ pub fn restore_session(
             after_state: Some(
                 json!({
                     "restored_path": original_path,
+                    "resume_artifact_path": manifest.resume_artifact_path,
                     "related_assets": related_assets.len(),
                 })
                 .to_string(),

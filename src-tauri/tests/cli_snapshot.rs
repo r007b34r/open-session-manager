@@ -277,7 +277,9 @@ fn search_command_returns_ranked_hits() {
         hits[0]
             .get("matchReasons")
             .and_then(Value::as_array)
-            .is_some_and(|reasons| reasons.iter().any(|reason| reason.as_str() == Some("title"))),
+            .is_some_and(|reasons| reasons
+                .iter()
+                .any(|reason| reason.as_str() == Some("title"))),
         "top hit should explain that the title matched"
     );
 }
@@ -292,8 +294,7 @@ fn get_command_returns_full_session_detail() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let session: Value =
-        serde_json::from_slice(&output.stdout).expect("get command prints json");
+    let session: Value = serde_json::from_slice(&output.stdout).expect("get command prints json");
 
     assert_eq!(
         session
@@ -328,8 +329,7 @@ fn view_command_renders_markdown_summary() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let payload: Value =
-        serde_json::from_slice(&output.stdout).expect("view command prints json");
+    let payload: Value = serde_json::from_slice(&output.stdout).expect("view command prints json");
     let content = payload
         .get("content")
         .and_then(Value::as_str)
@@ -640,6 +640,30 @@ fn snapshot_command_includes_persisted_audit_history() {
     assert!(audit_types.contains(&"soft_delete"));
     assert!(audit_types.contains(&"cleanup_checklist"));
     assert!(audit_types.contains(&"export_markdown"));
+
+    let export_event = audit_events
+        .iter()
+        .find(|event| event.get("type").and_then(Value::as_str) == Some("export_markdown"))
+        .expect("export event exists");
+    assert!(
+        export_event
+            .get("resumeArtifactPath")
+            .and_then(Value::as_str)
+            .is_some_and(|path| path.ends_with("resume-ses-persisted-1.json")),
+        "snapshot audit should expose resume artifact path for export"
+    );
+
+    let restore_event = audit_events
+        .iter()
+        .find(|event| event.get("type").and_then(Value::as_str) == Some("restore"))
+        .expect("restore event exists");
+    assert!(
+        restore_event
+            .get("resumeArtifactPath")
+            .and_then(Value::as_str)
+            .is_some_and(|path| path.ends_with("resume-ses-persisted-1.json")),
+        "snapshot audit should keep the resume artifact path through restore"
+    );
 }
 
 #[test]

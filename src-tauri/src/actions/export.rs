@@ -27,6 +27,7 @@ pub struct ExportRequest<'a> {
 pub struct ExportResult {
     pub output_path: PathBuf,
     pub cleanup_checklist_path: PathBuf,
+    pub resume_artifact_path: PathBuf,
     pub session_end_hook_report_path: Option<PathBuf>,
 }
 
@@ -40,8 +41,19 @@ pub fn export_session_markdown(request: &ExportRequest<'_>) -> ActionResult<Expo
 
     let markdown = build_markdown(request.session, request.insight);
     fs::write(&output_path, markdown)?;
-    let cleanup_result =
-        write_cleanup_checklist(request.session, request.insight, request.output_root, &output_path)?;
+    let cleanup_result = write_cleanup_checklist(
+        request.session,
+        request.insight,
+        request.output_root,
+        &output_path,
+    )?;
+    let resume_artifact_path = write_resume_artifact(
+        request.session,
+        request.insight,
+        request.output_root,
+        &output_path,
+        &cleanup_result,
+    )?;
 
     write_audit_event(
         request.connection,
@@ -55,6 +67,7 @@ pub fn export_session_markdown(request: &ExportRequest<'_>) -> ActionResult<Expo
                 json!({
                     "output_path": output_path,
                     "checklist_path": cleanup_result.checklist_path,
+                    "resume_artifact_path": resume_artifact_path,
                     "hook_report_path": cleanup_result.hook.report_path,
                 })
                 .to_string(),
@@ -109,6 +122,7 @@ pub fn export_session_markdown(request: &ExportRequest<'_>) -> ActionResult<Expo
     Ok(ExportResult {
         output_path,
         cleanup_checklist_path: cleanup_result.checklist_path,
+        resume_artifact_path,
         session_end_hook_report_path: cleanup_result.hook.report_path.clone(),
     })
 }
@@ -137,6 +151,29 @@ struct CleanupChecklistWriteResult {
     checklist_path: PathBuf,
     ready_for_delete: bool,
     hook: SessionEndHookResult,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ResumeArtifact {
+    schema_version: u8,
+    session_id: String,
+    assistant: String,
+    title: String,
+    summary: String,
+    progress_state: String,
+    export_path: String,
+    checklist_path: String,
+    source_path: String,
+    project_path: String,
+    next_focus: String,
+    resume_cue: String,
+    open_tasks: usize,
+    completed_tasks: usize,
+    risk_flags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hook_report_path: Option<String>,
+    generated_at: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -216,6 +253,52 @@ fn write_cleanup_checklist(
     })
 }
 
+fn write_resume_artifact(
+    session: &SessionRecord,
+    insight: &SessionInsight,
+    output_root: &Path,
+    export_path: &Path,
+    cleanup_result: &CleanupChecklistWriteResult,
+) -> ActionResult<PathBuf> {
+    let safe_session_id = safe_managed_name(&session.session_id);
+    let resume_artifact_path = output_root.join(format!("resume-{safe_session_id}.json"));
+    let digest = build_transcript_digest(session);
+    let handoff = derive_session_handoff(&digest, &insight.summary);
+    let artifact = ResumeArtifact {
+        schema_version: 1,
+        session_id: session.session_id.clone(),
+        assistant: session.assistant.clone(),
+        title: insight.title.clone(),
+        summary: insight.summary.clone(),
+        progress_state: insight.progress_state.clone(),
+        export_path: export_path.display().to_string(),
+        checklist_path: cleanup_result.checklist_path.display().to_string(),
+        source_path: session.source_path.clone(),
+        project_path: session
+            .project_path
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string()),
+        next_focus: handoff.next_focus,
+        resume_cue: handoff.resume_cue,
+        open_tasks: handoff.open_tasks,
+        completed_tasks: handoff.completed_tasks,
+        risk_flags: parse_string_list(&insight.risk_flags_json),
+        hook_report_path: cleanup_result
+            .hook
+            .report_path
+            .as_ref()
+            .map(|path| path.display().to_string()),
+        generated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    fs::write(
+        &resume_artifact_path,
+        serde_json::to_string_pretty(&artifact)?,
+    )?;
+
+    Ok(resume_artifact_path)
+}
+
 fn build_cleanup_warnings(
     insight: &SessionInsight,
     risk_flags: &[String],
@@ -225,7 +308,9 @@ fn build_cleanup_warnings(
 
     let open_tasks = todos.iter().filter(|todo| !todo.completed).count();
     if open_tasks > 0 {
-        warnings.push(format!("{open_tasks} open tasks still remain in the transcript."));
+        warnings.push(format!(
+            "{open_tasks} open tasks still remain in the transcript."
+        ));
     }
 
     if insight.progress_state != "completed" {
@@ -261,8 +346,14 @@ fn resolve_session_end_hook(session: &SessionRecord) -> Option<PathBuf> {
             .join(".open-session-manager")
             .join("hooks")
             .join("session-end.sh"),
-        project_root.join(".osm").join("hooks").join("session-end.ps1"),
-        project_root.join(".osm").join("hooks").join("session-end.sh"),
+        project_root
+            .join(".osm")
+            .join("hooks")
+            .join("session-end.ps1"),
+        project_root
+            .join(".osm")
+            .join("hooks")
+            .join("session-end.sh"),
     ];
 
     candidates.into_iter().find(|path| path.is_file())
@@ -284,7 +375,11 @@ fn run_session_end_hook(
     let mut command = match hook_path.extension().and_then(|value| value.to_str()) {
         Some("ps1") if cfg!(windows) => {
             let mut command = Command::new("powershell");
-            command.arg("-ExecutionPolicy").arg("Bypass").arg("-File").arg(hook_path);
+            command
+                .arg("-ExecutionPolicy")
+                .arg("Bypass")
+                .arg("-File")
+                .arg(hook_path);
             command
         }
         Some("ps1") => {
@@ -522,22 +617,7 @@ fn render_todo_section(todos: &[TranscriptTodo]) -> String {
 }
 
 fn render_session_handoff(digest: &crate::transcript::TranscriptDigest, summary: &str) -> String {
-    let next_focus = digest
-        .todos
-        .iter()
-        .find(|todo| !todo.completed)
-        .map(|todo| todo.content.as_str())
-        .unwrap_or(summary);
-    let resume_cue = digest
-        .highlights
-        .iter()
-        .rev()
-        .find(|highlight| highlight.role == "Assistant")
-        .or_else(|| digest.highlights.last())
-        .map(|highlight| highlight.content.as_str())
-        .unwrap_or(summary);
-    let open_tasks = digest.todos.iter().filter(|todo| !todo.completed).count();
-    let completed_tasks = digest.todos.iter().filter(|todo| todo.completed).count();
+    let handoff = derive_session_handoff(digest, summary);
 
     format!(
         "## Session Handoff\n\
@@ -545,11 +625,47 @@ fn render_session_handoff(digest: &crate::transcript::TranscriptDigest, summary:
 - Open tasks: {}\n\
 - Completed tasks: {}\n\
 - Resume cue: {}\n\n",
-        compact_markdown_line(next_focus),
-        open_tasks,
-        completed_tasks,
-        compact_markdown_line(resume_cue),
+        compact_markdown_line(&handoff.next_focus),
+        handoff.open_tasks,
+        handoff.completed_tasks,
+        compact_markdown_line(&handoff.resume_cue),
     )
+}
+
+struct SessionHandoff {
+    next_focus: String,
+    resume_cue: String,
+    open_tasks: usize,
+    completed_tasks: usize,
+}
+
+fn derive_session_handoff(
+    digest: &crate::transcript::TranscriptDigest,
+    summary: &str,
+) -> SessionHandoff {
+    let next_focus = digest
+        .todos
+        .iter()
+        .find(|todo| !todo.completed)
+        .map(|todo| todo.content.as_str())
+        .unwrap_or(summary)
+        .to_string();
+    let resume_cue = digest
+        .highlights
+        .iter()
+        .rev()
+        .find(|highlight| highlight.role == "Assistant")
+        .or_else(|| digest.highlights.last())
+        .map(|highlight| highlight.content.as_str())
+        .unwrap_or(summary)
+        .to_string();
+
+    SessionHandoff {
+        next_focus,
+        resume_cue,
+        open_tasks: digest.todos.iter().filter(|todo| !todo.completed).count(),
+        completed_tasks: digest.todos.iter().filter(|todo| todo.completed).count(),
+    }
 }
 
 fn render_transcript_highlights(highlights: &[TranscriptHighlight]) -> String {

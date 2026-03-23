@@ -97,6 +97,7 @@ export type AuditEventRecord = {
   outputPath?: string;
   quarantinedPath?: string;
   manifestPath?: string;
+  resumeArtifactPath?: string;
 };
 
 export type DoctorFindingRecord = {
@@ -253,9 +254,9 @@ const EMPTY_USAGE_OVERVIEW: UsageOverviewRecord = {
     cacheWriteTokens: 0,
     reasoningTokens: 0,
     totalTokens: 0,
-    costSource: "unknown"
+    costSource: "unknown",
   },
-  assistants: []
+  assistants: [],
 };
 const EMPTY_USAGE_TIMELINE: UsageTimelineRecord[] = [];
 const EMPTY_RUNTIME: DashboardRuntime = {
@@ -264,7 +265,7 @@ const EMPTY_RUNTIME: DashboardRuntime = {
   defaultExportRoot: "",
   exportRootSource: "default",
   quarantineRoot: "",
-  preferencesPath: ""
+  preferencesPath: "",
 };
 
 declare global {
@@ -278,23 +279,23 @@ const fallbackSnapshot: DashboardSnapshot = {
     {
       label: "Indexed Sessions",
       value: "184",
-      note: "Across Windows, Linux, and WSL surfaces"
+      note: "Across Windows, Linux, and WSL surfaces",
     },
     {
       label: "High-Value Candidates",
       value: "27",
-      note: "Worth exporting before cleanup"
+      note: "Worth exporting before cleanup",
     },
     {
       label: "Risky Configs",
       value: "9",
-      note: "Relay, wide permissions, or shell hooks"
+      note: "Relay, wide permissions, or shell hooks",
     },
     {
       label: "Cold Storage Saved",
       value: "11.3 GB",
-      note: "Potential reclaim from soft-delete queue"
-    }
+      note: "Potential reclaim from soft-delete queue",
+    },
   ],
   sessions: [
     {
@@ -316,28 +317,29 @@ const fallbackSnapshot: DashboardSnapshot = {
       keyArtifacts: [
         "Defined distro handshake checkpoints",
         "Separated Windows path discovery from Linux payload collection",
-        "Logged retry edge case for restore flow"
+        "Logged retry edge case for restore flow",
       ],
       transcriptHighlights: [
         {
           role: "User",
-          content: "Normalize the WSL collector handshake before adding more adapters."
+          content:
+            "Normalize the WSL collector handshake before adding more adapters.",
         },
         {
           role: "Assistant",
           content:
-            "Discovery roots are stable now. The next step is locking transport framing and manifest retries."
-        }
+            "Discovery roots are stable now. The next step is locking transport framing and manifest retries.",
+        },
       ],
       todoItems: [
         {
           content: "Finalize manifest framing",
-          completed: true
+          completed: true,
         },
         {
           content: "Verify retry path in WSL",
-          completed: false
-        }
+          completed: false,
+        },
       ],
       usage: {
         model: "gpt-5-codex",
@@ -346,8 +348,8 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 256,
         cacheWriteTokens: 0,
         reasoningTokens: 0,
-        totalTokens: 1024
-      }
+        totalTokens: 1024,
+      },
     },
     {
       sessionId: "ses-002",
@@ -367,29 +369,29 @@ const fallbackSnapshot: DashboardSnapshot = {
       keyArtifacts: [
         "Documented ANTHROPIC_BASE_URL override path",
         "Captured hook command chain",
-        "Flagged accept-edits default mode"
+        "Flagged accept-edits default mode",
       ],
       transcriptHighlights: [
         {
           role: "User",
           content:
-            "Audit the relay endpoint, shell hooks, and decide whether this Claude session should be archived."
+            "Audit the relay endpoint, shell hooks, and decide whether this Claude session should be archived.",
         },
         {
           role: "Assistant",
           content:
-            "Mapped ANTHROPIC_BASE_URL override and traced the permissive shell hook chain, but remediation has not been applied yet."
-        }
+            "Mapped ANTHROPIC_BASE_URL override and traced the permissive shell hook chain, but remediation has not been applied yet.",
+        },
       ],
       todoItems: [
         {
           content: "Review shell hook chain",
-          completed: false
+          completed: false,
         },
         {
           content: "Export remediation summary before cleanup",
-          completed: true
-        }
+          completed: true,
+        },
       ],
       usage: {
         model: "claude-sonnet-4-20250514",
@@ -398,8 +400,8 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheReadTokens: 890,
         cacheWriteTokens: 144,
         reasoningTokens: 0,
-        totalTokens: 2835
-      }
+        totalTokens: 2835,
+      },
     },
     {
       sessionId: "ses-003",
@@ -420,24 +422,25 @@ const fallbackSnapshot: DashboardSnapshot = {
       keyArtifacts: [
         "Wrote Markdown frontmatter template",
         "Added audit_events inserts for every destructive path",
-        "Verified restore from manifest"
+        "Verified restore from manifest",
       ],
       transcriptHighlights: [
         {
           role: "User",
-          content: "Package the export and quarantine workflow for release verification."
+          content:
+            "Package the export and quarantine workflow for release verification.",
         },
         {
           role: "Assistant",
           content:
-            "Markdown export, quarantine manifest, and restore validation are complete and ready for release checks."
-        }
+            "Markdown export, quarantine manifest, and restore validation are complete and ready for release checks.",
+        },
       ],
       todoItems: [
         {
           content: "Confirm restore from manifest",
-          completed: true
-        }
+          completed: true,
+        },
       ],
       usage: {
         model: "gpt-5",
@@ -447,9 +450,9 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheWriteTokens: 0,
         reasoningTokens: 10,
         totalTokens: 210,
-        costUsd: 0.02
-      }
-    }
+        costUsd: 0.02,
+      },
+    },
   ],
   configs: [
     {
@@ -462,8 +465,12 @@ const fallbackSnapshot: DashboardSnapshot = {
       baseUrl: "https://relay.cch.example/v1",
       maskedSecret: "***6789",
       officialOrProxy: "Proxy",
-      risks: ["third_party_base_url", "dangerous_sandbox", "dangerous_approval_policy"],
-      mcpServers: []
+      risks: [
+        "third_party_base_url",
+        "dangerous_sandbox",
+        "dangerous_approval_policy",
+      ],
+      mcpServers: [],
     },
     {
       artifactId: "cfg-002",
@@ -476,7 +483,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       maskedSecret: "***4321",
       officialOrProxy: "Proxy",
       risks: ["dangerous_permissions", "shell_hook"],
-      mcpServers: []
+      mcpServers: [],
     },
     {
       artifactId: "cfg-003",
@@ -497,9 +504,9 @@ const fallbackSnapshot: DashboardSnapshot = {
           status: "enabled",
           transport: "embedded",
           args: [],
-          configJson: '{\n  "enabled": true\n}'
-        }
-      ]
+          configJson: '{\n  "enabled": true\n}',
+        },
+      ],
     },
     {
       artifactId: "cfg-004",
@@ -522,9 +529,9 @@ const fallbackSnapshot: DashboardSnapshot = {
           command: "node",
           args: ["mcp-filesystem.js"],
           configJson:
-            '{\n  "command": "node",\n  "args": ["mcp-filesystem.js"]\n}'
-        }
-      ]
+            '{\n  "command": "node",\n  "args": ["mcp-filesystem.js"]\n}',
+        },
+      ],
     },
     {
       artifactId: "cfg-005",
@@ -539,7 +546,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       risks: [
         "third_party_provider",
         "third_party_base_url",
-        "dangerous_permissions"
+        "dangerous_permissions",
       ],
       mcpServers: [
         {
@@ -550,10 +557,10 @@ const fallbackSnapshot: DashboardSnapshot = {
           transport: "stdio",
           command: "uvx",
           args: ["mcp-postgres"],
-          configJson: '{\n  "command": "uvx",\n  "args": ["mcp-postgres"]\n}'
-        }
-      ]
-    }
+          configJson: '{\n  "command": "uvx",\n  "args": ["mcp-postgres"]\n}',
+        },
+      ],
+    },
   ],
   gitProjects: [
     {
@@ -575,16 +582,16 @@ const fallbackSnapshot: DashboardSnapshot = {
           sha: "7fd57a6",
           summary: "feat: add active session cockpit",
           author: "r007b34r",
-          authoredAt: "2026-03-23T01:40:00.000Z"
+          authoredAt: "2026-03-23T01:40:00.000Z",
         },
         {
           sha: "9042ddf",
           summary: "test: add mobile viewport matrix",
           author: "r007b34r",
-          authoredAt: "2026-03-23T01:10:00.000Z"
-        }
-      ]
-    }
+          authoredAt: "2026-03-23T01:10:00.000Z",
+        },
+      ],
+    },
   ],
   doctorFindings: [
     {
@@ -593,8 +600,8 @@ const fallbackSnapshot: DashboardSnapshot = {
       assistant: "Claude Code",
       path: "C:/Users/Max/.claude/projects/C--Users-Max/broken-session.jsonl",
       detail:
-        "Skipped malformed session file for Claude Code because the session id was missing."
-    }
+        "Skipped malformed session file for Claude Code because the session id was missing.",
+    },
   ],
   auditEvents: [
     {
@@ -606,7 +613,9 @@ const fallbackSnapshot: DashboardSnapshot = {
       result: "success",
       detail: "Exported Markdown briefing for cleanup-ready OpenCode session.",
       outputPath:
-        "C:/Users/Max/Documents/OpenSessionManager/exports/session-ses-003.md"
+        "C:/Users/Max/Documents/OpenSessionManager/exports/session-ses-003.md",
+      resumeArtifactPath:
+        "C:/Users/Max/Documents/OpenSessionManager/exports/resume-ses-003.json",
     },
     {
       eventId: "evt-002",
@@ -619,7 +628,9 @@ const fallbackSnapshot: DashboardSnapshot = {
       quarantinedPath:
         "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine/ses-003/payload/ses_demo.json",
       manifestPath:
-        "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine/ses-003/manifest.json"
+        "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine/ses-003/manifest.json",
+      resumeArtifactPath:
+        "C:/Users/Max/Documents/OpenSessionManager/exports/resume-ses-003.json",
     },
     {
       eventId: "evt-003",
@@ -628,8 +639,10 @@ const fallbackSnapshot: DashboardSnapshot = {
       actor: "r007b34r",
       createdAt: "2026-03-15 13:14",
       result: "success",
-      detail: "Restored transcript to original provider storage path."
-    }
+      detail: "Restored transcript to original provider storage path.",
+      resumeArtifactPath:
+        "C:/Users/Max/Documents/OpenSessionManager/exports/resume-ses-003.json",
+    },
   ],
   usageOverview: {
     totals: {
@@ -640,7 +653,7 @@ const fallbackSnapshot: DashboardSnapshot = {
       cacheWriteTokens: 144,
       reasoningTokens: 10,
       totalTokens: 4069,
-      costSource: "unknown"
+      costSource: "unknown",
     },
     assistants: [
       {
@@ -653,7 +666,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         reasoningTokens: 0,
         totalTokens: 2835,
         costUsd: 0.01301,
-        costSource: "estimated"
+        costSource: "estimated",
       },
       {
         assistant: "Codex",
@@ -664,7 +677,7 @@ const fallbackSnapshot: DashboardSnapshot = {
         cacheWriteTokens: 0,
         reasoningTokens: 0,
         totalTokens: 1024,
-        costSource: "unknown"
+        costSource: "unknown",
       },
       {
         assistant: "OpenCode",
@@ -676,9 +689,9 @@ const fallbackSnapshot: DashboardSnapshot = {
         reasoningTokens: 10,
         totalTokens: 210,
         costUsd: 0.02,
-        costSource: "reported"
-      }
-    ]
+        costSource: "reported",
+      },
+    ],
   },
   usageTimeline: [
     {
@@ -690,8 +703,8 @@ const fallbackSnapshot: DashboardSnapshot = {
       cacheWriteTokens: 144,
       reasoningTokens: 10,
       totalTokens: 4069,
-      costSource: "unknown"
-    }
+      costSource: "unknown",
+    },
   ],
   runtime: {
     auditDbPath: "C:/Users/Max/AppData/Local/OpenSessionManager/audit/audit.db",
@@ -700,20 +713,23 @@ const fallbackSnapshot: DashboardSnapshot = {
     exportRootSource: "default",
     quarantineRoot: "C:/Users/Max/AppData/Local/OpenSessionManager/quarantine",
     preferencesPath:
-      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json"
-  }
+      "C:/Users/Max/AppData/Local/OpenSessionManager/preferences.json",
+  },
 };
 
 export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot> {
-  const nativeSnapshot =
-    await tryInvokeNativeCommand<DashboardSnapshot>("load_dashboard_snapshot");
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "load_dashboard_snapshot",
+  );
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
     return normalizeDashboardSnapshot(nativeSnapshot);
   }
 
   const realSnapshot = await tryFetchRealSnapshot();
   if (realSnapshot) {
-    return applyBrowserRuntimePreferences(normalizeDashboardSnapshot(realSnapshot));
+    return applyBrowserRuntimePreferences(
+      normalizeDashboardSnapshot(realSnapshot),
+    );
   }
 
   const browserSnapshot = shouldUseDemoData()
@@ -733,7 +749,7 @@ export function isGitProjectActionAvailable() {
 
 export function recordMarkdownExport(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): DashboardSnapshot {
   const session = current.sessions.find((item) => item.sessionId === sessionId);
   if (!session) {
@@ -748,17 +764,24 @@ export function recordMarkdownExport(
         session.sessionId,
         `Exported Markdown digest for ${session.title}.`,
         {
-          outputPath: buildMarkdownOutputPath(current.runtime.exportRoot, session.sessionId)
-        }
+          outputPath: buildMarkdownOutputPath(
+            current.runtime.exportRoot,
+            session.sessionId,
+          ),
+          resumeArtifactPath: buildResumeArtifactPath(
+            current.runtime.exportRoot,
+            session.sessionId,
+          ),
+        },
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordSoftDelete(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): DashboardSnapshot {
   const session = current.sessions.find((item) => item.sessionId === sessionId);
   if (!session) {
@@ -766,7 +789,7 @@ export function recordSoftDelete(
   }
 
   const remainingSessions = current.sessions.filter(
-    (item) => item.sessionId !== sessionId
+    (item) => item.sessionId !== sessionId,
   );
 
   return {
@@ -776,16 +799,22 @@ export function recordSoftDelete(
       createAuditEvent(
         "soft_delete",
         session.sessionId,
-        `Moved ${session.title} into the quarantine queue.`
+        `Moved ${session.title} into the quarantine queue.`,
+        {
+          resumeArtifactPath: buildResumeArtifactPath(
+            current.runtime.exportRoot,
+            session.sessionId,
+          ),
+        },
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordConfigWriteback(
   current: DashboardSnapshot,
-  input: ConfigWritebackInput
+  input: ConfigWritebackInput,
 ): DashboardSnapshot {
   const nextConfigs = current.configs.map((config) => {
     if (config.artifactId !== input.artifactId) {
@@ -800,9 +829,14 @@ export function recordConfigWriteback(
       provider: input.provider,
       model: normalizeOptionalText(input.model),
       baseUrl: input.baseUrl,
-      maskedSecret: input.secret ? maskSecret(input.secret) : config.maskedSecret,
-      officialOrProxy: inferProxyModeFromEndpoint(input.provider, input.baseUrl),
-      risks: reconcileConfigRisks(config.risks, input.provider, input.baseUrl)
+      maskedSecret: input.secret
+        ? maskSecret(input.secret)
+        : config.maskedSecret,
+      officialOrProxy: inferProxyModeFromEndpoint(
+        input.provider,
+        input.baseUrl,
+      ),
+      risks: reconcileConfigRisks(config.risks, input.provider, input.baseUrl),
     };
   });
 
@@ -815,17 +849,20 @@ export function recordConfigWriteback(
         input.artifactId,
         `Updated config fields for ${input.assistant}.`,
         {
-          manifestPath: buildConfigBackupManifestPath(current.runtime, input.artifactId)
-        }
+          manifestPath: buildConfigBackupManifestPath(
+            current.runtime,
+            input.artifactId,
+          ),
+        },
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordGitProjectCommit(
   current: DashboardSnapshot,
-  input: GitProjectCommitInput
+  input: GitProjectCommitInput,
 ): DashboardSnapshot {
   const message = normalizeOptionalText(input.message);
   if (!message) {
@@ -856,10 +893,10 @@ export function recordGitProjectCommit(
           sha: createDemoGitSha(committedAt, message),
           summary: message,
           author: "r007b34r",
-          authoredAt: committedAt
+          authoredAt: committedAt,
         },
-        ...project.recentCommits
-      ].slice(0, 5)
+        ...project.recentCommits,
+      ].slice(0, 5),
     };
   });
 
@@ -872,14 +909,14 @@ export function recordGitProjectCommit(
     gitProjects: nextProjects,
     auditEvents: [
       createAuditEvent("git_commit", input.repoRoot, `Committed ${message}.`),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordGitProjectBranchSwitch(
   current: DashboardSnapshot,
-  input: GitProjectBranchSwitchInput
+  input: GitProjectBranchSwitchInput,
 ): DashboardSnapshot {
   const branch = normalizeOptionalText(input.branch);
   if (!branch) {
@@ -895,7 +932,7 @@ export function recordGitProjectBranchSwitch(
     matched = true;
     return {
       ...project,
-      branch
+      branch,
     };
   });
 
@@ -910,16 +947,16 @@ export function recordGitProjectBranchSwitch(
       createAuditEvent(
         "git_branch_switch",
         input.repoRoot,
-        `Switched to ${branch}.`
+        `Switched to ${branch}.`,
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordGitProjectPush(
   current: DashboardSnapshot,
-  input: GitProjectPushInput
+  input: GitProjectPushInput,
 ): DashboardSnapshot {
   const remote = normalizeOptionalText(input.remote) ?? "origin";
   let detail = `Pushed current branch to ${remote}.`;
@@ -934,7 +971,11 @@ export function recordGitProjectPush(
     return {
       ...project,
       ahead: 0,
-      status: project.dirty ? "dirty" : project.behind > 0 ? "diverged" : "clean"
+      status: project.dirty
+        ? "dirty"
+        : project.behind > 0
+          ? "diverged"
+          : "clean",
     };
   });
 
@@ -945,28 +986,31 @@ export function recordGitProjectPush(
   return {
     ...current,
     gitProjects: nextProjects,
-    auditEvents: [createAuditEvent("git_push", input.repoRoot, detail), ...current.auditEvents]
+    auditEvents: [
+      createAuditEvent("git_push", input.repoRoot, detail),
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordLocalAuditEvent(
   current: DashboardSnapshot,
-  input: LocalAuditEventInput
+  input: LocalAuditEventInput,
 ): DashboardSnapshot {
   return {
     ...current,
     auditEvents: [
       createAuditEvent(input.type, input.target, input.detail, {
-        result: input.result
+        result: input.result,
       }),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordSessionResume(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): DashboardSnapshot {
   const nextSessions = current.sessions.map((session) => {
     if (session.sessionId !== sessionId) {
@@ -980,8 +1024,8 @@ export function recordSessionResume(
         attached: true,
         available: true,
         lastResponse: "READY from demo resume",
-        lastResumedAt: new Date().toISOString()
-      }
+        lastResumedAt: new Date().toISOString(),
+      },
     };
   });
 
@@ -992,16 +1036,16 @@ export function recordSessionResume(
       createAuditEvent(
         "session_resume",
         sessionId,
-        `Resumed ${sessionId} from the session detail panel.`
+        `Resumed ${sessionId} from the session detail panel.`,
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export function recordSessionContinue(
   current: DashboardSnapshot,
-  input: SessionContinueInput
+  input: SessionContinueInput,
 ): DashboardSnapshot {
   const nextSessions = current.sessions.map((session) => {
     if (session.sessionId !== input.sessionId) {
@@ -1016,8 +1060,8 @@ export function recordSessionContinue(
         available: true,
         lastPrompt: input.prompt,
         lastResponse: `READY from demo continue: ${input.prompt}`,
-        lastContinuedAt: new Date().toISOString()
-      }
+        lastContinuedAt: new Date().toISOString(),
+      },
     };
   });
 
@@ -1028,20 +1072,20 @@ export function recordSessionContinue(
       createAuditEvent(
         "session_continue",
         input.sessionId,
-        `Sent a follow-up prompt to ${input.sessionId}.`
+        `Sent a follow-up prompt to ${input.sessionId}.`,
       ),
-      ...current.auditEvents
-    ]
+      ...current.auditEvents,
+    ],
   };
 }
 
 export async function applyMarkdownExport(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "export_session_markdown",
-    { sessionId }
+    { sessionId },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1053,13 +1097,13 @@ export async function applyMarkdownExport(
 
 export async function applyDashboardPreferences(
   current: DashboardSnapshot,
-  update: DashboardPreferencesUpdate
+  update: DashboardPreferencesUpdate,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "save_dashboard_preferences",
     {
-      exportRoot: normalizeDashboardPreferencePath(update.exportRoot)
-    }
+      exportRoot: normalizeDashboardPreferencePath(update.exportRoot),
+    },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1067,7 +1111,7 @@ export async function applyDashboardPreferences(
   }
 
   const nextSnapshot = normalizeDashboardSnapshot(
-    updateDashboardRuntime(current, update)
+    updateDashboardRuntime(current, update),
   );
   persistBrowserRuntimePreferences(nextSnapshot.runtime);
   return nextSnapshot;
@@ -1075,11 +1119,11 @@ export async function applyDashboardPreferences(
 
 export async function applySoftDelete(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "soft_delete_session",
-    { sessionId }
+    { sessionId },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1091,11 +1135,11 @@ export async function applySoftDelete(
 
 export async function applySessionResume(
   current: DashboardSnapshot,
-  sessionId: string
+  sessionId: string,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "resume_existing_session",
-    { sessionId }
+    { sessionId },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1111,11 +1155,11 @@ export async function applySessionResume(
 
 export async function applySessionContinue(
   current: DashboardSnapshot,
-  input: SessionContinueInput
+  input: SessionContinueInput,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "continue_existing_session",
-    input
+    input,
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1131,7 +1175,7 @@ export async function applySessionContinue(
 
 export async function applyConfigWriteback(
   current: DashboardSnapshot,
-  input: ConfigWritebackInput
+  input: ConfigWritebackInput,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "write_config_artifact",
@@ -1143,8 +1187,8 @@ export async function applyConfigWriteback(
       provider: input.provider,
       model: normalizeOptionalText(input.model),
       baseUrl: input.baseUrl,
-      secret: normalizeOptionalText(input.secret)
-    }
+      secret: normalizeOptionalText(input.secret),
+    },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1160,14 +1204,14 @@ export async function applyConfigWriteback(
 
 export async function applyGitProjectCommit(
   current: DashboardSnapshot,
-  input: GitProjectCommitInput
+  input: GitProjectCommitInput,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "commit_git_project",
     {
       repoRoot: input.repoRoot,
-      message: normalizeOptionalText(input.message)
-    }
+      message: normalizeOptionalText(input.message),
+    },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1183,14 +1227,14 @@ export async function applyGitProjectCommit(
 
 export async function applyGitProjectBranchSwitch(
   current: DashboardSnapshot,
-  input: GitProjectBranchSwitchInput
+  input: GitProjectBranchSwitchInput,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "switch_git_project_branch",
     {
       repoRoot: input.repoRoot,
-      branch: normalizeOptionalText(input.branch)
-    }
+      branch: normalizeOptionalText(input.branch),
+    },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1198,7 +1242,9 @@ export async function applyGitProjectBranchSwitch(
   }
 
   if (shouldUseDemoData()) {
-    return normalizeDashboardSnapshot(recordGitProjectBranchSwitch(current, input));
+    return normalizeDashboardSnapshot(
+      recordGitProjectBranchSwitch(current, input),
+    );
   }
 
   return current;
@@ -1206,14 +1252,14 @@ export async function applyGitProjectBranchSwitch(
 
 export async function applyGitProjectPush(
   current: DashboardSnapshot,
-  input: GitProjectPushInput
+  input: GitProjectPushInput,
 ): Promise<DashboardSnapshot> {
   const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
     "push_git_project",
     {
       repoRoot: input.repoRoot,
-      remote: normalizeOptionalText(input.remote)
-    }
+      remote: normalizeOptionalText(input.remote),
+    },
   );
 
   if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
@@ -1229,13 +1275,13 @@ export async function applyGitProjectPush(
 
 export function hasSuccessfulMarkdownExport(
   auditEvents: AuditEventRecord[],
-  sessionId: string
+  sessionId: string,
 ) {
   return auditEvents.some(
     (event) =>
       event.type === "export_markdown" &&
       event.target === sessionId &&
-      event.result === "success"
+      event.result === "success",
   );
 }
 
@@ -1244,8 +1290,15 @@ function createAuditEvent(
   target: string,
   detail: string,
   paths: Partial<
-    Pick<AuditEventRecord, "outputPath" | "quarantinedPath" | "manifestPath" | "result">
-  > = {}
+    Pick<
+      AuditEventRecord,
+      | "outputPath"
+      | "quarantinedPath"
+      | "manifestPath"
+      | "resumeArtifactPath"
+      | "result"
+    >
+  > = {},
 ): AuditEventRecord {
   return {
     eventId: `${type}-${target}-${Date.now()}`,
@@ -1255,7 +1308,7 @@ function createAuditEvent(
     createdAt: "2026-03-15 13:40",
     ...paths,
     result: paths.result ?? "success",
-    detail
+    detail,
   };
 }
 
@@ -1266,7 +1319,7 @@ async function tryFetchRealSnapshot() {
 
   try {
     const response = await fetch("/dashboard-snapshot.json", {
-      cache: "no-store"
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -1282,7 +1335,7 @@ async function tryFetchRealSnapshot() {
 
 async function tryInvokeNativeCommand<T>(
   command: string,
-  args: Record<string, unknown> = {}
+  args: Record<string, unknown> = {},
 ): Promise<T | null> {
   if (!isTauriRuntime()) {
     return null;
@@ -1297,7 +1350,10 @@ async function tryInvokeNativeCommand<T>(
 }
 
 function isTauriRuntime() {
-  return typeof window !== "undefined" && typeof window.__TAURI_INTERNALS__ !== "undefined";
+  return (
+    typeof window !== "undefined" &&
+    typeof window.__TAURI_INTERNALS__ !== "undefined"
+  );
 }
 
 function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
@@ -1327,7 +1383,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeDashboardSnapshot(
-  snapshot: DashboardSnapshot
+  snapshot: DashboardSnapshot,
 ): DashboardSnapshot {
   const sessions = [...snapshot.sessions]
     .map(normalizeSessionDetailRecord)
@@ -1336,10 +1392,14 @@ function normalizeDashboardSnapshot(
   return {
     ...snapshot,
     configs: Array.isArray(snapshot.configs)
-      ? snapshot.configs.filter(isConfigRiskRecord).map(normalizeConfigRiskRecord)
+      ? snapshot.configs
+          .filter(isConfigRiskRecord)
+          .map(normalizeConfigRiskRecord)
       : [],
     gitProjects: Array.isArray(snapshot.gitProjects)
-      ? snapshot.gitProjects.filter(isGitProjectRecord).map(normalizeGitProjectRecord)
+      ? snapshot.gitProjects
+          .filter(isGitProjectRecord)
+          .map(normalizeGitProjectRecord)
       : [],
     doctorFindings: Array.isArray(snapshot.doctorFindings)
       ? snapshot.doctorFindings.filter(isDoctorFindingRecord)
@@ -1352,34 +1412,41 @@ function normalizeDashboardSnapshot(
     runtime: normalizeDashboardRuntime(snapshot.runtime),
     sessions,
     usageOverview: normalizeUsageOverview(snapshot.usageOverview, sessions),
-    usageTimeline: normalizeUsageTimeline(snapshot.usageTimeline, sessions)
+    usageTimeline: normalizeUsageTimeline(snapshot.usageTimeline, sessions),
   };
 }
 
 function normalizeDashboardRuntime(
-  runtime?: Partial<DashboardRuntime>
+  runtime?: Partial<DashboardRuntime>,
 ): DashboardRuntime {
   return {
     ...EMPTY_RUNTIME,
     ...runtime,
     exportRootSource:
-      runtime?.exportRootSource === "custom" ? "custom" : "default"
+      runtime?.exportRootSource === "custom" ? "custom" : "default",
   };
 }
 
 function normalizeAuditEventRecord(event: AuditEventRecord): AuditEventRecord {
   return {
     ...event,
-    outputPath: typeof event.outputPath === "string" ? event.outputPath : undefined,
+    outputPath:
+      typeof event.outputPath === "string" ? event.outputPath : undefined,
     quarantinedPath:
-      typeof event.quarantinedPath === "string" ? event.quarantinedPath : undefined,
+      typeof event.quarantinedPath === "string"
+        ? event.quarantinedPath
+        : undefined,
     manifestPath:
-      typeof event.manifestPath === "string" ? event.manifestPath : undefined
+      typeof event.manifestPath === "string" ? event.manifestPath : undefined,
+    resumeArtifactPath:
+      typeof event.resumeArtifactPath === "string"
+        ? event.resumeArtifactPath
+        : undefined,
   };
 }
 
 function normalizeSessionDetailRecord(
-  session: SessionDetailRecord
+  session: SessionDetailRecord,
 ): SessionDetailRecord {
   const usage = isSessionUsageRecord(session.usage)
     ? normalizeSessionUsageRecord(session.usage)
@@ -1397,12 +1464,12 @@ function normalizeSessionDetailRecord(
       ? session.todoItems.filter(isTranscriptTodo)
       : [],
     ...(usage ? { usage } : {}),
-    ...(sessionControl ? { sessionControl } : {})
+    ...(sessionControl ? { sessionControl } : {}),
   };
 }
 
 function normalizeSessionControlRecord(
-  control: SessionControlRecord
+  control: SessionControlRecord,
 ): SessionControlRecord {
   return {
     ...control,
@@ -1411,30 +1478,37 @@ function normalizeSessionControlRecord(
     lastPrompt:
       typeof control.lastPrompt === "string" ? control.lastPrompt : undefined,
     lastResponse:
-      typeof control.lastResponse === "string" ? control.lastResponse : undefined,
+      typeof control.lastResponse === "string"
+        ? control.lastResponse
+        : undefined,
     lastError:
       typeof control.lastError === "string" ? control.lastError : undefined,
     lastResumedAt:
-      typeof control.lastResumedAt === "string" ? control.lastResumedAt : undefined,
+      typeof control.lastResumedAt === "string"
+        ? control.lastResumedAt
+        : undefined,
     lastContinuedAt:
       typeof control.lastContinuedAt === "string"
         ? control.lastContinuedAt
-        : undefined
+        : undefined,
   };
 }
 
-function seedDemoSessionControls(snapshot: DashboardSnapshot): DashboardSnapshot {
+function seedDemoSessionControls(
+  snapshot: DashboardSnapshot,
+): DashboardSnapshot {
   return {
     ...snapshot,
     sessions: snapshot.sessions.map((session) => ({
       ...session,
-      sessionControl: session.sessionControl ?? buildDemoSessionControl(session)
-    }))
+      sessionControl:
+        session.sessionControl ?? buildDemoSessionControl(session),
+    })),
   };
 }
 
 function buildDemoSessionControl(
-  session: Pick<SessionDetailRecord, "assistant">
+  session: Pick<SessionDetailRecord, "assistant">,
 ): SessionControlRecord | undefined {
   if (session.assistant === "Codex" || session.assistant === "codex") {
     return {
@@ -1442,7 +1516,7 @@ function buildDemoSessionControl(
       available: true,
       controller: "codex",
       command: "codex",
-      attached: false
+      attached: false,
     };
   }
 
@@ -1455,7 +1529,7 @@ function buildDemoSessionControl(
       available: true,
       controller: "claude-code",
       command: "claude",
-      attached: false
+      attached: false,
     };
   }
 
@@ -1463,7 +1537,7 @@ function buildDemoSessionControl(
 }
 
 function resolveSessionControlState(
-  session: Pick<SessionDetailRecord, "assistant" | "sessionControl">
+  session: Pick<SessionDetailRecord, "assistant" | "sessionControl">,
 ): SessionControlRecord {
   return (
     session.sessionControl ??
@@ -1472,14 +1546,14 @@ function resolveSessionControlState(
       available: false,
       controller: "unsupported",
       command: "",
-      attached: false
+      attached: false,
     }
   );
 }
 
 function compareSessionsByActivity(
   left: SessionDetailRecord,
-  right: SessionDetailRecord
+  right: SessionDetailRecord,
 ) {
   const timestampDelta =
     parseActivityTimestamp(right.lastActivityAt) -
@@ -1536,7 +1610,7 @@ function isAuditEventRecord(value: unknown): value is AuditEventRecord {
     typeof value.actor === "string" &&
     typeof value.createdAt === "string" &&
     typeof value.result === "string" &&
-      typeof value.detail === "string"
+    typeof value.detail === "string"
   );
 }
 
@@ -1559,12 +1633,16 @@ function normalizeConfigRiskRecord(config: ConfigRiskRecord): ConfigRiskRecord {
   return {
     ...config,
     mcpServers: Array.isArray(config.mcpServers)
-      ? config.mcpServers.filter(isConfigMcpServerRecord).map(normalizeConfigMcpServerRecord)
-      : []
+      ? config.mcpServers
+          .filter(isConfigMcpServerRecord)
+          .map(normalizeConfigMcpServerRecord)
+      : [],
   };
 }
 
-function isConfigMcpServerRecord(value: unknown): value is ConfigMcpServerRecord {
+function isConfigMcpServerRecord(
+  value: unknown,
+): value is ConfigMcpServerRecord {
   return (
     isRecord(value) &&
     typeof value.serverId === "string" &&
@@ -1578,7 +1656,7 @@ function isConfigMcpServerRecord(value: unknown): value is ConfigMcpServerRecord
 }
 
 function normalizeConfigMcpServerRecord(
-  server: ConfigMcpServerRecord
+  server: ConfigMcpServerRecord,
 ): ConfigMcpServerRecord {
   return {
     ...server,
@@ -1590,7 +1668,7 @@ function normalizeConfigMcpServerRecord(
     configJson:
       typeof server.configJson === "string"
         ? server.configJson
-        : JSON.stringify(server, null, 2)
+        : JSON.stringify(server, null, 2),
   };
 }
 
@@ -1623,15 +1701,24 @@ function isGitCommitRecord(value: unknown): value is GitCommitRecord {
   );
 }
 
-function normalizeGitProjectRecord(project: GitProjectRecord): GitProjectRecord {
+function normalizeGitProjectRecord(
+  project: GitProjectRecord,
+): GitProjectRecord {
   return {
     ...project,
     lastCommitSummary:
-      typeof project.lastCommitSummary === "string" ? project.lastCommitSummary : undefined,
-    lastCommitAt: typeof project.lastCommitAt === "string" ? project.lastCommitAt : undefined,
+      typeof project.lastCommitSummary === "string"
+        ? project.lastCommitSummary
+        : undefined,
+    lastCommitAt:
+      typeof project.lastCommitAt === "string"
+        ? project.lastCommitAt
+        : undefined,
     recentCommits: Array.isArray(project.recentCommits)
-      ? project.recentCommits.filter(isGitCommitRecord).map(normalizeGitCommitRecord)
-      : []
+      ? project.recentCommits
+          .filter(isGitCommitRecord)
+          .map(normalizeGitCommitRecord)
+      : [],
   };
 }
 
@@ -1641,7 +1728,7 @@ function normalizeGitCommitRecord(commit: GitCommitRecord): GitCommitRecord {
     sha: commit.sha.trim(),
     summary: commit.summary.trim(),
     author: commit.author.trim(),
-    authoredAt: commit.authoredAt.trim()
+    authoredAt: commit.authoredAt.trim(),
   };
 }
 
@@ -1683,14 +1770,14 @@ function isSessionUsageRecord(value: unknown): value is SessionUsageRecord {
 
 function normalizeUsageOverview(
   usageOverview: UsageOverviewRecord | undefined,
-  sessions: SessionDetailRecord[]
+  sessions: SessionDetailRecord[],
 ): UsageOverviewRecord {
   if (isUsageOverviewRecord(usageOverview)) {
     return {
       totals: normalizeUsageTotalsRecord(usageOverview.totals),
       assistants: usageOverview.assistants
         .map(normalizeAssistantUsageRecord)
-        .sort(compareAssistantUsage)
+        .sort(compareAssistantUsage),
     };
   }
 
@@ -1699,9 +1786,12 @@ function normalizeUsageOverview(
 
 function normalizeUsageTimeline(
   usageTimeline: UsageTimelineRecord[] | undefined,
-  sessions: SessionDetailRecord[]
+  sessions: SessionDetailRecord[],
 ): UsageTimelineRecord[] {
-  if (Array.isArray(usageTimeline) && usageTimeline.every(isUsageTimelineRecord)) {
+  if (
+    Array.isArray(usageTimeline) &&
+    usageTimeline.every(isUsageTimelineRecord)
+  ) {
     return usageTimeline
       .map(normalizeUsageTimelineRecord)
       .sort((left, right) => left.date.localeCompare(right.date));
@@ -1782,7 +1872,7 @@ type UsageAggregateState = {
 };
 
 function deriveUsageOverviewFromSessions(
-  sessions: SessionDetailRecord[]
+  sessions: SessionDetailRecord[],
 ): UsageOverviewRecord {
   const assistants = new Map<string, UsageAggregateState>();
   const totals = createUsageAggregateState();
@@ -1794,7 +1884,8 @@ function deriveUsageOverviewFromSessions(
 
     accumulateUsageAggregate(totals, session.usage);
 
-    const entry = assistants.get(session.assistant) ?? createUsageAggregateState();
+    const entry =
+      assistants.get(session.assistant) ?? createUsageAggregateState();
     accumulateUsageAggregate(entry, session.usage);
     assistants.set(session.assistant, entry);
   }
@@ -1810,7 +1901,7 @@ function deriveUsageOverviewFromSessions(
       reasoningTokens: totals.reasoningTokens,
       totalTokens: totals.totalTokens,
       costUsd: totalCost.costUsd,
-      costSource: totalCost.costSource
+      costSource: totalCost.costSource,
     },
     assistants: [...assistants.entries()]
       .map(([assistant, entry]) => {
@@ -1825,15 +1916,15 @@ function deriveUsageOverviewFromSessions(
           reasoningTokens: entry.reasoningTokens,
           totalTokens: entry.totalTokens,
           costUsd: cost.costUsd,
-          costSource: cost.costSource
+          costSource: cost.costSource,
         };
       })
-      .sort(compareAssistantUsage)
+      .sort(compareAssistantUsage),
   };
 }
 
 function deriveUsageTimelineFromSessions(
-  sessions: SessionDetailRecord[]
+  sessions: SessionDetailRecord[],
 ): UsageTimelineRecord[] {
   const buckets = new Map<string, UsageAggregateState>();
 
@@ -1866,14 +1957,14 @@ function deriveUsageTimelineFromSessions(
         reasoningTokens: entry.reasoningTokens,
         totalTokens: entry.totalTokens,
         costUsd: cost.costUsd,
-        costSource: cost.costSource
+        costSource: cost.costSource,
       };
     });
 }
 
 function compareAssistantUsage(
   left: AssistantUsageRecord,
-  right: AssistantUsageRecord
+  right: AssistantUsageRecord,
 ) {
   const tokenDelta = right.totalTokens - left.totalTokens;
   if (tokenDelta !== 0) {
@@ -1910,7 +2001,7 @@ function normalizeOptionalCost(value: unknown) {
 
 function normalizeCostSource(
   value: unknown,
-  costUsd: number | undefined
+  costUsd: number | undefined,
 ): CostSource {
   if (isCostSource(value)) {
     return value;
@@ -1919,43 +2010,47 @@ function normalizeCostSource(
   return typeof costUsd === "number" ? "reported" : "unknown";
 }
 
-function normalizeSessionUsageRecord(usage: SessionUsageRecord): SessionUsageRecord {
+function normalizeSessionUsageRecord(
+  usage: SessionUsageRecord,
+): SessionUsageRecord {
   const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
     costUsd,
-    costSource: normalizeCostSource(usage.costSource, costUsd)
+    costSource: normalizeCostSource(usage.costSource, costUsd),
   };
 }
 
-function normalizeUsageTotalsRecord(usage: UsageTotalsRecord): UsageTotalsRecord {
+function normalizeUsageTotalsRecord(
+  usage: UsageTotalsRecord,
+): UsageTotalsRecord {
   const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
     costUsd,
-    costSource: normalizeCostSource(usage.costSource, costUsd)
+    costSource: normalizeCostSource(usage.costSource, costUsd),
   };
 }
 
 function normalizeAssistantUsageRecord(
-  usage: AssistantUsageRecord
+  usage: AssistantUsageRecord,
 ): AssistantUsageRecord {
   const costUsd = normalizeOptionalCost(usage.costUsd);
   return {
     ...usage,
     costUsd,
-    costSource: normalizeCostSource(usage.costSource, costUsd)
+    costSource: normalizeCostSource(usage.costSource, costUsd),
   };
 }
 
 function normalizeUsageTimelineRecord(
-  timeline: UsageTimelineRecord
+  timeline: UsageTimelineRecord,
 ): UsageTimelineRecord {
   const costUsd = normalizeOptionalCost(timeline.costUsd);
   return {
     ...timeline,
     costUsd,
-    costSource: normalizeCostSource(timeline.costSource, costUsd)
+    costSource: normalizeCostSource(timeline.costSource, costUsd),
   };
 }
 
@@ -1972,13 +2067,13 @@ function createUsageAggregateState(): UsageAggregateState {
     hasKnownCost: false,
     hasUnknownCost: false,
     hasReported: false,
-    hasEstimated: false
+    hasEstimated: false,
   };
 }
 
 function accumulateUsageAggregate(
   state: UsageAggregateState,
-  usage: SessionUsageRecord
+  usage: SessionUsageRecord,
 ) {
   state.sessionCount += 1;
   state.inputTokens += usage.inputTokens;
@@ -2016,27 +2111,27 @@ function resolveAggregateCost(state: UsageAggregateState) {
   if (state.hasUnknownCost || !state.hasKnownCost) {
     return {
       costUsd: undefined,
-      costSource: "unknown" as const
+      costSource: "unknown" as const,
     };
   }
 
   if (state.hasReported && state.hasEstimated) {
     return {
       costUsd: roundCost(state.costUsd),
-      costSource: "mixed" as const
+      costSource: "mixed" as const,
     };
   }
 
   if (state.hasEstimated) {
     return {
       costUsd: roundCost(state.costUsd),
-      costSource: "estimated" as const
+      costSource: "estimated" as const,
     };
   }
 
   return {
     costUsd: roundCost(state.costUsd),
-    costSource: "reported" as const
+    costSource: "reported" as const,
   };
 }
 
@@ -2059,7 +2154,7 @@ function buildEmptyDashboardSnapshot(): DashboardSnapshot {
     auditEvents: [],
     usageOverview: EMPTY_USAGE_OVERVIEW,
     usageTimeline: EMPTY_USAGE_TIMELINE,
-    runtime: EMPTY_RUNTIME
+    runtime: EMPTY_RUNTIME,
   });
 }
 
@@ -2079,9 +2174,13 @@ function buildMarkdownOutputPath(exportRoot: string, sessionId: string) {
   return `${trimTrailingSlashes(exportRoot)}/session-${safeManagedName(sessionId)}.md`;
 }
 
+function buildResumeArtifactPath(exportRoot: string, sessionId: string) {
+  return `${trimTrailingSlashes(exportRoot)}/resume-${safeManagedName(sessionId)}.json`;
+}
+
 function buildConfigBackupManifestPath(
   runtime: DashboardRuntime,
-  artifactId: string
+  artifactId: string,
 ) {
   const backupRoot = buildConfigBackupRoot(runtime);
   if (!backupRoot) {
@@ -2111,9 +2210,7 @@ function buildConfigBackupRoot(runtime: DashboardRuntime) {
 function safeManagedName(value: string) {
   const sanitized = value
     .split("")
-    .map((character) =>
-      /[A-Za-z0-9_-]/.test(character) ? character : "_"
-    )
+    .map((character) => (/[A-Za-z0-9_-]/.test(character) ? character : "_"))
     .join("")
     .replace(/^_+|_+$/g, "");
 
@@ -2136,7 +2233,7 @@ function normalizeOptionalText(value: string | undefined) {
 
 function updateDashboardRuntime(
   current: DashboardSnapshot,
-  update: DashboardPreferencesUpdate
+  update: DashboardPreferencesUpdate,
 ): DashboardSnapshot {
   const exportRoot = normalizeDashboardPreferencePath(update.exportRoot);
 
@@ -2145,13 +2242,13 @@ function updateDashboardRuntime(
     runtime: {
       ...current.runtime,
       exportRoot: exportRoot ?? current.runtime.defaultExportRoot,
-      exportRootSource: exportRoot ? "custom" : "default"
-    }
+      exportRootSource: exportRoot ? "custom" : "default",
+    },
   };
 }
 
 function applyBrowserRuntimePreferences(
-  snapshot: DashboardSnapshot
+  snapshot: DashboardSnapshot,
 ): DashboardSnapshot {
   if (typeof window === "undefined") {
     return snapshot;
@@ -2159,14 +2256,14 @@ function applyBrowserRuntimePreferences(
 
   try {
     const storedExportRoot = normalizeDashboardPreferencePath(
-      window.localStorage.getItem("open-session-manager.export-root")
+      window.localStorage.getItem("open-session-manager.export-root"),
     );
     if (!storedExportRoot) {
       return snapshot;
     }
 
     return normalizeDashboardSnapshot(
-      updateDashboardRuntime(snapshot, { exportRoot: storedExportRoot })
+      updateDashboardRuntime(snapshot, { exportRoot: storedExportRoot }),
     );
   } catch {
     return snapshot;
@@ -2180,7 +2277,10 @@ function persistBrowserRuntimePreferences(runtime: DashboardRuntime) {
 
   try {
     if (runtime.exportRootSource === "custom") {
-      window.localStorage.setItem("open-session-manager.export-root", runtime.exportRoot);
+      window.localStorage.setItem(
+        "open-session-manager.export-root",
+        runtime.exportRoot,
+      );
     } else {
       window.localStorage.removeItem("open-session-manager.export-root");
     }
@@ -2211,10 +2311,11 @@ function createDemoGitSha(timestamp: string, summary: string) {
 function reconcileConfigRisks(
   currentRisks: string[],
   provider: string,
-  baseUrl: string
+  baseUrl: string,
 ) {
   const nextRisks = currentRisks.filter(
-    (risk) => risk !== "third_party_provider" && risk !== "third_party_base_url"
+    (risk) =>
+      risk !== "third_party_provider" && risk !== "third_party_base_url",
   );
 
   if (!isOfficialProvider(provider)) {
@@ -2236,7 +2337,7 @@ function inferProxyModeFromEndpoint(provider: string, baseUrl: string) {
 
 function isOfficialProvider(provider: string) {
   return ["openai", "anthropic", "opencode", "google", "github"].includes(
-    provider.trim().toLowerCase()
+    provider.trim().toLowerCase(),
   );
 }
 

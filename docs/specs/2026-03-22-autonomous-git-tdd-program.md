@@ -94,7 +94,7 @@
 | `SES-06` | P1 | todo | session process control | 能读取并展示进程状态、退出码与运行时长 |
 | `SES-07` | P0 | partial | one-click resume | Web 详情页已接恢复按钮、继续提示和最近控制结果；真实执行目前只覆盖 `Codex / Claude Code` |
 | `SES-08` | P1 | todo | continue rate-limit 策略 | 恢复节流和冲突保护测试通过 |
-| `SES-09` | P0 | partial | 标准化 handoff / resume artifact | 导出与恢复之间形成一对一工件引用，测试覆盖 |
+| `SES-09` | P0 | done | 标准化 handoff / resume artifact | Markdown 导出会生成 `resume-<session>.json`，软删除 manifest 与恢复审计持续引用该工件，dashboard / Web Audit 已可见 |
 
 ### 4.4 活跃会话与实时监控
 

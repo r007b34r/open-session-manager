@@ -8,7 +8,8 @@ use crate::domain::session::SessionRecord;
 use super::{
     ActionError, ActionResult, AuditWriteRequest, QuarantineAsset, QuarantineManifest,
     has_successful_cleanup_checklist, has_successful_markdown_export,
-    latest_session_end_hook_failed, move_path, safe_managed_name, write_audit_event,
+    latest_export_resume_artifact_path, latest_session_end_hook_failed, move_path,
+    safe_managed_name, write_audit_event,
 };
 
 pub struct SoftDeleteRequest<'a> {
@@ -47,6 +48,8 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
         .join(safe_managed_name(&request.session.session_id));
     let quarantined_path = session_root.join("payload").join(basename);
     let related_assets = collect_related_assets(request.session, &session_root);
+    let resume_artifact_path =
+        latest_export_resume_artifact_path(request.connection, &request.session.session_id)?;
 
     move_path(source_path, &quarantined_path)?;
     for asset in &related_assets {
@@ -64,6 +67,7 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
         quarantined_path: quarantined_path.clone(),
         manifest_path: manifest_path.clone(),
         deleted_at: chrono::Utc::now().to_rfc3339(),
+        resume_artifact_path: resume_artifact_path.clone(),
         related_assets,
     };
 
@@ -81,6 +85,7 @@ pub fn soft_delete_session(request: &SoftDeleteRequest<'_>) -> ActionResult<Quar
                 json!({
                     "quarantined_path": quarantined_path,
                     "manifest_path": manifest_path,
+                    "resume_artifact_path": resume_artifact_path,
                 })
                 .to_string(),
             ),
