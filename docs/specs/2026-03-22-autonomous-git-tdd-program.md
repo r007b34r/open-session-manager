@@ -205,7 +205,7 @@
 
 | ID | 优先级 | 状态 | 事项 | 验收指标 |
 | --- | --- | --- | --- | --- |
-| `UX-01` | P1 | todo | 移动端适配 | Playwright 多视口测试通过 |
+| `UX-01` | P1 | done | 移动端适配 | Playwright 已增加 `mobile-chrome` 项目，并通过移动视口 E2E 验证 |
 | `UX-02` | P1 | todo | 远程访问壳层 | 浏览器跨设备访问测试通过 |
 | `UX-03` | P1 | todo | terminal panel | 终端面板交互测试通过 |
 | `UX-04` | P0 | done | richer diff / review flows | 配置写回前已支持 masked diff、风险提示和显式确认；会话移入隔离区前也要求 cleanup 审查确认 |
