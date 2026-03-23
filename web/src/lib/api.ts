@@ -28,6 +28,13 @@ export type SessionRuntimeState =
   | "detached"
   | "unavailable";
 
+export type SessionContinueGuard =
+  | "ok"
+  | "detached"
+  | "unavailable"
+  | "busy"
+  | "throttled";
+
 export type SessionUsageRecord = {
   model?: string;
   inputTokens: number;
@@ -251,6 +258,8 @@ export type SessionContinueInput = {
   sessionId: string;
   prompt: string;
 };
+
+const CONTINUE_COOLDOWN_MS = 10_000;
 
 const DEMO_DATA_STORAGE_KEY = "open-session-manager.enable-demo-data";
 const EMPTY_USAGE_OVERVIEW: UsageOverviewRecord = {
@@ -1057,7 +1066,7 @@ export function recordSessionContinue(
   input: SessionContinueInput,
 ): DashboardSnapshot {
   const session = current.sessions.find((item) => item.sessionId === input.sessionId);
-  if (!session || !resolveSessionControlState(session).attached) {
+  if (!session || getSessionContinueGuard(session) !== "ok") {
     return current;
   }
 
@@ -1092,6 +1101,30 @@ export function recordSessionContinue(
       ...current.auditEvents,
     ],
   };
+}
+
+export function getSessionContinueGuard(
+  session: Pick<SessionDetailRecord, "assistant" | "sessionControl">,
+  now = new Date(),
+): SessionContinueGuard {
+  const control = resolveSessionControlState(session);
+  if (!control.available) {
+    return "unavailable";
+  }
+
+  if (!control.attached) {
+    return "detached";
+  }
+
+  if (control.runtimeState === "busy") {
+    return "busy";
+  }
+
+  if (isContinueCooldownActive(control.lastContinuedAt, now)) {
+    return "throttled";
+  }
+
+  return "ok";
 }
 
 export function recordSessionAttach(
@@ -2183,6 +2216,22 @@ function normalizeSessionRuntimeState(
   }
 
   return "busy";
+}
+
+function isContinueCooldownActive(
+  value: string | undefined,
+  now: Date,
+) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return false;
+  }
+
+  return now.getTime() - timestamp < CONTINUE_COOLDOWN_MS;
 }
 
 function normalizeSessionUsageRecord(

@@ -622,4 +622,63 @@ describe("session control fallback", () => {
       nextSnapshot.auditEvents.some((event) => event.type === "session_continue"),
     ).toBe(false);
   });
+
+  it("busy 会话不能继续运行", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const busySnapshot = {
+      ...current,
+      sessions: current.sessions.map((session) =>
+        session.sessionId === "ses-001"
+          ? {
+              ...session,
+              sessionControl: {
+                ...session.sessionControl,
+                supported: true,
+                available: true,
+                attached: true,
+                runtimeState: "busy" as const,
+              },
+            }
+          : session,
+      ),
+    };
+
+    const nextSnapshot = recordSessionContinue(busySnapshot, {
+      sessionId: "ses-001",
+      prompt: "Continue while busy",
+    });
+
+    expect(nextSnapshot).toEqual(busySnapshot);
+  });
+
+  it("冷却窗口内不会重复继续运行", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const throttledSnapshot = {
+      ...current,
+      sessions: current.sessions.map((session) =>
+        session.sessionId === "ses-001"
+          ? {
+              ...session,
+              sessionControl: {
+                ...session.sessionControl,
+                supported: true,
+                available: true,
+                attached: true,
+                runtimeState: "waiting" as const,
+                lastContinuedAt: new Date().toISOString(),
+              },
+            }
+          : session,
+      ),
+    };
+
+    const nextSnapshot = recordSessionContinue(throttledSnapshot, {
+      sessionId: "ses-001",
+      prompt: "Continue too fast",
+    });
+
+    expect(nextSnapshot).toEqual(throttledSnapshot);
+  });
 });

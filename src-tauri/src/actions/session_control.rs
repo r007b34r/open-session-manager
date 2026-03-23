@@ -4,7 +4,7 @@ use std::{
     process::Command,
 };
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rusqlite::Connection;
 use serde::Serialize;
 use serde_json::json;
@@ -24,6 +24,7 @@ const DEFAULT_RESUME_PROMPT: &str =
     "Resume this session and reply with a one-line status summary ending with READY.";
 const ATTACH_RESPONSE: &str = "Session attached for follow-up prompts.";
 const DETACH_RESPONSE: &str = "Session detached from follow-up prompts.";
+const CONTINUE_COOLDOWN_SECONDS: i64 = 10;
 
 pub struct SessionControlRequest<'a> {
     pub session: &'a SessionRecord,
@@ -98,6 +99,11 @@ fn execute_session_control(
         return Err(ActionError::Precondition(
             "continue requires an attached session; attach or resume it first".to_string(),
         ));
+    }
+
+    if operation == "continue" {
+        ensure_session_is_ready_for_continue(request.session, &state)?;
+        ensure_continue_cooldown_elapsed(&state)?;
     }
 
     let prepared = match controller.controller {
@@ -289,6 +295,94 @@ fn default_session_control_state(
         last_resumed_at: None,
         last_continued_at: None,
     }
+}
+
+fn ensure_session_is_ready_for_continue(
+    session: &SessionRecord,
+    state: &SessionControlStateRow,
+) -> ActionResult<()> {
+    if session_is_busy_for_continue(session, state) {
+        return Err(ActionError::Precondition(
+            "continue is blocked while the session is busy; wait for READY or idle before sending another prompt"
+                .to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn ensure_continue_cooldown_elapsed(state: &SessionControlStateRow) -> ActionResult<()> {
+    let Some(last_continued_at) = state.last_continued_at.as_deref() else {
+        return Ok(());
+    };
+
+    let Some(last_continued_at) = parse_control_timestamp(last_continued_at) else {
+        return Ok(());
+    };
+
+    if Utc::now()
+        .signed_duration_since(last_continued_at)
+        .num_seconds()
+        < CONTINUE_COOLDOWN_SECONDS
+    {
+        return Err(ActionError::Precondition(
+            "continue is cooling down; wait a moment before sending another prompt"
+                .to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn session_is_busy_for_continue(
+    session: &SessionRecord,
+    state: &SessionControlStateRow,
+) -> bool {
+    if !state.attached {
+        return false;
+    }
+
+    if session.ended_at.is_some() || matches_terminal_status(&session.status) {
+        return false;
+    }
+
+    if state
+        .last_error
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+    {
+        return false;
+    }
+
+    if state
+        .last_response
+        .as_deref()
+        .is_some_and(looks_like_ready_response)
+    {
+        return false;
+    }
+
+    true
+}
+
+fn parse_control_timestamp(value: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(value)
+        .ok()
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+}
+
+fn looks_like_ready_response(value: &str) -> bool {
+    let lowered = value.to_ascii_lowercase();
+    lowered.contains("ready")
+        || lowered.contains("awaiting")
+        || lowered.contains("waiting for")
+}
+
+fn matches_terminal_status(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "completed" | "done" | "finished" | "failed" | "exited" | "stopped"
+    )
 }
 
 fn session_working_dir(session: &SessionRecord) -> PathBuf {

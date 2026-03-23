@@ -170,6 +170,67 @@ describe("SessionDetail", () => {
     expect(screen.getByText(/control status: idle/i)).toBeInTheDocument();
   });
 
+  it("busy 会话会禁用继续按钮并提示等待当前运行完成", async () => {
+    const user = userEvent.setup();
+
+    renderWithI18n(
+      <SessionDetail
+        onContinueSession={vi.fn()}
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: true,
+            runtimeState: "busy"
+          } as any
+        })}
+      />
+    );
+
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue while busy"
+    );
+
+    expect(screen.getByRole("button", { name: /continue session/i })).toBeDisabled();
+    expect(
+      screen.getByText(/wait for the current run to report ready or go idle/i)
+    ).toBeInTheDocument();
+  });
+
+  it("冷却窗口内会禁用继续按钮并提示稍后重试", async () => {
+    const user = userEvent.setup();
+
+    renderWithI18n(
+      <SessionDetail
+        onContinueSession={vi.fn()}
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: true,
+            runtimeState: "waiting",
+            lastContinuedAt: new Date().toISOString()
+          } as any
+        })}
+      />
+    );
+
+    await user.type(
+      screen.getByLabelText(/continue prompt/i),
+      "Continue too fast"
+    );
+
+    expect(screen.getByRole("button", { name: /continue session/i })).toBeDisabled();
+    expect(
+      screen.getByText(/wait a moment before sending another follow-up prompt/i)
+    ).toBeInTheDocument();
+  });
+
   it("要求在移入隔离区前显式确认 cleanup 审查", async () => {
     const user = userEvent.setup();
     const onSoftDelete = vi.fn();

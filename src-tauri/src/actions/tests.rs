@@ -17,7 +17,7 @@ use crate::{
         credential_audit::build_credential_artifacts,
     },
     domain::session::{SessionInsight, SessionRecord},
-    storage::sqlite::bootstrap_database,
+    storage::sqlite::{SessionControlStateRow, bootstrap_database, upsert_session_control_state},
 };
 
 use super::{
@@ -1609,6 +1609,168 @@ fn refuses_continue_for_detached_session() {
         match error {
             ActionError::Precondition(message) => {
                 assert!(message.contains("attach") || message.contains("resume"));
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    });
+}
+
+#[test]
+fn refuses_continue_for_busy_session() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-busy-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "busy456".to_string(),
+    };
+
+    upsert_session_control_state(
+        &connection,
+        &SessionControlStateRow {
+            session_id: session.session_id.clone(),
+            assistant: "codex".to_string(),
+            controller: "codex".to_string(),
+            available: true,
+            attached: true,
+            last_command: Some("osm attach codex-busy-1".to_string()),
+            last_prompt: None,
+            last_response: Some("Session attached for follow-up prompts.".to_string()),
+            last_error: None,
+            last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
+            last_continued_at: None,
+        },
+    )
+    .expect("seed busy state");
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        let error = continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue while busy"),
+        })
+        .expect_err("busy session should reject continue");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+
+        match error {
+            ActionError::Precondition(message) => {
+                assert!(message.contains("busy"));
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    });
+}
+
+#[test]
+fn throttles_continue_for_recent_prompt() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-throttle-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "throttle456".to_string(),
+    };
+
+    upsert_session_control_state(
+        &connection,
+        &SessionControlStateRow {
+            session_id: session.session_id.clone(),
+            assistant: "codex".to_string(),
+            controller: "codex".to_string(),
+            available: true,
+            attached: true,
+            last_command: Some("codex exec resume codex-throttle-1 Continue once".to_string()),
+            last_prompt: Some("Continue once".to_string()),
+            last_response: Some("READY from fake codex".to_string()),
+            last_error: None,
+            last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
+            last_continued_at: Some(chrono::Utc::now().to_rfc3339()),
+        },
+    )
+    .expect("seed throttled state");
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        let error = continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue again too fast"),
+        })
+        .expect_err("recent continue should be throttled");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+
+        match error {
+            ActionError::Precondition(message) => {
+                assert!(message.contains("wait") || message.contains("cooldown"));
             }
             other => panic!("unexpected error: {other}"),
         }

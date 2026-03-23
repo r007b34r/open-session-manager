@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { SessionDetailRecord } from "../lib/api";
+import { getSessionContinueGuard, type SessionDetailRecord } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 import { buildRuleArtifact, buildSkillArtifact } from "../lib/knowledge-lift";
 
@@ -61,10 +61,10 @@ export function SessionDetail({
   const activeArtifact = liftView === "rule" ? ruleArtifact : skillArtifact;
   const sessionControl = session.sessionControl;
   const runtimeStatus = translateSessionControlStatus(copy.sessionDetail.statuses, sessionControl);
+  const continueGuard = getSessionContinueGuard(session);
   const canContinue =
     Boolean(onContinueSession) &&
-    Boolean(sessionControl?.available) &&
-    Boolean(sessionControl?.attached) &&
+    continueGuard === "ok" &&
     continuePrompt.trim().length > 0;
 
   return (
@@ -275,6 +275,16 @@ export function SessionDetail({
               {sessionControl.lastError ? (
                 <p className="action-hint">
                   {copy.sessionDetail.fields.lastError}: {sessionControl.lastError}
+                </p>
+              ) : null}
+              {continueGuard === "busy" ? (
+                <p className="action-hint">
+                  {copy.sessionDetail.continueGuardHints.busy}
+                </p>
+              ) : null}
+              {continueGuard === "throttled" ? (
+                <p className="action-hint">
+                  {copy.sessionDetail.continueGuardHints.throttled}
                 </p>
               ) : null}
             </div>

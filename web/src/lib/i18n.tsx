@@ -201,6 +201,10 @@ type Messages = {
     cleanupRequirement: string;
     controlUnavailable: string;
     continuePlaceholder: string;
+    continueGuardHints: {
+      busy: string;
+      throttled: string;
+    };
     exportPathLabel: string;
     actions: {
       exportMarkdown: string;
@@ -632,6 +636,10 @@ const messages: Record<Language, Messages> = {
       controlUnavailable:
         "Session control is only available when the matching assistant command is installed and reachable from the local runtime.",
       continuePlaceholder: "Send a follow-up prompt back into this session",
+      continueGuardHints: {
+        busy: "Wait for the current run to report READY or go idle before sending another prompt.",
+        throttled: "Wait a moment before sending another follow-up prompt.",
+      },
       exportPathLabel: "Markdown saved to",
       actions: {
         exportMarkdown: "Export Markdown",
@@ -1124,6 +1132,10 @@ const messages: Record<Language, Messages> = {
       controlUnavailable:
         "只有本机已安装且当前运行时能找到对应助手命令时，才允许执行会话恢复与继续运行。",
       continuePlaceholder: "向当前会话继续发送一条跟进提示",
+      continueGuardHints: {
+        busy: "当前会话还在运行中，等它进入 READY 或空闲态后再发送下一条提示。",
+        throttled: "刚刚已经发送过继续提示，请稍等片刻再重试。",
+      },
       exportPathLabel: "Markdown 已保存到",
       actions: {
         exportMarkdown: "导出为 Markdown",
