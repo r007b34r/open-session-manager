@@ -10,6 +10,7 @@
     "browser": "npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
     "test": "vitest run",
     "e2e": "cross-env NODE_PATH=./node_modules playwright test",
+    "e2e:visual": "cross-env NODE_PATH=./node_modules playwright test ../tests/e2e/open-session-manager-visual.spec.ts --project=chromium",
     "tauri:dev": "node ../scripts/run-tauri.mjs dev",
     "tauri:build": "node ../scripts/run-tauri.mjs build"
   },

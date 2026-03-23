@@ -195,7 +195,7 @@
 | `QLT-01` | P0 | done | metadata repair / self-healing | `Claude Code` 缺失 `sessionId` 的历史 JSONL 可按 UUID 文件名自愈，并有回归测试与全量验证 |
 | `QLT-02` | P0 | done | unknown session diagnostics | 已知会话根目录下被静默过滤的未知 session-like 文件会进入 `doctor` 诊断输出，而不是直接消失 |
 | `QLT-03` | P0 | done | fixture drift ledger | fixtures 已有版本/来源/hash ledger，且统一 verify 会强制检查 drift |
-| `QLT-04` | P1 | todo | screenshot automation | UI 回归截图脚本和对比测试通过 |
+| `QLT-04` | P1 | done | screenshot automation | `e2e:visual` 已生成并校验总览页与会话详情页截图基线 |
 | `QLT-05` | P1 | todo | config hot reload | 配置变更自动刷新测试通过 |
 | `QLT-06` | P2 | todo | desktop auto update | 更新检查与回退测试通过 |
 | `QLT-07` | P2 | todo | tray integration | 托盘菜单和状态同步测试通过 |
