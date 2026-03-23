@@ -109,6 +109,27 @@ type Messages = {
         unavailable: string;
       };
     };
+    git: {
+      kicker: string;
+      title: string;
+      description: string;
+      empty: string;
+      fields: {
+        branch: string;
+        sessions: string;
+        staged: string;
+        unstaged: string;
+        untracked: string;
+        aheadBehind: string;
+        latestCommit: string;
+        recentCommits: string;
+      };
+      statuses: {
+        clean: string;
+        dirty: string;
+        diverged: string;
+      };
+    };
   };
   sessions: {
     searchLabel: string;
@@ -466,6 +487,28 @@ const messages: Record<Language, Messages> = {
           attached: "Attached",
           ready: "Ready",
           unavailable: "Unavailable"
+        }
+      },
+      git: {
+        kicker: "Git Governance",
+        title: "Git workspace status",
+        description:
+          "Track which session-backed projects have local modifications, diverged history, or a clean branch before you merge or clean anything up.",
+        empty: "No Git-backed project paths were detected in the current snapshot.",
+        fields: {
+          branch: "Branch",
+          sessions: "Sessions",
+          staged: "Staged",
+          unstaged: "Working tree",
+          untracked: "Untracked",
+          aheadBehind: "Ahead/Behind",
+          latestCommit: "Latest commit",
+          recentCommits: "Recent commits"
+        },
+        statuses: {
+          clean: "Clean",
+          dirty: "Dirty",
+          diverged: "Diverged"
         }
       }
     },
@@ -907,6 +950,27 @@ const messages: Record<Language, Messages> = {
           attached: "已附着",
           ready: "可恢复",
           unavailable: "不可用"
+        }
+      },
+      git: {
+        kicker: "Git 治理",
+        title: "Git 工作区状态",
+        description: "把会话关联项目的分支、脏区和最近提交集中展示，方便判断该清理、续做还是先合并。",
+        empty: "当前快照里还没有检测到可归入 Git 的项目路径。",
+        fields: {
+          branch: "分支",
+          sessions: "关联会话",
+          staged: "已暂存",
+          unstaged: "未暂存",
+          untracked: "未跟踪",
+          aheadBehind: "领先/落后",
+          latestCommit: "最近提交",
+          recentCommits: "最近提交历史"
+        },
+        statuses: {
+          clean: "干净",
+          dirty: "脏区未清",
+          diverged: "分叉"
         }
       }
     },

@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   applyConfigWriteback,
@@ -34,6 +34,8 @@ import { OverviewRoute } from "./routes/index";
 import { RootShell } from "./routes/__root";
 import { SessionsRoute } from "./routes/sessions";
 
+const SNAPSHOT_AUTO_REFRESH_INTERVAL_MS = 15_000;
+
 export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [isRefreshingSnapshot, setIsRefreshingSnapshot] = useState(false);
@@ -45,10 +47,16 @@ export function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(() =>
     getSelectedSessionId(getCurrentPath())
   );
+  const isMountedRef = useRef(true);
+  const isSnapshotFetchInFlightRef = useRef(false);
   const copy = getMessages(language);
 
-  const loadSnapshot = (options: { refresh: boolean }) => {
-    let cancelled = false;
+  const loadSnapshot = useEffectEvent(async (options: { refresh: boolean }) => {
+    if (isSnapshotFetchInFlightRef.current) {
+      return;
+    }
+
+    isSnapshotFetchInFlightRef.current = true;
 
     if (options.refresh) {
       startTransition(() => {
@@ -56,33 +64,53 @@ export function App() {
       });
     }
 
-    void fetchDashboardSnapshot()
-      .then((data) => {
-        if (cancelled) {
-          return;
-        }
-
+    try {
+      const data = await fetchDashboardSnapshot();
+      if (isMountedRef.current) {
         startTransition(() => {
           setSnapshot(data);
         });
-      })
-      .finally(() => {
-        if (cancelled || !options.refresh) {
-          return;
-        }
-
+      }
+    } finally {
+      isSnapshotFetchInFlightRef.current = false;
+      if (isMountedRef.current && options.refresh) {
         startTransition(() => {
           setIsRefreshingSnapshot(false);
         });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  };
+      }
+    }
+  });
 
   useEffect(() => {
-    return loadSnapshot({ refresh: false });
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void loadSnapshot({ refresh: false });
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      void loadSnapshot({ refresh: false });
+    };
+
+    const intervalId = window.setInterval(
+      refreshIfVisible,
+      SNAPSHOT_AUTO_REFRESH_INTERVAL_MS
+    );
+
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, []);
 
   useEffect(() => {

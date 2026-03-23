@@ -1,5 +1,6 @@
 import { ActiveSessionCockpit } from "../components/active-session-cockpit";
 import { DoctorPanel } from "../components/doctor-panel";
+import { GitProjectPanel } from "../components/git-project-panel";
 import type { DashboardSnapshot } from "../lib/api";
 import { UsagePanel } from "../components/usage-panel";
 import { useI18n } from "../lib/i18n";
@@ -93,6 +94,8 @@ export function OverviewRoute({
         usageOverview={snapshot.usageOverview}
         usageTimeline={snapshot.usageTimeline}
       />
+
+      <GitProjectPanel projects={snapshot.gitProjects ?? []} />
 
       <ActiveSessionCockpit
         isRefreshing={isRefreshing}

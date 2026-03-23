@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { act } from "react";
 
 import { App } from "./app";
 import type { DashboardSnapshot } from "./lib/api";
@@ -18,6 +19,7 @@ describe("App", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("renders the governance dashboard shell", async () => {
@@ -412,6 +414,160 @@ describe("App", () => {
       await within(cockpitPanel as HTMLElement).findByText(/ready from refreshed snapshot/i)
     ).toBeInTheDocument();
     expect(within(cockpitPanel as HTMLElement).getByText(/^attached$/i)).toBeInTheDocument();
+  });
+
+  it("在总览里展示多项目 Git 状态和最近提交历史", async () => {
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () =>
+          ({
+            ...buildDashboardSnapshot({
+              sessions: [
+                buildDashboardSession({
+                  sessionId: "ses-git-001",
+                  title: "Git status inventory",
+                  projectPath: "C:/Projects/osm"
+                }),
+                buildDashboardSession({
+                  sessionId: "ses-git-002",
+                  title: "Follow-up cleanup",
+                  projectPath: "C:/Projects/osm"
+                })
+              ]
+            }),
+            gitProjects: [
+              {
+                projectPath: "C:/Projects/osm",
+                repoRoot: "C:/Projects/osm",
+                branch: "feat/usability-clarity",
+                status: "dirty",
+                sessionCount: 2,
+                dirty: true,
+                stagedChanges: 1,
+                unstagedChanges: 2,
+                untrackedFiles: 1,
+                ahead: 1,
+                behind: 0,
+                lastCommitSummary: "feat: add cockpit",
+                lastCommitAt: "2026-03-23T03:00:00.000Z",
+                recentCommits: [
+                  {
+                    sha: "7fd57a6",
+                    summary: "feat: add cockpit",
+                    author: "r007b34r",
+                    authoredAt: "2026-03-23T03:00:00.000Z"
+                  },
+                  {
+                    sha: "9042ddf",
+                    summary: "test: widen viewport coverage",
+                    author: "r007b34r",
+                    authoredAt: "2026-03-23T02:30:00.000Z"
+                  }
+                ]
+              }
+            ]
+          }) as any
+      })
+    );
+
+    render(<App />);
+
+    const heading = await screen.findByRole("heading", {
+      name: /git workspace status/i
+    });
+    const panel = heading.closest("section");
+
+    expect(panel).not.toBeNull();
+    expect(
+      within(panel as HTMLElement).getByText(/feat\/usability-clarity/i)
+    ).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText(/dirty/i)).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText(/staged/i)).toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).getByText(/test: widen viewport coverage/i)
+    ).toBeInTheDocument();
+  });
+
+  it("配置快照会在自动刷新周期后热更新", async () => {
+    window.localStorage.removeItem("open-session-manager.enable-demo-data");
+    window.location.hash = "#/configs";
+    let refreshTick: (() => void) | undefined;
+    vi.spyOn(window, "setInterval").mockImplementation((handler, delay) => {
+      if (delay === 15000 && typeof handler === "function") {
+        refreshTick = handler as () => void;
+      }
+
+      return 1 as unknown as number;
+    });
+    vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          ({
+            ...buildDashboardSnapshot(),
+            configs: [
+              {
+                artifactId: "cfg-hot-reload",
+                assistant: "GitHub Copilot CLI",
+                scope: "Global",
+                path: "~/.copilot/config.json",
+                provider: "github",
+                model: "gpt-5",
+                baseUrl: "https://api.githubcopilot.com",
+                maskedSecret: "***4321",
+                officialOrProxy: "Official",
+                risks: [],
+                mcpServers: []
+              }
+            ]
+          }) as any
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          ({
+            ...buildDashboardSnapshot(),
+            configs: [
+              {
+                artifactId: "cfg-hot-reload",
+                assistant: "GitHub Copilot CLI",
+                scope: "Global",
+                path: "~/.copilot/config.json",
+                provider: "github",
+                model: "gpt-5-mini",
+                baseUrl: "https://api.githubcopilot.com",
+                maskedSecret: "***4321",
+                officialOrProxy: "Official",
+                risks: [],
+                mcpServers: []
+              }
+            ]
+          }) as any
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: /config risk center/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText("gpt-5")).toBeInTheDocument();
+    expect(refreshTick).toBeDefined();
+
+    await act(async () => {
+      refreshTick?.();
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    expect(await screen.findByText("gpt-5-mini")).toBeInTheDocument();
   });
 
   it("在首页嵌入式会话区切换详情时不应强制跳转到 sessions 路由", async () => {

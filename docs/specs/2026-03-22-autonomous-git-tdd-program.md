@@ -125,7 +125,7 @@
 | --- | --- | --- | --- | --- |
 | `GIT-01` | P0 | done | diff viewer | 已有独立前端 diff 组件测试，覆盖字段标签、前后值、风险 badge 和空 diff 提示 |
 | `GIT-02` | P1 | todo | commit / push / branch switch | Git 操作链路有保护和回显，集成测试通过 |
-| `GIT-03` | P1 | todo | global git status dashboard | 多项目状态面板测试通过 |
+| `GIT-03` | P1 | done | global git status dashboard | 多项目状态面板测试通过 |
 | `GIT-04` | P1 | todo | commit history view | 历史视图支持筛选与详情 |
 | `GIT-05` | P1 | done | project grouping | Sessions 与 Config 页面已按项目分组展示，并有 Web / App 测试覆盖 |
 | `GIT-06` | P1 | todo | file explorer | 文件树和路径预览测试通过 |
@@ -196,7 +196,7 @@
 | `QLT-02` | P0 | done | unknown session diagnostics | 已知会话根目录下被静默过滤的未知 session-like 文件会进入 `doctor` 诊断输出，而不是直接消失 |
 | `QLT-03` | P0 | done | fixture drift ledger | fixtures 已有版本/来源/hash ledger，且统一 verify 会强制检查 drift |
 | `QLT-04` | P1 | done | screenshot automation | `e2e:visual` 已生成并校验总览页与会话详情页截图基线 |
-| `QLT-05` | P1 | todo | config hot reload | 配置变更自动刷新测试通过 |
+| `QLT-05` | P1 | done | config hot reload | 配置变更自动刷新测试通过 |
 | `QLT-06` | P2 | todo | desktop auto update | 更新检查与回退测试通过 |
 | `QLT-07` | P2 | todo | tray integration | 托盘菜单和状态同步测试通过 |
 | `QLT-08` | P1 | todo | 多 profile / 多实例 | profile 切换与隔离测试通过 |

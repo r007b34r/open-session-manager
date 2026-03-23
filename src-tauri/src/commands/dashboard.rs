@@ -1,7 +1,8 @@
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     env, fmt, fs, io,
     path::{Path, PathBuf},
+    process::Command,
     time::UNIX_EPOCH,
 };
 
@@ -120,6 +121,7 @@ pub struct DashboardSnapshot {
     pub metrics: Vec<DashboardMetric>,
     pub sessions: Vec<SessionDetailRecord>,
     pub configs: Vec<ConfigRiskRecord>,
+    pub git_projects: Vec<GitProjectRecord>,
     pub doctor_findings: Vec<DoctorFindingRecord>,
     pub audit_events: Vec<AuditEventRecord>,
     pub usage_overview: UsageOverviewRecord,
@@ -220,6 +222,37 @@ pub struct ConfigMcpServerRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     pub config_json: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitProjectRecord {
+    pub project_path: String,
+    pub repo_root: String,
+    pub branch: String,
+    pub status: String,
+    pub session_count: usize,
+    pub dirty: bool,
+    pub staged_changes: u32,
+    pub unstaged_changes: u32,
+    pub untracked_files: u32,
+    pub ahead: u32,
+    pub behind: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_commit_summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_commit_at: Option<String>,
+    #[serde(default)]
+    pub recent_commits: Vec<GitCommitRecord>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitCommitRecord {
+    pub sha: String,
+    pub summary: String,
+    pub author: String,
+    pub authored_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -441,6 +474,237 @@ pub fn build_local_doctor_report(context: &DiscoveryContext) -> SnapshotResult<D
     })
 }
 
+fn build_git_project_records(sessions: &[SessionDetailRecord]) -> Vec<GitProjectRecord> {
+    let mut projects = BTreeMap::<String, GitProjectRecord>::new();
+
+    for session in sessions {
+        let project_path = session.project_path.trim();
+        if project_path.is_empty() || project_path.eq_ignore_ascii_case("unknown") {
+            continue;
+        }
+
+        let Some(inspected) = inspect_git_project(Path::new(project_path)) else {
+            continue;
+        };
+
+        let entry = projects
+            .entry(inspected.repo_root.clone())
+            .or_insert_with(|| GitProjectRecord {
+                project_path: project_path.to_string(),
+                repo_root: inspected.repo_root.clone(),
+                branch: inspected.branch.clone(),
+                status: inspected.status.clone(),
+                session_count: 0,
+                dirty: inspected.dirty,
+                staged_changes: inspected.staged_changes,
+                unstaged_changes: inspected.unstaged_changes,
+                untracked_files: inspected.untracked_files,
+                ahead: inspected.ahead,
+                behind: inspected.behind,
+                last_commit_summary: inspected.last_commit_summary.clone(),
+                last_commit_at: inspected.last_commit_at.clone(),
+                recent_commits: inspected.recent_commits.clone(),
+            });
+
+        entry.session_count += 1;
+    }
+
+    let mut values = projects.into_values().collect::<Vec<_>>();
+    values.sort_by(|left, right| {
+        let dirty_delta = right.dirty.cmp(&left.dirty);
+        if dirty_delta != std::cmp::Ordering::Equal {
+            return dirty_delta;
+        }
+
+        let session_delta = right.session_count.cmp(&left.session_count);
+        if session_delta != std::cmp::Ordering::Equal {
+            return session_delta;
+        }
+
+        left.repo_root.cmp(&right.repo_root)
+    });
+    values
+}
+
+struct GitProjectInspection {
+    repo_root: String,
+    branch: String,
+    status: String,
+    dirty: bool,
+    staged_changes: u32,
+    unstaged_changes: u32,
+    untracked_files: u32,
+    ahead: u32,
+    behind: u32,
+    last_commit_summary: Option<String>,
+    last_commit_at: Option<String>,
+    recent_commits: Vec<GitCommitRecord>,
+}
+
+fn inspect_git_project(project_path: &Path) -> Option<GitProjectInspection> {
+    if !project_path.exists() {
+        return None;
+    }
+
+    let repo_root = normalize_git_path(&run_git_command(
+        project_path,
+        &["rev-parse", "--show-toplevel"],
+    )?);
+    let status_output = run_git_command(project_path, &["status", "--porcelain", "--branch"])?;
+    let parsed_status = parse_git_status(&status_output);
+    let recent_commits = parse_git_commits(
+        &run_git_command(
+            project_path,
+            &["log", "-n", "5", "--pretty=format:%H%x1f%s%x1f%an%x1f%cI"],
+        )
+        .unwrap_or_default(),
+    );
+    let last_commit_summary = recent_commits.first().map(|commit| commit.summary.clone());
+    let last_commit_at = recent_commits
+        .first()
+        .map(|commit| commit.authored_at.clone());
+
+    Some(GitProjectInspection {
+        repo_root,
+        branch: parsed_status.branch,
+        status: parsed_status.status,
+        dirty: parsed_status.dirty,
+        staged_changes: parsed_status.staged_changes,
+        unstaged_changes: parsed_status.unstaged_changes,
+        untracked_files: parsed_status.untracked_files,
+        ahead: parsed_status.ahead,
+        behind: parsed_status.behind,
+        last_commit_summary,
+        last_commit_at,
+        recent_commits,
+    })
+}
+
+fn run_git_command(project_path: &Path, args: &[&str]) -> Option<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(project_path)
+        .args(args)
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn normalize_git_path(value: &str) -> String {
+    PathBuf::from(value.trim()).display().to_string()
+}
+
+struct ParsedGitStatus {
+    branch: String,
+    status: String,
+    dirty: bool,
+    staged_changes: u32,
+    unstaged_changes: u32,
+    untracked_files: u32,
+    ahead: u32,
+    behind: u32,
+}
+
+fn parse_git_status(output: &str) -> ParsedGitStatus {
+    let mut branch = "unknown".to_string();
+    let mut staged_changes = 0;
+    let mut unstaged_changes = 0;
+    let mut untracked_files = 0;
+    let mut ahead = 0;
+    let mut behind = 0;
+
+    for (index, line) in output.lines().enumerate() {
+        if index == 0 && line.starts_with("## ") {
+            let header = line.trim_start_matches("## ");
+            if let Some((branch_part, _)) = header.split_once("...") {
+                branch = branch_part.trim().to_string();
+            } else {
+                branch = header
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or("unknown")
+                    .to_string();
+            }
+
+            if let Some((_, bracketed)) = header.split_once('[') {
+                let bracketed = bracketed.trim_end_matches(']');
+                for part in bracketed.split(',') {
+                    let trimmed = part.trim();
+                    if let Some(value) = trimmed.strip_prefix("ahead ") {
+                        ahead = value.parse::<u32>().unwrap_or(0);
+                    }
+                    if let Some(value) = trimmed.strip_prefix("behind ") {
+                        behind = value.parse::<u32>().unwrap_or(0);
+                    }
+                }
+            }
+
+            continue;
+        }
+
+        let bytes = line.as_bytes();
+        if bytes.len() < 2 {
+            continue;
+        }
+
+        let left = bytes[0] as char;
+        let right = bytes[1] as char;
+
+        if left == '?' && right == '?' {
+            untracked_files += 1;
+            continue;
+        }
+
+        if left != ' ' {
+            staged_changes += 1;
+        }
+
+        if right != ' ' {
+            unstaged_changes += 1;
+        }
+    }
+
+    let dirty = staged_changes > 0 || unstaged_changes > 0 || untracked_files > 0;
+    let status = if dirty {
+        "dirty".to_string()
+    } else if ahead > 0 || behind > 0 {
+        "diverged".to_string()
+    } else {
+        "clean".to_string()
+    };
+
+    ParsedGitStatus {
+        branch,
+        status,
+        dirty,
+        staged_changes,
+        unstaged_changes,
+        untracked_files,
+        ahead,
+        behind,
+    }
+}
+
+fn parse_git_commits(output: &str) -> Vec<GitCommitRecord> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('\u{1f}');
+            Some(GitCommitRecord {
+                sha: parts.next()?.trim().to_string(),
+                summary: parts.next()?.trim().to_string(),
+                author: parts.next()?.trim().to_string(),
+                authored_at: parts.next()?.trim().to_string(),
+            })
+        })
+        .collect()
+}
+
 fn build_snapshot(
     session_roots: Vec<KnownPath>,
     config_targets: Vec<ConfigAuditTarget>,
@@ -480,11 +744,13 @@ fn build_snapshot(
             session.usage.clone(),
         )
     }));
+    let git_projects = build_git_project_records(&sessions);
 
     Ok(DashboardSnapshot {
         metrics: build_metrics(&sessions, &configs),
         sessions,
         configs,
+        git_projects,
         doctor_findings,
         audit_events,
         usage_overview,
@@ -2045,12 +2311,14 @@ mod tests {
     use std::{
         fs,
         path::PathBuf,
+        process::Command,
         sync::atomic::{AtomicU64, Ordering},
         thread,
         time::Duration,
     };
 
     use rusqlite::Connection;
+    use serde_json::Value;
 
     use crate::discovery::DiscoveryContext;
 
@@ -2694,6 +2962,97 @@ mod tests {
         assert_eq!(latest_run.2, 1);
     }
 
+    #[test]
+    fn local_snapshot_emits_git_project_status_and_recent_commits() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let repo_root = sandbox.join("repos").join("git-demo");
+        let codex_root = home_dir.join(".codex").join("sessions").join("2026").join("03");
+
+        fs::create_dir_all(&repo_root).expect("create repo root");
+        fs::create_dir_all(&codex_root).expect("create codex root");
+
+        git(&repo_root, &["init"]);
+        git(&repo_root, &["branch", "-M", "main"]);
+        git(&repo_root, &["config", "user.name", "OSM Test"]);
+        git(&repo_root, &["config", "user.email", "osm-test@example.com"]);
+
+        fs::write(repo_root.join("README.md"), "# git demo\n").expect("seed readme");
+        git(&repo_root, &["add", "."]);
+        git(&repo_root, &["commit", "-m", "feat: seed git dashboard"]);
+        fs::write(repo_root.join("notes.txt"), "dirty working tree\n").expect("seed dirty file");
+
+        let escaped_repo_path = repo_root.display().to_string().replace('\\', "\\\\");
+        fs::write(
+            codex_root.join("rollout-2026-03-23.jsonl"),
+            format!(
+                concat!(
+                    "{{\"timestamp\":\"2026-03-23T04:00:00.000Z\",\"type\":\"session_meta\",",
+                    "\"payload\":{{\"id\":\"codex-git-001\",\"timestamp\":\"2026-03-23T04:00:00.000Z\",",
+                    "\"cwd\":\"{}\",\"originator\":\"codex_cli_rs\",",
+                    "\"cli_version\":\"0.97.0\",\"source\":\"cli\"}}}}\n",
+                    "{{\"timestamp\":\"2026-03-23T04:00:03.000Z\",\"type\":\"response_item\",",
+                    "\"payload\":{{\"type\":\"message\",\"role\":\"user\",\"content\":[{{\"type\":\"input_text\",",
+                    "\"text\":\"Inspect git governance state\"}}]}}}}\n",
+                    "{{\"timestamp\":\"2026-03-23T04:00:06.000Z\",\"type\":\"response_item\",",
+                    "\"payload\":{{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{{\"type\":\"output_text\",",
+                    "\"text\":\"Git snapshot is pending.\"}}]}}}}\n"
+                ),
+                escaped_repo_path
+            ),
+        )
+        .expect("write codex session");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        let serialized = serde_json::to_value(&snapshot).expect("serialize snapshot");
+        let git_projects = serialized
+            .get("gitProjects")
+            .and_then(Value::as_array)
+            .expect("git projects should be serialized");
+        let project = git_projects
+            .iter()
+            .find(|record| {
+                record
+                    .get("repoRoot")
+                    .and_then(Value::as_str)
+                    .is_some_and(|path| path.contains("git-demo"))
+            })
+            .expect("repo record should exist");
+
+        assert_eq!(
+            project.get("branch").and_then(Value::as_str),
+            Some("main")
+        );
+        assert_eq!(
+            project.get("status").and_then(Value::as_str),
+            Some("dirty")
+        );
+        assert_eq!(
+            project.get("sessionCount").and_then(Value::as_u64),
+            Some(1)
+        );
+        assert_eq!(
+            project.get("untrackedFiles").and_then(Value::as_u64),
+            Some(1)
+        );
+        assert_eq!(
+            project
+                .get("recentCommits")
+                .and_then(Value::as_array)
+                .and_then(|commits| commits.first())
+                .and_then(|commit| commit.get("summary"))
+                .and_then(Value::as_str),
+            Some("feat: seed git dashboard")
+        );
+    }
+
     fn fixtures_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../tests/fixtures")
@@ -2714,5 +3073,23 @@ mod tests {
 
         fs::create_dir_all(&root).expect("create temp root");
         root
+    }
+
+    fn git(repo_root: &std::path::Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo_root)
+            .output()
+            .expect("git command should run");
+
+        if !output.status.success() {
+            panic!(
+                "git {:?} failed: {}",
+                args,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
     }
 }

@@ -75,6 +75,7 @@ describe("fetchDashboardSnapshot", () => {
 
     await expect(fetchDashboardSnapshot()).resolves.toEqual({
       ...realSnapshot,
+      gitProjects: [],
       sessions: [
         {
           ...realSnapshot.sessions[1],
@@ -143,6 +144,7 @@ describe("fetchDashboardSnapshot", () => {
 
     await expect(fetchDashboardSnapshot()).resolves.toEqual({
       ...nativeSnapshot,
+      gitProjects: [],
       usageOverview: buildEmptyUsageOverview(),
       usageTimeline: []
     });
@@ -296,6 +298,7 @@ function buildEmptyUsageOverview() {
       cacheWriteTokens: 0,
       reasoningTokens: 0,
       totalTokens: 0,
+      costUsd: undefined,
       costSource: "unknown"
     },
     assistants: []

@@ -122,6 +122,30 @@ export type DashboardRuntime = {
   preferencesPath: string;
 };
 
+export type GitCommitRecord = {
+  sha: string;
+  summary: string;
+  author: string;
+  authoredAt: string;
+};
+
+export type GitProjectRecord = {
+  projectPath: string;
+  repoRoot: string;
+  branch: string;
+  status: string;
+  sessionCount: number;
+  dirty: boolean;
+  stagedChanges: number;
+  unstagedChanges: number;
+  untrackedFiles: number;
+  ahead: number;
+  behind: number;
+  lastCommitSummary?: string;
+  lastCommitAt?: string;
+  recentCommits: GitCommitRecord[];
+};
+
 export type UsageTotalsRecord = {
   sessionsWithUsage: number;
   inputTokens: number;
@@ -169,6 +193,7 @@ export type DashboardSnapshot = {
   metrics: DashboardMetric[];
   sessions: SessionDetailRecord[];
   configs: ConfigRiskRecord[];
+  gitProjects?: GitProjectRecord[];
   doctorFindings: DoctorFindingRecord[];
   auditEvents: AuditEventRecord[];
   usageOverview: UsageOverviewRecord;
@@ -511,6 +536,37 @@ const fallbackSnapshot: DashboardSnapshot = {
           command: "uvx",
           args: ["mcp-postgres"],
           configJson: '{\n  "command": "uvx",\n  "args": ["mcp-postgres"]\n}'
+        }
+      ]
+    }
+  ],
+  gitProjects: [
+    {
+      projectPath: "C:/Users/Max/Desktop/2026年3月15日",
+      repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+      branch: "feat/usability-clarity",
+      status: "dirty",
+      sessionCount: 3,
+      dirty: true,
+      stagedChanges: 1,
+      unstagedChanges: 2,
+      untrackedFiles: 1,
+      ahead: 0,
+      behind: 0,
+      lastCommitSummary: "feat: add active session cockpit",
+      lastCommitAt: "2026-03-23T01:40:00.000Z",
+      recentCommits: [
+        {
+          sha: "7fd57a6",
+          summary: "feat: add active session cockpit",
+          author: "r007b34r",
+          authoredAt: "2026-03-23T01:40:00.000Z"
+        },
+        {
+          sha: "9042ddf",
+          summary: "test: add mobile viewport matrix",
+          author: "r007b34r",
+          authoredAt: "2026-03-23T01:10:00.000Z"
         }
       ]
     }
@@ -1039,6 +1095,9 @@ function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
     Array.isArray(value.metrics) &&
     Array.isArray(value.sessions) &&
     Array.isArray(value.configs) &&
+    (!("gitProjects" in value) ||
+      (Array.isArray(value.gitProjects) &&
+        value.gitProjects.every(isGitProjectRecord))) &&
     (!("doctorFindings" in value) ||
       (Array.isArray(value.doctorFindings) &&
         value.doctorFindings.every(isDoctorFindingRecord))) &&
@@ -1064,6 +1123,9 @@ function normalizeDashboardSnapshot(
     ...snapshot,
     configs: Array.isArray(snapshot.configs)
       ? snapshot.configs.filter(isConfigRiskRecord).map(normalizeConfigRiskRecord)
+      : [],
+    gitProjects: Array.isArray(snapshot.gitProjects)
+      ? snapshot.gitProjects.filter(isGitProjectRecord).map(normalizeGitProjectRecord)
       : [],
     doctorFindings: Array.isArray(snapshot.doctorFindings)
       ? snapshot.doctorFindings.filter(isDoctorFindingRecord)
@@ -1315,6 +1377,57 @@ function normalizeConfigMcpServerRecord(
       typeof server.configJson === "string"
         ? server.configJson
         : JSON.stringify(server, null, 2)
+  };
+}
+
+function isGitProjectRecord(value: unknown): value is GitProjectRecord {
+  return (
+    isRecord(value) &&
+    typeof value.projectPath === "string" &&
+    typeof value.repoRoot === "string" &&
+    typeof value.branch === "string" &&
+    typeof value.status === "string" &&
+    typeof value.sessionCount === "number" &&
+    typeof value.dirty === "boolean" &&
+    typeof value.stagedChanges === "number" &&
+    typeof value.unstagedChanges === "number" &&
+    typeof value.untrackedFiles === "number" &&
+    typeof value.ahead === "number" &&
+    typeof value.behind === "number" &&
+    Array.isArray(value.recentCommits) &&
+    value.recentCommits.every(isGitCommitRecord)
+  );
+}
+
+function isGitCommitRecord(value: unknown): value is GitCommitRecord {
+  return (
+    isRecord(value) &&
+    typeof value.sha === "string" &&
+    typeof value.summary === "string" &&
+    typeof value.author === "string" &&
+    typeof value.authoredAt === "string"
+  );
+}
+
+function normalizeGitProjectRecord(project: GitProjectRecord): GitProjectRecord {
+  return {
+    ...project,
+    lastCommitSummary:
+      typeof project.lastCommitSummary === "string" ? project.lastCommitSummary : undefined,
+    lastCommitAt: typeof project.lastCommitAt === "string" ? project.lastCommitAt : undefined,
+    recentCommits: Array.isArray(project.recentCommits)
+      ? project.recentCommits.filter(isGitCommitRecord).map(normalizeGitCommitRecord)
+      : []
+  };
+}
+
+function normalizeGitCommitRecord(commit: GitCommitRecord): GitCommitRecord {
+  return {
+    ...commit,
+    sha: commit.sha.trim(),
+    summary: commit.summary.trim(),
+    author: commit.author.trim(),
+    authoredAt: commit.authoredAt.trim()
   };
 }
 
@@ -1727,6 +1840,7 @@ function buildEmptyDashboardSnapshot(): DashboardSnapshot {
     metrics: [],
     sessions: [],
     configs: [],
+    gitProjects: [],
     doctorFindings: [],
     auditEvents: [],
     usageOverview: EMPTY_USAGE_OVERVIEW,
