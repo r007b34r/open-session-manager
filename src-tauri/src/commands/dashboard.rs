@@ -1200,6 +1200,12 @@ fn build_session_control_record(
             env::var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND")
                 .unwrap_or_else(|_| "claude".to_string()),
         ),
+        "github-copilot-cli" => (
+            true,
+            "github-copilot-cli".to_string(),
+            env::var("OPEN_SESSION_MANAGER_COPILOT_COMMAND")
+                .unwrap_or_else(|_| "copilot".to_string()),
+        ),
         assistant => (false, assistant.to_string(), String::new()),
     };
     let available = supported && dashboard_command_is_available(&command);
@@ -2749,6 +2755,25 @@ mod tests {
                 .and_then(serde_json::Value::as_str),
             Some("unknown")
         );
+    }
+
+    #[test]
+    fn fixture_snapshot_marks_copilot_session_control_supported() {
+        let snapshot =
+            build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
+        let copilot_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "copilot-ses-1")
+            .expect("copilot fixture session exists");
+        let control = copilot_session
+            .session_control
+            .as_ref()
+            .expect("copilot fixture session control exists");
+
+        assert!(control.supported);
+        assert_eq!(control.controller, "github-copilot-cli");
+        assert_eq!(control.command, "copilot");
     }
 
     #[test]

@@ -122,6 +122,7 @@ fn execute_session_control(
     let prepared = match controller.controller {
         "codex" => build_codex_command(&controller, request.session, prompt),
         "claude-code" => build_claude_command(&controller, request.session, prompt),
+        "github-copilot-cli" => build_copilot_command(&controller, request.session, prompt),
         other => {
             return Err(ActionError::Precondition(format!(
                 "session control is not supported for {other}"
@@ -394,6 +395,12 @@ fn resolve_controller(session: &SessionRecord) -> ActionResult<ResolvedControlle
             controller: "claude-code",
             command: env::var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND")
                 .unwrap_or_else(|_| "claude".to_string()),
+            working_dir,
+        }),
+        "github-copilot-cli" => Ok(ResolvedController {
+            controller: "github-copilot-cli",
+            command: env::var("OPEN_SESSION_MANAGER_COPILOT_COMMAND")
+                .unwrap_or_else(|_| "copilot".to_string()),
             working_dir,
         }),
         assistant => Err(ActionError::Precondition(format!(
@@ -690,6 +697,26 @@ fn build_claude_command(
             "-r".to_string(),
             session.session_id.clone(),
             prompt.to_string(),
+        ],
+        working_dir: controller.working_dir.clone(),
+        output_file: None,
+    })
+}
+
+fn build_copilot_command(
+    controller: &ResolvedController,
+    session: &SessionRecord,
+    prompt: &str,
+) -> ActionResult<PreparedCommand> {
+    Ok(PreparedCommand {
+        command: controller.command.clone(),
+        args: vec![
+            format!("--resume={}", session.session_id),
+            "-p".to_string(),
+            prompt.to_string(),
+            "-s".to_string(),
+            "--output-format".to_string(),
+            "text".to_string(),
         ],
         working_dir: controller.working_dir.clone(),
         output_file: None,

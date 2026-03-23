@@ -399,6 +399,83 @@ fn serve_command_exposes_session_control_routes() {
     );
 }
 
+#[test]
+fn serve_command_controls_copilot_session_via_http() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("copilot.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".copilot")
+            .join("session-state")
+            .join("copilot-ses-1.jsonl"),
+        "copilot/session-state/copilot-ses-1.jsonl",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_copilot_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let copilot_command = fake_command_path(&bin_dir, "copilot");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_COPILOT_COMMAND",
+            copilot_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let resume = post_json_with_token(
+        port,
+        "/api/v1/sessions/copilot-ses-1/resume",
+        "osm-local-token",
+        None,
+    );
+    assert_eq!(
+        resume.get("assistant").and_then(Value::as_str),
+        Some("github-copilot-cli")
+    );
+    assert_eq!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("controller"))
+            .and_then(Value::as_str),
+        Some("github-copilot-cli")
+    );
+    assert!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("lastResponse"))
+            .and_then(Value::as_str)
+            .is_some_and(|response| response.contains("READY"))
+    );
+
+    let continued = post_json_with_token(
+        port,
+        "/api/v1/sessions/copilot-ses-1/continue",
+        "osm-local-token",
+        Some(r#"{"prompt":"Continue with Copilot verification"}"#),
+    );
+    assert_eq!(
+        continued
+            .get("sessionControl")
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with Copilot verification")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read copilot log")
+            .contains("--resume=copilot-ses-1")
+    );
+}
+
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = env::temp_dir().join(format!(
@@ -642,6 +719,47 @@ fn write_fake_codex_executable(bin_dir: &Path, log_path: &Path) {
 
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
             .expect("chmod fake codex");
+    }
+}
+
+fn write_fake_copilot_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("copilot.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake copilot\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake copilot");
+        return;
+    }
+
+    let script_path = bin_dir.join("copilot");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake copilot\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake copilot");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake copilot");
     }
 }
 
