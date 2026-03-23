@@ -2,6 +2,7 @@ use std::{
     env,
     fs,
     path::{Path, PathBuf},
+    process::Command,
     sync::{
         Mutex, OnceLock,
         atomic::{AtomicU64, Ordering},
@@ -28,6 +29,10 @@ use super::{
     },
     delete::{SoftDeleteRequest, soft_delete_session},
     export::{ExportRequest, export_session_markdown},
+    git_control::{
+        GitBranchSwitchRequest, GitCommitRequest, GitPushRequest, commit_project, push_project,
+        switch_branch,
+    },
     restore::restore_session,
     session_control::{SessionControlRequest, continue_session, resume_session},
 };
@@ -1378,6 +1383,117 @@ fn continues_attached_session_and_persists_audit_event() {
     );
 }
 
+#[test]
+fn commits_git_project_and_records_audit_event() {
+    let sandbox = temp_root();
+    let repo_root = sandbox.join("git-commit");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    init_git_repo(&repo_root);
+    fs::write(repo_root.join("README.md"), "# updated\n").expect("write dirty readme");
+    fs::write(repo_root.join("notes.txt"), "new file\n").expect("write new file");
+
+    let result = commit_project(&GitCommitRequest {
+        repo_root: &repo_root,
+        message: "feat: capture git controls",
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("commit git project");
+
+    assert_eq!(result.branch, "main");
+    assert_eq!(result.summary, "feat: capture git controls");
+    assert_eq!(
+        git(&repo_root, &["log", "-1", "--pretty=%s"]),
+        "feat: capture git controls"
+    );
+    assert!(query_event_types(&connection).contains(&"git_commit".to_string()));
+}
+
+#[test]
+fn switches_git_branch_with_dirty_worktree_guardrail() {
+    let sandbox = temp_root();
+    let repo_root = sandbox.join("git-switch");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    init_git_repo(&repo_root);
+    fs::write(repo_root.join("README.md"), "# dirty\n").expect("write dirty readme");
+
+    let error = switch_branch(&GitBranchSwitchRequest {
+        repo_root: &repo_root,
+        branch: "feature/git-panel",
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect_err("dirty worktree should block branch switch");
+
+    match error {
+        ActionError::Precondition(message) => {
+            assert!(message.contains("clean"));
+        }
+        other => panic!("unexpected error: {other}"),
+    }
+
+    git(&repo_root, &["add", "."]);
+    git(&repo_root, &["commit", "-m", "chore: clean before switch"]);
+
+    let result = switch_branch(&GitBranchSwitchRequest {
+        repo_root: &repo_root,
+        branch: "feature/git-panel",
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("switch branch");
+
+    assert_eq!(result.branch, "feature/git-panel");
+    assert_eq!(git(&repo_root, &["branch", "--show-current"]), "feature/git-panel");
+    assert!(query_event_types(&connection).contains(&"git_branch_switch".to_string()));
+}
+
+#[test]
+fn pushes_git_project_to_upstream_and_records_audit_event() {
+    let sandbox = temp_root();
+    let remote_root = sandbox.join("remote.git");
+    let repo_root = sandbox.join("git-push");
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    init_bare_git_repo(&remote_root);
+    init_git_repo(&repo_root);
+    git(
+        &repo_root,
+        &["remote", "add", "origin", remote_root.to_str().expect("remote path")],
+    );
+    git(&repo_root, &["push", "-u", "origin", "main"]);
+
+    fs::write(repo_root.join("README.md"), "# pushed\n").expect("write dirty readme");
+    commit_project(&GitCommitRequest {
+        repo_root: &repo_root,
+        message: "feat: push git controls",
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("create outgoing commit");
+
+    let result = push_project(&GitPushRequest {
+        repo_root: &repo_root,
+        remote: None,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("push git project");
+
+    assert_eq!(result.branch, "main");
+    assert!(result.output.contains("origin"));
+    assert_eq!(
+        git(&repo_root, &["log", "-1", "--pretty=%s"]),
+        git_bare(&remote_root, &["log", "-1", "--pretty=%s", "main"])
+    );
+    assert!(query_event_types(&connection).contains(&"git_push".to_string()));
+}
+
 fn config_fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../tests/fixtures/configs")
@@ -1398,6 +1514,60 @@ fn temp_root() -> PathBuf {
 
     fs::create_dir_all(&root).expect("create temp root");
     root
+}
+
+fn init_git_repo(repo_root: &Path) {
+    fs::create_dir_all(repo_root).expect("create repo root");
+    git(repo_root, &["init"]);
+    git(repo_root, &["branch", "-M", "main"]);
+    git(repo_root, &["config", "user.name", "OSM Test"]);
+    git(repo_root, &["config", "user.email", "osm-test@example.com"]);
+    fs::write(repo_root.join("README.md"), "# seed\n").expect("write readme");
+    git(repo_root, &["add", "."]);
+    git(repo_root, &["commit", "-m", "chore: seed repo"]);
+}
+
+fn init_bare_git_repo(repo_root: &Path) {
+    fs::create_dir_all(repo_root).expect("create bare repo root");
+    git(repo_root, &["init", "--bare"]);
+}
+
+fn git(repo_root: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(repo_root)
+        .output()
+        .expect("git command should run");
+
+    if !output.status.success() {
+        panic!(
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn git_bare(repo_root: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .arg("--git-dir")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .expect("bare git command should run");
+
+    if !output.status.success() {
+        panic!(
+            "git --git-dir {:?} {:?} failed: {}",
+            repo_root,
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
 fn with_path_prefix<T>(bin_dir: &Path, action: impl FnOnce() -> T) -> T {

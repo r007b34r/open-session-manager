@@ -1,6 +1,7 @@
 pub mod config_writeback;
 pub mod delete;
 pub mod export;
+pub mod git_control;
 pub mod restore;
 pub mod session_control;
 

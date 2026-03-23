@@ -491,6 +491,45 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("在总览里执行 Git 提交并显示最新结果", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /git workspace status/i });
+    await user.type(
+      screen.getByLabelText(/commit message/i),
+      "feat: review git queue"
+    );
+    await user.click(screen.getByRole("button", { name: /commit changes/i }));
+
+    expect(await screen.findByText(/committed feat: review git queue\./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/feat: review git queue/i)).not.toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: /push branch/i }));
+
+    expect(
+      await screen.findByText(/pushed feat\/usability-clarity to origin\./i)
+    ).toBeInTheDocument();
+  });
+
+  it("在 dirty 仓库里切换分支前给出保护提示", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: /git workspace status/i });
+    await user.type(
+      screen.getByLabelText(/target branch/i),
+      "feature/git-guardrails"
+    );
+
+    expect(
+      screen.getByText(/clean up local changes before switching branches/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch branch/i })).toBeDisabled();
+  });
+
   it("配置快照会在自动刷新周期后热更新", async () => {
     window.localStorage.removeItem("open-session-manager.enable-demo-data");
     window.location.hash = "#/configs";

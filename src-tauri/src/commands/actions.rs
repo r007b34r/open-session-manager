@@ -9,6 +9,10 @@ use crate::{
         },
         delete::{SoftDeleteRequest, soft_delete_session},
         export::{ExportRequest, ExportResult, export_session_markdown},
+        git_control::{
+            GitActionResult, GitBranchSwitchRequest, GitCommitRequest, GitPushRequest,
+            commit_project, push_project, switch_branch,
+        },
         restore::restore_session,
         session_control::{
             SessionControlRequest, SessionControlResult, continue_session, resume_session,
@@ -104,5 +108,47 @@ pub fn continue_existing_session(
         actor,
         connection,
         prompt: Some(prompt),
+    })
+}
+
+pub fn commit_git_project(
+    repo_root: &Path,
+    message: &str,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<GitActionResult> {
+    commit_project(&GitCommitRequest {
+        repo_root,
+        message,
+        actor,
+        connection,
+    })
+}
+
+pub fn switch_git_project_branch(
+    repo_root: &Path,
+    branch: &str,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<GitActionResult> {
+    switch_branch(&GitBranchSwitchRequest {
+        repo_root,
+        branch,
+        actor,
+        connection,
+    })
+}
+
+pub fn push_git_project(
+    repo_root: &Path,
+    remote: Option<&str>,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<GitActionResult> {
+    push_project(&GitPushRequest {
+        repo_root,
+        remote,
+        actor,
+        connection,
     })
 }

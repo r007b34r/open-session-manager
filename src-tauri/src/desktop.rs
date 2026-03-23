@@ -7,8 +7,11 @@ use crate::{
     actions::config_writeback::ConfigWritebackUpdate,
     commands::{
         actions::{
+            commit_git_project as commit_git_project_action,
             continue_existing_session as continue_existing_session_action, delete_session,
             export_session, resume_existing_session as resume_existing_session_action,
+            push_git_project as push_git_project_action,
+            switch_git_project_branch as switch_git_project_branch_action,
             write_config_artifact as apply_config_writeback,
         },
         dashboard::{
@@ -31,11 +34,14 @@ pub fn run() -> Result<(), String> {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             load_dashboard_snapshot,
+            commit_git_project,
             export_session_markdown,
+            push_git_project,
             resume_existing_session,
             continue_existing_session,
             soft_delete_session,
             save_dashboard_preferences,
+            switch_git_project_branch,
             write_config_artifact,
             list_session_inventory,
             search_session_inventory,
@@ -279,6 +285,77 @@ pub async fn write_config_artifact(
     .map_err(|error| error.to_string())?
 }
 
+#[tauri::command]
+pub async fn commit_git_project(
+    repo_root: String,
+    message: String,
+) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let resolved_repo_root = resolve_git_repo_root(&context, &paths, &repo_root)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        commit_git_project_action(&resolved_repo_root, &message, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn switch_git_project_branch(
+    repo_root: String,
+    branch: String,
+) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let resolved_repo_root = resolve_git_repo_root(&context, &paths, &repo_root)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        switch_git_project_branch_action(&resolved_repo_root, &branch, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn push_git_project(
+    repo_root: String,
+    remote: Option<String>,
+) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let resolved_repo_root = resolve_git_repo_root(&context, &paths, &repo_root)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        push_git_project_action(
+            &resolved_repo_root,
+            remote.as_deref(),
+            &actor,
+            &connection,
+        )
+        .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
 fn resolve_indexed_session(
     context: &DiscoveryContext,
     session_id: &str,
@@ -288,6 +365,23 @@ fn resolve_indexed_session(
         .into_iter()
         .find(|indexed| indexed.session.session_id == session_id)
         .ok_or_else(|| format!("session not found: {session_id}"))
+}
+
+fn resolve_git_repo_root(
+    context: &DiscoveryContext,
+    paths: &RuntimePaths,
+    repo_root: &str,
+) -> Result<PathBuf, String> {
+    let snapshot = build_snapshot_with_runtime(context, paths)?;
+    let requested = normalize_repo_root(repo_root);
+
+    snapshot
+        .git_projects
+        .into_iter()
+        .find(|project| normalize_repo_root(&project.repo_root) == requested)
+        .map(|project| PathBuf::from(project.repo_root))
+        .or_else(|| resolve_git_repo_root_fallback(repo_root))
+        .ok_or_else(|| format!("git project not found: {repo_root}"))
 }
 
 fn build_discovery_context() -> DiscoveryContext {
@@ -332,12 +426,42 @@ fn resolve_actor() -> String {
         .unwrap_or_else(|_| "local-user".to_string())
 }
 
+fn normalize_repo_root(value: &str) -> String {
+    PathBuf::from(value.trim()).display().to_string()
+}
+
+fn resolve_git_repo_root_fallback(repo_root: &str) -> Option<PathBuf> {
+    let candidate = PathBuf::from(repo_root.trim());
+    if !candidate.exists() {
+        return None;
+    }
+
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&candidate)
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let resolved = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if resolved.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(resolved))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
         env, fs,
         future::Future,
         path::{Path, PathBuf},
+        process::Command,
         sync::{
             Mutex, OnceLock,
             atomic::{AtomicU64, Ordering},
@@ -347,13 +471,14 @@ mod tests {
     use serde_json::Value;
 
     use super::{
-        ConfigWritebackPayload, continue_existing_session, expand_session_detail,
+        ConfigWritebackPayload, commit_git_project, continue_existing_session,
+        expand_session_detail,
         export_session_markdown, get_session_detail, list_session_inventory,
         ListSessionInventoryRequest,
         load_dashboard_snapshot, resume_existing_session, save_dashboard_preferences,
         SearchSessionInventoryRequest,
         search_session_inventory, soft_delete_session, view_session_detail,
-        write_config_artifact,
+        push_git_project, switch_git_project_branch, write_config_artifact,
     };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
@@ -417,6 +542,21 @@ mod tests {
             secret: Some("ghu_new_secret_123454321".to_string()),
         });
         assert_future(&write);
+
+        let commit = commit_git_project(
+            "C:/Projects/osm".to_string(),
+            "feat: git dashboard".to_string(),
+        );
+        assert_future(&commit);
+
+        let switch_branch = switch_git_project_branch(
+            "C:/Projects/osm".to_string(),
+            "feature/git-dashboard".to_string(),
+        );
+        assert_future(&switch_branch);
+
+        let push = push_git_project("C:/Projects/osm".to_string(), None);
+        assert_future(&push);
     }
 
     #[test]
@@ -581,6 +721,85 @@ mod tests {
         });
     }
 
+    #[test]
+    fn git_project_commands_commit_switch_and_push() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let repo_root = sandbox.join("repos").join("git-demo");
+        let remote_root = sandbox.join("remote.git");
+
+        init_bare_git_repo(&remote_root);
+        init_git_repo(&repo_root);
+        git(
+            &repo_root,
+            &["remote", "add", "origin", remote_root.to_str().expect("remote path")],
+        );
+        git(&repo_root, &["push", "-u", "origin", "main"]);
+        seed_git_project_session(&home_dir, &repo_root);
+
+        with_home_dir(&home_dir, || {
+            tauri::async_runtime::block_on(async {
+                fs::write(repo_root.join("README.md"), "# commit from desktop\n")
+                    .expect("write dirty readme");
+
+                let after_commit = commit_git_project(
+                    repo_root.display().to_string(),
+                    "feat: desktop git commit".to_string(),
+                )
+                .await
+                .expect("commit git project");
+
+                assert!(
+                    after_commit
+                        .audit_events
+                        .iter()
+                        .any(|event| {
+                            event.r#type == "git_commit"
+                                && event.detail.contains("Committed feat: desktop git commit")
+                        })
+                );
+                assert_eq!(
+                    git(&repo_root, &["log", "-1", "--pretty=%s"]),
+                    "feat: desktop git commit"
+                );
+
+                let after_push = push_git_project(repo_root.display().to_string(), None)
+                    .await
+                    .expect("push git project");
+                assert!(
+                    after_push
+                        .audit_events
+                        .iter()
+                        .any(|event| {
+                            event.r#type == "git_push"
+                                && event.detail.contains("Pushed main to origin")
+                        })
+                );
+
+                let after_switch = switch_git_project_branch(
+                    repo_root.display().to_string(),
+                    "feature/git-dashboard".to_string(),
+                )
+                .await
+                .expect("switch git branch");
+
+                assert!(
+                    after_switch
+                        .audit_events
+                        .iter()
+                        .any(|event| {
+                            event.r#type == "git_branch_switch"
+                                && event.detail.contains("Switched to feature/git-dashboard")
+                        })
+                );
+                assert_eq!(
+                    git(&repo_root, &["branch", "--show-current"]),
+                    "feature/git-dashboard"
+                );
+            })
+        });
+    }
+
     fn fixtures_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../tests/fixtures")
@@ -606,6 +825,32 @@ mod tests {
     fn seed_session_fixture(target: &Path, fixture_relative: &str) {
         fs::create_dir_all(target.parent().expect("target parent")).expect("create target dir");
         fs::copy(fixtures_root().join(fixture_relative), target).expect("copy fixture");
+    }
+
+    fn seed_git_project_session(home_dir: &Path, repo_root: &Path) {
+        let codex_root = home_dir.join(".codex").join("sessions").join("2026").join("03");
+        let escaped_repo_path = repo_root.display().to_string().replace('\\', "\\\\");
+
+        fs::create_dir_all(&codex_root).expect("create codex session root");
+        fs::write(
+            codex_root.join("git-dashboard-2026-03-23.jsonl"),
+            format!(
+                concat!(
+                    "{{\"timestamp\":\"2026-03-23T04:00:00.000Z\",\"type\":\"session_meta\",",
+                    "\"payload\":{{\"id\":\"codex-git-001\",\"timestamp\":\"2026-03-23T04:00:00.000Z\",",
+                    "\"cwd\":\"{}\",\"originator\":\"codex_cli_rs\",",
+                    "\"cli_version\":\"0.97.0\",\"source\":\"cli\"}}}}\n",
+                    "{{\"timestamp\":\"2026-03-23T04:00:03.000Z\",\"type\":\"response_item\",",
+                    "\"payload\":{{\"type\":\"message\",\"role\":\"user\",\"content\":[{{\"type\":\"input_text\",",
+                    "\"text\":\"Inspect git governance state\"}}]}}}}\n",
+                    "{{\"timestamp\":\"2026-03-23T04:00:06.000Z\",\"type\":\"response_item\",",
+                    "\"payload\":{{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{{\"type\":\"output_text\",",
+                    "\"text\":\"Git snapshot is pending.\"}}]}}}}\n"
+                ),
+                escaped_repo_path
+            ),
+        )
+        .expect("write git project session");
     }
 
     fn with_home_dir<T>(home_dir: &Path, action: impl FnOnce() -> T) -> T {
@@ -642,5 +887,39 @@ mod tests {
         }
 
         result
+    }
+
+    fn init_git_repo(repo_root: &Path) {
+        fs::create_dir_all(repo_root).expect("create repo root");
+        git(repo_root, &["init"]);
+        git(repo_root, &["branch", "-M", "main"]);
+        git(repo_root, &["config", "user.name", "OSM Test"]);
+        git(repo_root, &["config", "user.email", "osm-test@example.com"]);
+        fs::write(repo_root.join("README.md"), "# seed\n").expect("write readme");
+        git(repo_root, &["add", "."]);
+        git(repo_root, &["commit", "-m", "chore: seed repo"]);
+    }
+
+    fn init_bare_git_repo(repo_root: &Path) {
+        fs::create_dir_all(repo_root).expect("create bare repo root");
+        git(repo_root, &["init", "--bare"]);
+    }
+
+    fn git(repo_root: &Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo_root)
+            .output()
+            .expect("git command should run");
+
+        if !output.status.success() {
+            panic!(
+                "git {:?} failed: {}",
+                args,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
     }
 }

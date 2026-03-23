@@ -123,6 +123,19 @@ type Messages = {
         aheadBehind: string;
         latestCommit: string;
         recentCommits: string;
+        lastAction: string;
+      };
+      actions: {
+        commitMessage: string;
+        commitButton: string;
+        branchName: string;
+        switchButton: string;
+        pushButton: string;
+      };
+      guardrails: {
+        cleanBeforeSwitch: string;
+        cleanBeforePush: string;
+        nothingToPush: string;
       };
       statuses: {
         clean: string;
@@ -503,7 +516,20 @@ const messages: Record<Language, Messages> = {
           untracked: "Untracked",
           aheadBehind: "Ahead/Behind",
           latestCommit: "Latest commit",
-          recentCommits: "Recent commits"
+          recentCommits: "Recent commits",
+          lastAction: "Last action"
+        },
+        actions: {
+          commitMessage: "Commit message",
+          commitButton: "Commit changes",
+          branchName: "Target branch",
+          switchButton: "Switch branch",
+          pushButton: "Push branch"
+        },
+        guardrails: {
+          cleanBeforeSwitch: "Clean up local changes before switching branches.",
+          cleanBeforePush: "Push stays locked until the working tree is clean.",
+          nothingToPush: "No outgoing commits are waiting to be pushed."
         },
         statuses: {
           clean: "Clean",
@@ -965,7 +991,20 @@ const messages: Record<Language, Messages> = {
           untracked: "未跟踪",
           aheadBehind: "领先/落后",
           latestCommit: "最近提交",
-          recentCommits: "最近提交历史"
+          recentCommits: "最近提交历史",
+          lastAction: "最近动作"
+        },
+        actions: {
+          commitMessage: "提交说明",
+          commitButton: "提交当前变更",
+          branchName: "目标分支",
+          switchButton: "切换分支",
+          pushButton: "推送当前分支"
+        },
+        guardrails: {
+          cleanBeforeSwitch: "先清掉本地脏区，再切换分支。",
+          cleanBeforePush: "工作区未清理前，不允许推送。",
+          nothingToPush: "当前没有待推送的提交。"
         },
         statuses: {
           clean: "干净",

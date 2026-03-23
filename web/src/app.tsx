@@ -3,6 +3,9 @@ import { startTransition, useEffect, useEffectEvent, useRef, useState } from "re
 import {
   applyConfigWriteback,
   applyDashboardPreferences,
+  applyGitProjectBranchSwitch,
+  applyGitProjectCommit,
+  applyGitProjectPush,
   applyMarkdownExport,
   recordLocalAuditEvent,
   applySessionContinue,
@@ -12,6 +15,9 @@ import {
   isConfigWritebackAvailable,
   type ConfigWritebackInput,
   type DashboardSnapshot,
+  type GitProjectBranchSwitchInput,
+  type GitProjectCommitInput,
+  type GitProjectPushInput,
   type LocalAuditEventInput
 } from "./lib/api";
 import {
@@ -256,6 +262,42 @@ export function App() {
     });
   };
 
+  const handleGitProjectCommit = (input: GitProjectCommitInput) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyGitProjectCommit(snapshot, input).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
+  const handleGitProjectBranchSwitch = (input: GitProjectBranchSwitchInput) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyGitProjectBranchSwitch(snapshot, input).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
+  const handleGitProjectPush = (input: GitProjectPushInput) => {
+    if (!snapshot) {
+      return;
+    }
+
+    void applyGitProjectPush(snapshot, input).then((nextSnapshot) => {
+      startTransition(() => {
+        setSnapshot(nextSnapshot);
+      });
+    });
+  };
+
   const handleRefreshSnapshot = () => {
     loadSnapshot({ refresh: true });
   };
@@ -302,6 +344,9 @@ export function App() {
               handleSoftDelete,
               handleSaveConfig,
               handleAuditEvent,
+              handleGitProjectCommit,
+              handleGitProjectBranchSwitch,
+              handleGitProjectPush,
               handleRefreshSnapshot,
               isRefreshingSnapshot
             )
@@ -331,6 +376,9 @@ function renderRoute(
   onSoftDelete: (sessionId: string) => void,
   onSaveConfig: (input: ConfigWritebackInput) => void,
   onAuditEvent: (input: LocalAuditEventInput) => void,
+  onGitProjectCommit: (input: GitProjectCommitInput) => void,
+  onGitProjectBranchSwitch: (input: GitProjectBranchSwitchInput) => void,
+  onGitProjectPush: (input: GitProjectPushInput) => void,
   onRefreshSnapshot: () => void,
   isRefreshingSnapshot: boolean
 ) {
@@ -380,6 +428,9 @@ function renderRoute(
     <>
       <OverviewRoute
         isRefreshing={isRefreshingSnapshot}
+        onGitProjectBranchSwitch={onGitProjectBranchSwitch}
+        onGitProjectCommit={onGitProjectCommit}
+        onGitProjectPush={onGitProjectPush}
         onRefreshSnapshot={onRefreshSnapshot}
         snapshot={snapshot}
       />

@@ -8,6 +8,9 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 import {
   applyConfigWriteback,
+  applyGitProjectBranchSwitch,
+  applyGitProjectCommit,
+  applyGitProjectPush,
   applyMarkdownExport,
   applySoftDelete,
   fetchDashboardSnapshot,
@@ -439,6 +442,116 @@ describe("desktop actions", () => {
       model: "gpt-5-mini",
       baseUrl: "https://github.com/api/copilot",
       secret: "ghu_new_secret_123454321"
+    });
+  });
+
+  it("桌面模式下 Git 提交动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const nativeSnapshot: DashboardSnapshot = {
+      ...current,
+      auditEvents: [
+        {
+          eventId: "evt-native-git-commit",
+          type: "git_commit",
+          target: "C:/Users/Max/Desktop/2026年3月15日",
+          actor: "r007b34r",
+          createdAt: "2026-03-15 15:33",
+          result: "success",
+          detail: "Committed from native runtime."
+        },
+        ...current.auditEvents
+      ]
+    };
+
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {}
+    });
+    invokeMock.mockResolvedValueOnce(nativeSnapshot);
+
+    await expect(
+      applyGitProjectCommit(current, {
+        repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+        message: "feat: native git commit"
+      })
+    ).resolves.toEqual(nativeSnapshot);
+    expect(invokeMock).toHaveBeenCalledWith("commit_git_project", {
+      repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+      message: "feat: native git commit"
+    });
+  });
+
+  it("桌面模式下 Git 切分支动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const nativeSnapshot: DashboardSnapshot = {
+      ...current,
+      auditEvents: [
+        {
+          eventId: "evt-native-git-switch",
+          type: "git_branch_switch",
+          target: "C:/Users/Max/Desktop/2026年3月15日",
+          actor: "r007b34r",
+          createdAt: "2026-03-15 15:34",
+          result: "success",
+          detail: "Switched from native runtime."
+        },
+        ...current.auditEvents
+      ]
+    };
+
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {}
+    });
+    invokeMock.mockResolvedValueOnce(nativeSnapshot);
+
+    await expect(
+      applyGitProjectBranchSwitch(current, {
+        repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+        branch: "feature/native-branch"
+      })
+    ).resolves.toEqual(nativeSnapshot);
+    expect(invokeMock).toHaveBeenCalledWith("switch_git_project_branch", {
+      repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+      branch: "feature/native-branch"
+    });
+  });
+
+  it("桌面模式下 Git 推送动作优先走 Tauri 命令", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const nativeSnapshot: DashboardSnapshot = {
+      ...current,
+      auditEvents: [
+        {
+          eventId: "evt-native-git-push",
+          type: "git_push",
+          target: "C:/Users/Max/Desktop/2026年3月15日",
+          actor: "r007b34r",
+          createdAt: "2026-03-15 15:35",
+          result: "success",
+          detail: "Pushed from native runtime."
+        },
+        ...current.auditEvents
+      ]
+    };
+
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {}
+    });
+    invokeMock.mockResolvedValueOnce(nativeSnapshot);
+
+    await expect(
+      applyGitProjectPush(current, {
+        repoRoot: "C:/Users/Max/Desktop/2026年3月15日"
+      })
+    ).resolves.toEqual(nativeSnapshot);
+    expect(invokeMock).toHaveBeenCalledWith("push_git_project", {
+      repoRoot: "C:/Users/Max/Desktop/2026年3月15日",
+      remote: undefined
     });
   });
 });

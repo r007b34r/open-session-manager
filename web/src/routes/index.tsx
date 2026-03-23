@@ -1,19 +1,30 @@
 import { ActiveSessionCockpit } from "../components/active-session-cockpit";
 import { DoctorPanel } from "../components/doctor-panel";
 import { GitProjectPanel } from "../components/git-project-panel";
-import type { DashboardSnapshot } from "../lib/api";
+import type {
+  DashboardSnapshot,
+  GitProjectBranchSwitchInput,
+  GitProjectCommitInput,
+  GitProjectPushInput
+} from "../lib/api";
 import { UsagePanel } from "../components/usage-panel";
 import { useI18n } from "../lib/i18n";
 
 type OverviewRouteProps = {
   snapshot: DashboardSnapshot;
   isRefreshing: boolean;
+  onGitProjectCommit: (input: GitProjectCommitInput) => void;
+  onGitProjectBranchSwitch: (input: GitProjectBranchSwitchInput) => void;
+  onGitProjectPush: (input: GitProjectPushInput) => void;
   onRefreshSnapshot: () => void;
 };
 
 export function OverviewRoute({
   snapshot,
   isRefreshing,
+  onGitProjectCommit,
+  onGitProjectBranchSwitch,
+  onGitProjectPush,
   onRefreshSnapshot
 }: OverviewRouteProps) {
   const { copy, language, translateMetricLabel, translateMetricNote } = useI18n();
@@ -95,7 +106,13 @@ export function OverviewRoute({
         usageTimeline={snapshot.usageTimeline}
       />
 
-      <GitProjectPanel projects={snapshot.gitProjects ?? []} />
+      <GitProjectPanel
+        auditEvents={snapshot.auditEvents}
+        onCommit={onGitProjectCommit}
+        onPush={onGitProjectPush}
+        onSwitchBranch={onGitProjectBranchSwitch}
+        projects={snapshot.gitProjects ?? []}
+      />
 
       <ActiveSessionCockpit
         isRefreshing={isRefreshing}

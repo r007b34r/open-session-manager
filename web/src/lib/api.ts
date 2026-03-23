@@ -205,6 +205,21 @@ export type DashboardPreferencesUpdate = {
   exportRoot: string | null;
 };
 
+export type GitProjectCommitInput = {
+  repoRoot: string;
+  message: string;
+};
+
+export type GitProjectBranchSwitchInput = {
+  repoRoot: string;
+  branch: string;
+};
+
+export type GitProjectPushInput = {
+  repoRoot: string;
+  remote?: string;
+};
+
 export type LocalAuditEventInput = {
   type: string;
   target: string;
@@ -712,6 +727,10 @@ export function isConfigWritebackAvailable() {
   return isTauriRuntime() || shouldUseDemoData();
 }
 
+export function isGitProjectActionAvailable() {
+  return isTauriRuntime() || shouldUseDemoData();
+}
+
 export function recordMarkdownExport(
   current: DashboardSnapshot,
   sessionId: string
@@ -801,6 +820,132 @@ export function recordConfigWriteback(
       ),
       ...current.auditEvents
     ]
+  };
+}
+
+export function recordGitProjectCommit(
+  current: DashboardSnapshot,
+  input: GitProjectCommitInput
+): DashboardSnapshot {
+  const message = normalizeOptionalText(input.message);
+  if (!message) {
+    return current;
+  }
+
+  const committedAt = new Date().toISOString();
+  let matched = false;
+  const nextProjects = (current.gitProjects ?? []).map((project) => {
+    if (project.repoRoot !== input.repoRoot) {
+      return project;
+    }
+
+    matched = true;
+    const ahead = project.ahead + 1;
+    return {
+      ...project,
+      dirty: false,
+      status: ahead > 0 || project.behind > 0 ? "diverged" : "clean",
+      stagedChanges: 0,
+      unstagedChanges: 0,
+      untrackedFiles: 0,
+      ahead,
+      lastCommitSummary: message,
+      lastCommitAt: committedAt,
+      recentCommits: [
+        {
+          sha: createDemoGitSha(committedAt, message),
+          summary: message,
+          author: "r007b34r",
+          authoredAt: committedAt
+        },
+        ...project.recentCommits
+      ].slice(0, 5)
+    };
+  });
+
+  if (!matched) {
+    return current;
+  }
+
+  return {
+    ...current,
+    gitProjects: nextProjects,
+    auditEvents: [
+      createAuditEvent("git_commit", input.repoRoot, `Committed ${message}.`),
+      ...current.auditEvents
+    ]
+  };
+}
+
+export function recordGitProjectBranchSwitch(
+  current: DashboardSnapshot,
+  input: GitProjectBranchSwitchInput
+): DashboardSnapshot {
+  const branch = normalizeOptionalText(input.branch);
+  if (!branch) {
+    return current;
+  }
+
+  let matched = false;
+  const nextProjects = (current.gitProjects ?? []).map((project) => {
+    if (project.repoRoot !== input.repoRoot) {
+      return project;
+    }
+
+    matched = true;
+    return {
+      ...project,
+      branch
+    };
+  });
+
+  if (!matched) {
+    return current;
+  }
+
+  return {
+    ...current,
+    gitProjects: nextProjects,
+    auditEvents: [
+      createAuditEvent(
+        "git_branch_switch",
+        input.repoRoot,
+        `Switched to ${branch}.`
+      ),
+      ...current.auditEvents
+    ]
+  };
+}
+
+export function recordGitProjectPush(
+  current: DashboardSnapshot,
+  input: GitProjectPushInput
+): DashboardSnapshot {
+  const remote = normalizeOptionalText(input.remote) ?? "origin";
+  let detail = `Pushed current branch to ${remote}.`;
+  let matched = false;
+  const nextProjects = (current.gitProjects ?? []).map((project) => {
+    if (project.repoRoot !== input.repoRoot) {
+      return project;
+    }
+
+    matched = true;
+    detail = `Pushed ${project.branch} to ${remote}.`;
+    return {
+      ...project,
+      ahead: 0,
+      status: project.dirty ? "dirty" : project.behind > 0 ? "diverged" : "clean"
+    };
+  });
+
+  if (!matched) {
+    return current;
+  }
+
+  return {
+    ...current,
+    gitProjects: nextProjects,
+    auditEvents: [createAuditEvent("git_push", input.repoRoot, detail), ...current.auditEvents]
   };
 }
 
@@ -1008,6 +1153,75 @@ export async function applyConfigWriteback(
 
   if (shouldUseDemoData()) {
     return normalizeDashboardSnapshot(recordConfigWriteback(current, input));
+  }
+
+  return current;
+}
+
+export async function applyGitProjectCommit(
+  current: DashboardSnapshot,
+  input: GitProjectCommitInput
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "commit_git_project",
+    {
+      repoRoot: input.repoRoot,
+      message: normalizeOptionalText(input.message)
+    }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordGitProjectCommit(current, input));
+  }
+
+  return current;
+}
+
+export async function applyGitProjectBranchSwitch(
+  current: DashboardSnapshot,
+  input: GitProjectBranchSwitchInput
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "switch_git_project_branch",
+    {
+      repoRoot: input.repoRoot,
+      branch: normalizeOptionalText(input.branch)
+    }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordGitProjectBranchSwitch(current, input));
+  }
+
+  return current;
+}
+
+export async function applyGitProjectPush(
+  current: DashboardSnapshot,
+  input: GitProjectPushInput
+): Promise<DashboardSnapshot> {
+  const nativeSnapshot = await tryInvokeNativeCommand<DashboardSnapshot>(
+    "push_git_project",
+    {
+      repoRoot: input.repoRoot,
+      remote: normalizeOptionalText(input.remote)
+    }
+  );
+
+  if (nativeSnapshot && isDashboardSnapshot(nativeSnapshot)) {
+    return normalizeDashboardSnapshot(nativeSnapshot);
+  }
+
+  if (shouldUseDemoData()) {
+    return normalizeDashboardSnapshot(recordGitProjectPush(current, input));
   }
 
   return current;
@@ -1982,6 +2196,16 @@ function maskSecret(value: string) {
   }
 
   return `***${normalized.slice(-4)}`;
+}
+
+function createDemoGitSha(timestamp: string, summary: string) {
+  const seed = `${timestamp}:${summary}`;
+  let hash = 0;
+  for (const character of seed) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+
+  return hash.toString(16).padStart(7, "0").slice(0, 7);
 }
 
 function reconcileConfigRisks(

@@ -1662,6 +1662,12 @@ fn summarize_audit_event(event: &AuditEvent) -> String {
         "restore" => {
             format!("Restored {} from quarantine.", event.target_id)
         }
+        "git_commit" => parse_audit_summary(&event.after_state)
+            .map(|summary| format!("Committed {summary}."))
+            .unwrap_or_else(|| format!("Recorded git_commit for {}.", event.target_id)),
+        "git_branch_switch" | "git_push" => parse_audit_summary(&event.after_state)
+            .map(|summary| ensure_sentence(&summary))
+            .unwrap_or_else(|| format!("Recorded {} for {}.", event.event_type, event.target_id)),
         _ => format!("Recorded {} for {}.", event.event_type, event.target_id),
     }
 }
@@ -1695,6 +1701,23 @@ fn parse_audit_paths(after_state: &Option<String>) -> AuditEventPaths {
             .get("manifest_path")
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
+    }
+}
+
+fn parse_audit_summary(after_state: &Option<String>) -> Option<String> {
+    let after_state = after_state.as_ref()?;
+    let parsed = serde_json::from_str::<Value>(after_state).ok()?;
+    parsed
+        .get("summary")
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+}
+
+fn ensure_sentence(value: &str) -> String {
+    if value.ends_with('.') {
+        value.to_string()
+    } else {
+        format!("{value}.")
     }
 }
 

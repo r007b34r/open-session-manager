@@ -1097,6 +1097,42 @@ a {
   gap: 10px;
 }
 
+.git-action-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.git-action-group {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.git-action-group input {
+  border: 1px solid rgba(31, 39, 34, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.git-action-note {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.git-action-note p {
+  margin: 0;
+}
+
 .mcp-viewer-panel {
   display: grid;
   gap: 16px;
