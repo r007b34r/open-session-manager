@@ -34,7 +34,8 @@ use super::{
     },
     restore::restore_session,
     session_control::{
-        SessionControlRequest, attach_session, continue_session, detach_session, resume_session,
+        SessionControlRequest, attach_session, continue_session, detach_session, pause_session,
+        resume_session,
     },
     write_audit_event,
 };
@@ -1427,6 +1428,36 @@ fn continues_attached_session_and_persists_audit_event() {
         content_hash: "def456".to_string(),
     };
 
+    upsert_session_control_state(
+        &connection,
+        &SessionControlStateRow {
+            session_id: session.session_id.clone(),
+            assistant: "claude-code".to_string(),
+            controller: "claude-code".to_string(),
+            available: true,
+            attached: true,
+            paused: false,
+            last_command: Some("claude -p -r claude-ses-1".to_string()),
+            last_prompt: Some("Resume and report READY".to_string()),
+            last_response: Some("READY from fake claude".to_string()),
+            last_error: None,
+            last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
+            last_continued_at: None,
+            paused_at: None,
+            process_state: Some("waiting".to_string()),
+            process_id: Some(4100),
+            exit_code: Some(0),
+            started_at: Some("2026-03-15T05:00:00Z".to_string()),
+            runtime_seconds: Some(600),
+            event_count: 1,
+            input_tokens: 20,
+            output_tokens: 10,
+            total_tokens: 30,
+            last_activity_at: Some("2026-03-15T05:10:00Z".to_string()),
+        },
+    )
+    .expect("seed attached control state");
+
     with_path_prefix(&bin_dir, || {
         unsafe {
             env::set_var(
@@ -1657,12 +1688,24 @@ fn refuses_continue_for_busy_session() {
             controller: "codex".to_string(),
             available: true,
             attached: true,
+            paused: false,
             last_command: Some("osm attach codex-busy-1".to_string()),
             last_prompt: None,
             last_response: Some("Session attached for follow-up prompts.".to_string()),
             last_error: None,
             last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
             last_continued_at: None,
+            paused_at: None,
+            process_state: Some("busy".to_string()),
+            process_id: None,
+            exit_code: None,
+            started_at: Some("2026-03-15T05:00:00Z".to_string()),
+            runtime_seconds: Some(900),
+            event_count: 1,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
         },
     )
     .expect("seed busy state");
@@ -1738,12 +1781,24 @@ fn throttles_continue_for_recent_prompt() {
             controller: "codex".to_string(),
             available: true,
             attached: true,
+            paused: false,
             last_command: Some("codex exec resume codex-throttle-1 Continue once".to_string()),
             last_prompt: Some("Continue once".to_string()),
             last_response: Some("READY from fake codex".to_string()),
             last_error: None,
             last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
             last_continued_at: Some(chrono::Utc::now().to_rfc3339()),
+            paused_at: None,
+            process_state: Some("waiting".to_string()),
+            process_id: None,
+            exit_code: None,
+            started_at: Some("2026-03-15T05:00:00Z".to_string()),
+            runtime_seconds: Some(900),
+            event_count: 2,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
         },
     )
     .expect("seed throttled state");
@@ -1775,6 +1830,289 @@ fn throttles_continue_for_recent_prompt() {
             other => panic!("unexpected error: {other}"),
         }
     });
+}
+
+#[test]
+fn pauses_and_resumes_supported_session() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-pause-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "pause123".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        attach_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("attach session");
+
+        let paused = pause_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("pause session");
+        assert!(paused.response.contains("paused"));
+
+        let resumed = resume_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("resume session");
+        assert!(resumed.response.contains("READY"));
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+    });
+
+    let (paused, paused_at, process_state): (i64, Option<String>, Option<String>) = connection
+        .query_row(
+            "SELECT paused, paused_at, process_state
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .expect("control state should persist pause lifecycle");
+
+    assert_eq!(paused, 0);
+    assert!(paused_at.is_none());
+    assert_eq!(process_state.as_deref(), Some("waiting"));
+    assert!(query_event_types(&connection).contains(&"session_pause".to_string()));
+    assert!(query_event_types(&connection).contains(&"session_resume".to_string()));
+}
+
+#[test]
+fn refuses_continue_for_paused_session() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-paused-continue-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "paused456".to_string(),
+    };
+
+    upsert_session_control_state(
+        &connection,
+        &SessionControlStateRow {
+            session_id: session.session_id.clone(),
+            assistant: "codex".to_string(),
+            controller: "codex".to_string(),
+            available: true,
+            attached: true,
+            paused: true,
+            last_command: Some("osm pause codex-paused-continue-1".to_string()),
+            last_prompt: None,
+            last_response: Some("Session paused for manual review.".to_string()),
+            last_error: None,
+            last_resumed_at: Some("2026-03-15T05:10:00Z".to_string()),
+            last_continued_at: None,
+            paused_at: Some("2026-03-15T05:12:00Z".to_string()),
+            process_state: Some("paused".to_string()),
+            process_id: Some(4300),
+            exit_code: None,
+            started_at: Some("2026-03-15T05:00:00Z".to_string()),
+            runtime_seconds: Some(720),
+            event_count: 3,
+            input_tokens: 10,
+            output_tokens: 20,
+            total_tokens: 30,
+            last_activity_at: Some("2026-03-15T05:12:00Z".to_string()),
+        },
+    )
+    .expect("seed paused state");
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        let error = continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue after pause"),
+        })
+        .expect_err("paused session should reject continue");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+
+        match error {
+            ActionError::Precondition(message) => {
+                assert!(message.contains("paused"));
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    });
+}
+
+#[test]
+fn updates_process_metadata_during_session_control() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox.join("sessions").join("codex-session.jsonl");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(&source_path, "{\"type\":\"response_item\"}\n").expect("write source session");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "codex-process-state-1".to_string(),
+        installation_id: None,
+        assistant: "codex".to_string(),
+        environment: "windows".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T05:00:00Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T05:15:00Z".to_string()),
+        message_count: 10,
+        tool_count: 4,
+        status: "running".to_string(),
+        raw_format: "codex-jsonl".to_string(),
+        content_hash: "process789".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+                fake_command_path(&bin_dir, "codex"),
+            );
+        }
+
+        resume_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("resume session");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        }
+    });
+
+    let (
+        process_state,
+        process_id,
+        exit_code,
+        started_at,
+        runtime_seconds,
+        event_count,
+        last_activity_at,
+    ): (
+        Option<String>,
+        Option<i64>,
+        Option<i64>,
+        Option<String>,
+        Option<i64>,
+        i64,
+        Option<String>,
+    ) = connection
+        .query_row(
+            "SELECT process_state, process_id, exit_code, started_at, runtime_seconds, event_count, last_activity_at
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            },
+        )
+        .expect("control metadata should persist");
+
+    assert_eq!(process_state.as_deref(), Some("waiting"));
+    assert!(process_id.is_some());
+    assert_eq!(exit_code, Some(0));
+    assert_eq!(started_at.as_deref(), Some("2026-03-15T05:00:00Z"));
+    assert!(runtime_seconds.is_some_and(|value| value >= 0));
+    assert_eq!(event_count, 1);
+    assert!(last_activity_at.is_some());
 }
 
 #[test]

@@ -72,7 +72,23 @@ export function ActiveSessionCockpit({
                   </div>
                   <div>
                     <dt>{copy.overview.cockpit.fields.lastSeen}</dt>
-                    <dd>{lastTimestamp}</dd>
+                    <dd>{control.lastActivityAt ?? lastTimestamp}</dd>
+                  </div>
+                  <div>
+                    <dt>{copy.overview.cockpit.fields.processId}</dt>
+                    <dd>
+                      {typeof control.processId === "number"
+                        ? control.processId
+                        : copy.data.unknownValue}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{copy.overview.cockpit.fields.runtimeSeconds}</dt>
+                    <dd>
+                      {typeof control.runtimeSeconds === "number"
+                        ? control.runtimeSeconds
+                        : copy.data.unknownValue}
+                    </dd>
                   </div>
                 </dl>
                 <div className="cockpit-copy-stack">
@@ -85,9 +101,23 @@ export function ActiveSessionCockpit({
                     <p>
                       <strong>{copy.overview.cockpit.fields.lastError}</strong>
                       {": "}
-                      {control.lastError}
-                    </p>
-                  ) : null}
+                    {control.lastError}
+                  </p>
+                ) : null}
+                  <p>
+                    <strong>{copy.overview.cockpit.fields.eventCount}</strong>
+                    {": "}
+                    {typeof control.eventCount === "number"
+                      ? control.eventCount
+                      : copy.data.unknownValue}
+                  </p>
+                  <p>
+                    <strong>{copy.overview.cockpit.fields.totalTokens}</strong>
+                    {": "}
+                    {typeof control.totalTokens === "number"
+                      ? control.totalTokens
+                      : copy.data.unknownValue}
+                  </p>
                 </div>
               </article>
             );
@@ -102,6 +132,7 @@ function translateCockpitStatus(
   statuses: {
     attached: string;
     ready: string;
+    paused: string;
     busy: string;
     waiting: string;
     idle: string;
@@ -110,6 +141,10 @@ function translateCockpitStatus(
   },
   control: NonNullable<SessionDetailRecord["sessionControl"]>
 ) {
+  if (control.runtimeState === "paused") {
+    return statuses.paused;
+  }
+
   if (control.runtimeState === "busy") {
     return statuses.busy;
   }

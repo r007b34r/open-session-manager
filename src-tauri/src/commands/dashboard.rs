@@ -44,10 +44,10 @@ use crate::{
     preferences::RuntimeSnapshot,
     session_text::normalize_session_text,
     storage::sqlite::{
-        SessionIndexCacheRow, SessionIndexRunRecord, delete_session_index_cache_rows,
-        insert_session_index_run, list_session_index_cache_paths, load_audit_events,
-        load_session_control_state, load_session_index_cache_row, open_database,
-        upsert_session_index_cache_row,
+        SessionControlStateRow, SessionIndexCacheRow, SessionIndexRunRecord,
+        delete_session_index_cache_rows, insert_session_index_run,
+        list_session_index_cache_paths, load_audit_events, load_session_control_state,
+        load_session_index_cache_row, open_database, upsert_session_index_cache_row,
     },
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
     usage::{
@@ -169,6 +169,7 @@ pub struct SessionControlRecord {
     pub controller: String,
     pub command: String,
     pub attached: bool,
+    pub paused: bool,
     pub runtime_state: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_command: Option<String>,
@@ -182,6 +183,22 @@ pub struct SessionControlRecord {
     pub last_resumed_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_continued_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_state: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_seconds: Option<i64>,
+    pub event_count: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub total_tokens: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_activity_at: Option<String>,
 }
 
 #[derive(Debug)]
@@ -1189,13 +1206,7 @@ fn build_session_control_record(
     let persisted = connection
         .and_then(|db| load_session_control_state(db, &session.session_id).ok())
         .flatten();
-    let runtime_state = derive_session_control_runtime_state(
-        session,
-        available,
-        persisted.as_ref().is_some_and(|state| state.attached),
-        persisted.as_ref().and_then(|state| state.last_response.as_deref()),
-        persisted.as_ref().and_then(|state| state.last_error.as_deref()),
-    );
+    let runtime_state = derive_session_control_runtime_state(session, available, persisted.as_ref());
 
     SessionControlRecord {
         supported,
@@ -1203,6 +1214,7 @@ fn build_session_control_record(
         controller,
         command,
         attached: persisted.as_ref().is_some_and(|state| state.attached),
+        paused: persisted.as_ref().is_some_and(|state| state.paused),
         runtime_state: runtime_state.to_string(),
         last_command: persisted
             .as_ref()
@@ -1222,21 +1234,52 @@ fn build_session_control_record(
         last_continued_at: persisted
             .as_ref()
             .and_then(|state| state.last_continued_at.clone()),
+        process_state: persisted
+            .as_ref()
+            .and_then(|state| state.process_state.clone()),
+        process_id: persisted.as_ref().and_then(|state| state.process_id),
+        exit_code: persisted.as_ref().and_then(|state| state.exit_code),
+        started_at: persisted.as_ref().and_then(|state| state.started_at.clone()),
+        runtime_seconds: persisted.as_ref().and_then(|state| state.runtime_seconds),
+        event_count: persisted.as_ref().map_or(0, |state| state.event_count),
+        input_tokens: persisted.as_ref().map_or(0, |state| state.input_tokens),
+        output_tokens: persisted.as_ref().map_or(0, |state| state.output_tokens),
+        total_tokens: persisted.as_ref().map_or(0, |state| state.total_tokens),
+        last_activity_at: persisted
+            .as_ref()
+            .and_then(|state| state.last_activity_at.clone()),
     }
 }
 
 fn derive_session_control_runtime_state(
     session: &SessionRecord,
     available: bool,
-    attached: bool,
-    last_response: Option<&str>,
-    last_error: Option<&str>,
+    persisted: Option<&SessionControlStateRow>,
 ) -> &'static str {
     if !available {
         return "unavailable";
     }
 
+    let attached = persisted.is_some_and(|state| state.attached);
+    if persisted.is_some_and(|state| state.paused) {
+        return "paused";
+    }
+
     if !attached {
+        return "detached";
+    }
+
+    if persisted
+        .and_then(|state| state.process_state.as_deref())
+        .is_some_and(|state: &str| state.eq_ignore_ascii_case("paused"))
+    {
+        return "paused";
+    }
+
+    if persisted
+        .and_then(|state| state.process_state.as_deref())
+        .is_some_and(|state: &str| state.eq_ignore_ascii_case("detached"))
+    {
         return "detached";
     }
 
@@ -1244,7 +1287,25 @@ fn derive_session_control_runtime_state(
         return "idle";
     }
 
-    if last_error.is_some() || last_response.is_some_and(looks_like_ready_response) {
+    if persisted
+        .and_then(|state| state.process_state.as_deref())
+        .is_some_and(|state: &str| state.eq_ignore_ascii_case("idle"))
+    {
+        return "idle";
+    }
+
+    if persisted
+        .and_then(|state| state.process_state.as_deref())
+        .is_some_and(|state: &str| state.eq_ignore_ascii_case("waiting"))
+    {
+        return "waiting";
+    }
+
+    if persisted.and_then(|state| state.last_error.as_deref()).is_some()
+        || persisted
+            .and_then(|state| state.last_response.as_deref())
+            .is_some_and(looks_like_ready_response)
+    {
         return "waiting";
     }
 
@@ -2979,12 +3040,24 @@ mod tests {
                 controller: "codex".to_string(),
                 available: true,
                 attached: false,
+                paused: false,
                 last_command: None,
                 last_prompt: None,
                 last_response: None,
                 last_error: None,
                 last_resumed_at: None,
                 last_continued_at: None,
+                paused_at: None,
+                process_state: None,
+                process_id: None,
+                exit_code: None,
+                started_at: None,
+                runtime_seconds: None,
+                event_count: 0,
+                input_tokens: 0,
+                output_tokens: 0,
+                total_tokens: 0,
+                last_activity_at: None,
             },
             SessionControlStateRow {
                 session_id: busy_session.session_id.clone(),
@@ -2992,12 +3065,24 @@ mod tests {
                 controller: "codex".to_string(),
                 available: true,
                 attached: true,
+                paused: false,
                 last_command: Some("codex exec resume codex-busy-state".to_string()),
                 last_prompt: Some("Continue working".to_string()),
                 last_response: Some("Working on the requested changes".to_string()),
                 last_error: None,
                 last_resumed_at: Some("2026-03-23T03:00:00Z".to_string()),
                 last_continued_at: None,
+                paused_at: None,
+                process_state: Some("busy".to_string()),
+                process_id: Some(4100),
+                exit_code: None,
+                started_at: Some("2026-03-23T02:55:00Z".to_string()),
+                runtime_seconds: Some(300),
+                event_count: 4,
+                input_tokens: 100,
+                output_tokens: 50,
+                total_tokens: 150,
+                last_activity_at: Some("2026-03-23T03:00:30Z".to_string()),
             },
             SessionControlStateRow {
                 session_id: waiting_session.session_id.clone(),
@@ -3005,12 +3090,24 @@ mod tests {
                 controller: "codex".to_string(),
                 available: true,
                 attached: true,
+                paused: false,
                 last_command: Some("codex exec resume codex-waiting-state".to_string()),
                 last_prompt: Some("Summarize status".to_string()),
                 last_response: Some("READY from fake codex".to_string()),
                 last_error: None,
                 last_resumed_at: Some("2026-03-23T03:01:00Z".to_string()),
                 last_continued_at: None,
+                paused_at: None,
+                process_state: Some("waiting".to_string()),
+                process_id: Some(4101),
+                exit_code: None,
+                started_at: Some("2026-03-23T02:58:00Z".to_string()),
+                runtime_seconds: Some(180),
+                event_count: 2,
+                input_tokens: 40,
+                output_tokens: 10,
+                total_tokens: 50,
+                last_activity_at: Some("2026-03-23T03:01:30Z".to_string()),
             },
             SessionControlStateRow {
                 session_id: idle_session.session_id.clone(),
@@ -3018,12 +3115,24 @@ mod tests {
                 controller: "codex".to_string(),
                 available: true,
                 attached: true,
+                paused: false,
                 last_command: Some("codex exec resume codex-idle-state".to_string()),
                 last_prompt: Some("Wrap up".to_string()),
                 last_response: Some("READY from fake codex".to_string()),
                 last_error: None,
                 last_resumed_at: Some("2026-03-23T03:02:00Z".to_string()),
                 last_continued_at: Some("2026-03-23T03:03:00Z".to_string()),
+                paused_at: None,
+                process_state: Some("idle".to_string()),
+                process_id: Some(4102),
+                exit_code: Some(0),
+                started_at: Some("2026-03-23T02:40:00Z".to_string()),
+                runtime_seconds: Some(1380),
+                event_count: 7,
+                input_tokens: 300,
+                output_tokens: 120,
+                total_tokens: 420,
+                last_activity_at: Some("2026-03-23T03:03:00Z".to_string()),
             },
         ] {
             upsert_session_control_state(&connection, &state).expect("seed control state");
@@ -3056,6 +3165,101 @@ mod tests {
             Some("waiting")
         );
         assert_eq!(idle.get("runtimeState").and_then(Value::as_str), Some("idle"));
+
+        match original_command {
+            Some(value) => unsafe {
+                env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", value);
+            },
+            None => unsafe {
+                env::remove_var("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+            },
+        }
+    }
+
+    #[test]
+    fn builds_live_session_hud_fields() {
+        let sandbox = temp_root();
+        let project_root = sandbox.join("project");
+        let command_path = if cfg!(windows) {
+            sandbox.join("codex.cmd")
+        } else {
+            sandbox.join("codex")
+        };
+
+        fs::create_dir_all(&project_root).expect("create project root");
+        write_fake_command(&command_path);
+
+        let connection = Connection::open_in_memory().expect("open sqlite");
+        bootstrap_database(&connection).expect("bootstrap schema");
+
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock env guard");
+        let original_command = env::var_os("OPEN_SESSION_MANAGER_CODEX_COMMAND");
+        unsafe {
+            env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", &command_path);
+        }
+
+        let paused_session = build_control_session(
+            "codex-paused-hud",
+            project_root.display().to_string(),
+            "running",
+        );
+
+        upsert_session_control_state(
+            &connection,
+            &SessionControlStateRow {
+                session_id: paused_session.session_id.clone(),
+                assistant: "codex".to_string(),
+                controller: "codex".to_string(),
+                available: true,
+                attached: true,
+                paused: true,
+                last_command: Some("osm pause codex-paused-hud".to_string()),
+                last_prompt: None,
+                last_response: Some("Session paused for manual review.".to_string()),
+                last_error: None,
+                last_resumed_at: Some("2026-03-23T04:00:00Z".to_string()),
+                last_continued_at: None,
+                paused_at: Some("2026-03-23T04:05:00Z".to_string()),
+                process_state: Some("paused".to_string()),
+                process_id: Some(4321),
+                exit_code: Some(0),
+                started_at: Some("2026-03-23T03:45:00Z".to_string()),
+                runtime_seconds: Some(1200),
+                event_count: 7,
+                input_tokens: 120,
+                output_tokens: 34,
+                total_tokens: 154,
+                last_activity_at: Some("2026-03-23T04:05:30Z".to_string()),
+            },
+        )
+        .expect("seed paused control state");
+
+        let control = serde_json::to_value(build_session_control_record(
+            &paused_session,
+            Some(&connection),
+        ))
+        .expect("serialize paused control");
+
+        assert_eq!(control.get("runtimeState").and_then(Value::as_str), Some("paused"));
+        assert_eq!(control.get("processState").and_then(Value::as_str), Some("paused"));
+        assert_eq!(control.get("processId").and_then(Value::as_i64), Some(4321));
+        assert_eq!(control.get("exitCode").and_then(Value::as_i64), Some(0));
+        assert_eq!(
+            control.get("startedAt").and_then(Value::as_str),
+            Some("2026-03-23T03:45:00Z")
+        );
+        assert_eq!(control.get("runtimeSeconds").and_then(Value::as_i64), Some(1200));
+        assert_eq!(control.get("eventCount").and_then(Value::as_i64), Some(7));
+        assert_eq!(control.get("inputTokens").and_then(Value::as_i64), Some(120));
+        assert_eq!(control.get("outputTokens").and_then(Value::as_i64), Some(34));
+        assert_eq!(control.get("totalTokens").and_then(Value::as_i64), Some(154));
+        assert_eq!(
+            control.get("lastActivityAt").and_then(Value::as_str),
+            Some("2026-03-23T04:05:30Z")
+        );
 
         match original_command {
             Some(value) => unsafe {

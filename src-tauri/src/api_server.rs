@@ -5,17 +5,25 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode, header::AUTHORIZATION},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
+    actions::ActionError,
     AppState,
     commands::{
+        actions::{
+            attach_existing_session as attach_existing_session_action,
+            continue_existing_session as continue_existing_session_action,
+            detach_existing_session as detach_existing_session_action,
+            pause_existing_session as pause_existing_session_action,
+            resume_existing_session as resume_existing_session_action,
+        },
         dashboard::{
             DashboardSnapshot, build_fixture_dashboard_snapshot_with_audit,
-            build_local_dashboard_snapshot_with_audit,
+            build_local_dashboard_snapshot_with_audit, build_local_indexed_sessions,
         },
         query::{
             ListSessionInventoryRequest, SearchSessionInventoryRequest, expand_session,
@@ -25,6 +33,7 @@ use crate::{
     discovery::DiscoveryContext,
     openapi::openapi_document,
     preferences::build_runtime_paths,
+    storage::sqlite::open_database,
 };
 
 #[derive(Debug, Clone)]
@@ -74,7 +83,11 @@ struct HealthResponse {
     version: &'static str,
 }
 
-use serde::Deserialize;
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ContinueSessionRequest {
+    prompt: String,
+}
 
 pub fn run(args: &[String]) -> Result<(), String> {
     let config = parse_config(args)?;
@@ -111,6 +124,26 @@ fn router(state: ApiState) -> Router {
         .route("/api/v1/sessions/{sessionId}", get(get_session_detail))
         .route("/api/v1/sessions/{sessionId}/view", get(view_session_detail))
         .route("/api/v1/sessions/{sessionId}/expand", get(expand_session_detail))
+        .route(
+            "/api/v1/sessions/{sessionId}/resume",
+            post(resume_session_control),
+        )
+        .route(
+            "/api/v1/sessions/{sessionId}/pause",
+            post(pause_session_control),
+        )
+        .route(
+            "/api/v1/sessions/{sessionId}/attach",
+            post(attach_session_control),
+        )
+        .route(
+            "/api/v1/sessions/{sessionId}/detach",
+            post(detach_session_control),
+        )
+        .route(
+            "/api/v1/sessions/{sessionId}/continue",
+            post(continue_session_control),
+        )
         .with_state(state)
 }
 
@@ -199,6 +232,74 @@ async fn expand_session_detail(
         .ok_or_else(|| ApiError::not_found(format!("session not found: {session_id}")))
 }
 
+async fn resume_session_control(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(execute_session_control_action(
+        &state,
+        &session_id,
+        |session, actor, connection| resume_existing_session_action(session, actor, connection),
+    )?))
+}
+
+async fn pause_session_control(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(execute_session_control_action(
+        &state,
+        &session_id,
+        |session, actor, connection| pause_existing_session_action(session, actor, connection),
+    )?))
+}
+
+async fn attach_session_control(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(execute_session_control_action(
+        &state,
+        &session_id,
+        |session, actor, connection| attach_existing_session_action(session, actor, connection),
+    )?))
+}
+
+async fn detach_session_control(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(execute_session_control_action(
+        &state,
+        &session_id,
+        |session, actor, connection| detach_existing_session_action(session, actor, connection),
+    )?))
+}
+
+async fn continue_session_control(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    Json(request): Json<ContinueSessionRequest>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&state, &headers)?;
+    Ok(Json(execute_session_control_action(
+        &state,
+        &session_id,
+        |session, actor, connection| {
+            continue_existing_session_action(session, &request.prompt, actor, connection)
+        },
+    )?))
+}
+
 fn load_snapshot_data(state: &ApiState) -> Result<DashboardSnapshot, ApiError> {
     if let Some(fixtures_path) = state.fixtures_path.as_ref() {
         let mut snapshot = build_fixture_dashboard_snapshot_with_audit(
@@ -235,11 +336,52 @@ fn build_discovery_context() -> DiscoveryContext {
     }
 }
 
+fn execute_session_control_action<F>(
+    state: &ApiState,
+    session_id: &str,
+    action: F,
+) -> Result<Value, ApiError>
+where
+    F: FnOnce(
+        &crate::domain::session::SessionRecord,
+        &str,
+        &rusqlite::Connection,
+    ) -> crate::actions::ActionResult<crate::actions::session_control::SessionControlResult>,
+{
+    if state.fixtures_path.is_some() {
+        return Err(ApiError::bad_request(
+            "session control API is unavailable while serving fixture snapshots".to_string(),
+        ));
+    }
+
+    let context = build_discovery_context();
+    let indexed = build_local_indexed_sessions(&context)
+        .map_err(ApiError::internal)?
+        .into_iter()
+        .find(|indexed| indexed.session.session_id == session_id)
+        .ok_or_else(|| ApiError::not_found(format!("session not found: {session_id}")))?;
+
+    let audit_db_path = control_audit_db_path(state)?;
+    let connection = open_database(&audit_db_path).map_err(ApiError::internal)?;
+    action(&indexed.session, &resolve_actor(), &connection).map_err(map_action_error)?;
+
+    let snapshot = build_local_dashboard_snapshot_with_audit(&context, Some(&audit_db_path))
+        .map_err(ApiError::internal)?;
+    get_session(&snapshot, session_id)
+        .ok_or_else(|| ApiError::not_found(format!("session not found: {session_id}")))
+}
+
 fn resolve_home_dir() -> PathBuf {
     env::var_os("HOME")
         .or_else(|| env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .unwrap_or_else(|| env::current_dir().expect("current dir resolves"))
+}
+
+fn resolve_actor() -> String {
+    env::var("USERNAME")
+        .or_else(|_| env::var("USER"))
+        .unwrap_or_else(|_| "api-server".to_string())
 }
 
 fn parse_config(args: &[String]) -> Result<ServeConfig, String> {
@@ -265,6 +407,15 @@ fn parse_config(args: &[String]) -> Result<ServeConfig, String> {
 fn parse_flag_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
     args.windows(2)
         .find_map(|window| (window[0] == flag).then_some(window[1].as_str()))
+}
+
+fn control_audit_db_path(state: &ApiState) -> Result<PathBuf, ApiError> {
+    let mut runtime_paths = build_runtime_paths().map_err(ApiError::internal)?;
+    if let Some(custom_audit_db_path) = state.audit_db_path.as_ref() {
+        runtime_paths.audit_db_path = custom_audit_db_path.clone();
+    }
+
+    Ok(runtime_paths.audit_db_path)
 }
 
 fn authorize(state: &ApiState, headers: &HeaderMap) -> Result<(), ApiError> {
@@ -307,6 +458,20 @@ impl ApiError {
             message: message.to_string(),
         }
     }
+
+    fn bad_request(message: impl ToString) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            message: message.to_string(),
+        }
+    }
+
+    fn conflict(message: impl ToString) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.to_string(),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {
@@ -318,5 +483,13 @@ impl IntoResponse for ApiError {
             })),
         )
             .into_response()
+    }
+}
+
+fn map_action_error(error: ActionError) -> ApiError {
+    match error {
+        ActionError::Precondition(message) => ApiError::conflict(message),
+        ActionError::Execution(message) => ApiError::conflict(message),
+        other => ApiError::internal(other),
     }
 }

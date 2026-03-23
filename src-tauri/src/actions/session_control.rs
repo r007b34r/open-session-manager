@@ -1,7 +1,8 @@
 use std::{
     env, fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
+    time::Instant,
 };
 
 use chrono::{DateTime, Utc};
@@ -24,6 +25,7 @@ const DEFAULT_RESUME_PROMPT: &str =
     "Resume this session and reply with a one-line status summary ending with READY.";
 const ATTACH_RESPONSE: &str = "Session attached for follow-up prompts.";
 const DETACH_RESPONSE: &str = "Session detached from follow-up prompts.";
+const PAUSE_RESPONSE: &str = "Session paused for manual review.";
 const CONTINUE_COOLDOWN_SECONDS: i64 = 10;
 
 pub struct SessionControlRequest<'a> {
@@ -51,6 +53,13 @@ struct ResolvedController {
     working_dir: PathBuf,
 }
 
+#[derive(Debug)]
+struct PreparedCommandResult {
+    response: String,
+    process_id: Option<i64>,
+    exit_code: Option<i64>,
+}
+
 pub fn resume_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
     execute_session_control(
         request,
@@ -76,6 +85,10 @@ pub fn attach_session(request: &SessionControlRequest<'_>) -> ActionResult<Sessi
 
 pub fn detach_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
     update_session_attachment(request, false, "session_detach", DETACH_RESPONSE)
+}
+
+pub fn pause_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
+    update_session_pause(request, "session_pause", PAUSE_RESPONSE)
 }
 
 fn execute_session_control(
@@ -115,7 +128,8 @@ fn execute_session_control(
             )));
         }
     }?;
-    let response = prepared.execute()?;
+    let execution = prepared.execute()?;
+    let response = execution.response;
     let now = Utc::now().to_rfc3339();
     let rendered_command = prepared.render();
 
@@ -123,10 +137,24 @@ fn execute_session_control(
     state.controller = controller.controller.to_string();
     state.available = true;
     state.attached = true;
+    state.paused = false;
     state.last_command = Some(rendered_command.clone());
     state.last_prompt = Some(prompt.to_string());
     state.last_response = Some(response.clone());
     state.last_error = None;
+    state.paused_at = None;
+    state.process_state = Some(derive_process_state(
+        request.session,
+        true,
+        false,
+        Some(response.as_str()),
+    ));
+    state.process_id = execution.process_id;
+    state.exit_code = execution.exit_code;
+    state.started_at = session_started_at(request.session, &state);
+    state.runtime_seconds = session_runtime_seconds(request.session);
+    state.event_count += 1;
+    state.last_activity_at = Some(now.clone());
     if operation == "resume" {
         state.last_resumed_at = Some(now.clone());
     } else {
@@ -162,6 +190,8 @@ fn execute_session_control(
                     "command": rendered_command,
                     "prompt": prompt,
                     "response": response,
+                    "paused": false,
+                    "processState": state.process_state,
                 })
                 .to_string(),
             ),
@@ -203,9 +233,18 @@ fn update_session_attachment(
     state.controller = controller.controller.to_string();
     state.available = true;
     state.attached = attached;
+    state.paused = false;
     state.last_command = Some(rendered_command.clone());
     state.last_response = Some(response.to_string());
     state.last_error = None;
+    state.paused_at = None;
+    state.process_state = Some(derive_process_state(request.session, attached, false, None));
+    state.process_id = None;
+    state.exit_code = None;
+    state.started_at = session_started_at(request.session, &state);
+    state.runtime_seconds = session_runtime_seconds(request.session);
+    state.event_count += 1;
+    state.last_activity_at = Some(now.clone());
     if attached {
         state.last_resumed_at = Some(now.clone());
     }
@@ -239,6 +278,8 @@ fn update_session_attachment(
                     "command": rendered_command,
                     "response": response,
                     "attached": attached,
+                    "paused": false,
+                    "processState": state.process_state,
                 })
                 .to_string(),
             ),
@@ -253,6 +294,89 @@ fn update_session_attachment(
         prompt: String::new(),
         response: response.to_string(),
         attached,
+    })
+}
+
+fn update_session_pause(
+    request: &SessionControlRequest<'_>,
+    audit_event_type: &str,
+    response: &str,
+) -> ActionResult<SessionControlResult> {
+    let controller = resolve_controller(request.session)?;
+    if !command_is_available(&controller.command) {
+        return Err(ActionError::Execution(format!(
+            "assistant command is not available on PATH: {}",
+            controller.command
+        )));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let rendered_command = format!("osm pause {}", request.session.session_id);
+    let mut state = load_session_control_state(request.connection, &request.session.session_id)?
+        .unwrap_or_else(|| default_session_control_state(request.session, controller.controller));
+
+    state.assistant = request.session.assistant.clone();
+    state.controller = controller.controller.to_string();
+    state.available = true;
+    state.attached = true;
+    state.paused = true;
+    state.last_command = Some(rendered_command.clone());
+    state.last_response = Some(response.to_string());
+    state.last_error = None;
+    state.paused_at = Some(now.clone());
+    state.process_state = Some(derive_process_state(request.session, true, true, None));
+    state.process_id = None;
+    state.exit_code = None;
+    state.started_at = session_started_at(request.session, &state);
+    state.runtime_seconds = session_runtime_seconds(request.session);
+    state.event_count += 1;
+    state.last_activity_at = Some(now.clone());
+
+    upsert_session_control_state(request.connection, &state)?;
+    insert_session_control_event(
+        request.connection,
+        &SessionControlEventRow {
+            event_id: session_control_event_id(&request.session.session_id, "pause", &now),
+            session_id: request.session.session_id.clone(),
+            operation: "pause".to_string(),
+            created_at: now.clone(),
+            prompt: None,
+            response: Some(response.to_string()),
+            result: "success".to_string(),
+            error_message: None,
+            command: Some(rendered_command.clone()),
+        },
+    )?;
+    write_audit_event(
+        request.connection,
+        AuditWriteRequest {
+            event_type: audit_event_type,
+            target_type: "session",
+            target_id: &request.session.session_id,
+            actor: request.actor,
+            before_state: None,
+            after_state: Some(
+                json!({
+                    "controller": controller.controller,
+                    "command": rendered_command,
+                    "response": response,
+                    "attached": true,
+                    "paused": true,
+                    "processState": state.process_state,
+                })
+                .to_string(),
+            ),
+            result: "success",
+        },
+    )?;
+
+    Ok(SessionControlResult {
+        session_id: request.session.session_id.clone(),
+        controller: controller.controller.to_string(),
+        command: controller.command,
+        prompt: String::new(),
+        response: response.to_string(),
+        attached: true,
     })
 }
 
@@ -288,12 +412,24 @@ fn default_session_control_state(
         controller: controller.to_string(),
         available: true,
         attached: false,
+        paused: false,
         last_command: None,
         last_prompt: None,
         last_response: None,
         last_error: None,
         last_resumed_at: None,
         last_continued_at: None,
+        paused_at: None,
+        process_state: None,
+        process_id: None,
+        exit_code: None,
+        started_at: None,
+        runtime_seconds: None,
+        event_count: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+        last_activity_at: None,
     }
 }
 
@@ -301,6 +437,13 @@ fn ensure_session_is_ready_for_continue(
     session: &SessionRecord,
     state: &SessionControlStateRow,
 ) -> ActionResult<()> {
+    if state.paused {
+        return Err(ActionError::Precondition(
+            "continue is blocked while the session is paused; resume it before sending another prompt"
+                .to_string(),
+        ));
+    }
+
     if session_is_busy_for_continue(session, state) {
         return Err(ActionError::Precondition(
             "continue is blocked while the session is busy; wait for READY or idle before sending another prompt"
@@ -453,12 +596,22 @@ struct PreparedCommand {
 }
 
 impl PreparedCommand {
-    fn execute(&self) -> ActionResult<String> {
-        let output = Command::new(&self.command)
+    fn execute(&self) -> ActionResult<PreparedCommandResult> {
+        let started = Instant::now();
+        let child = Command::new(&self.command)
             .args(&self.args)
             .current_dir(&self.working_dir)
-            .output()
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
             .map_err(|error| ActionError::Execution(error.to_string()))?;
+        let process_id = Some(i64::from(child.id()));
+        let output = child
+            .wait_with_output()
+            .map_err(|error| ActionError::Execution(error.to_string()))?;
+        let exit_code = output.status.code().map(i64::from);
+        let _duration_seconds = started.elapsed().as_secs().min(i64::MAX as u64) as i64;
 
         if !output.status.success() {
             return Err(ActionError::Execution(
@@ -469,16 +622,24 @@ impl PreparedCommand {
         if let Some(path) = &self.output_file {
             let content = fs::read_to_string(path)?;
             if !content.trim().is_empty() {
-                return Ok(content.trim().to_string());
+                return Ok(PreparedCommandResult {
+                    response: content.trim().to_string(),
+                    process_id,
+                    exit_code,
+                });
             }
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if stdout.is_empty() {
-            Ok("OK".to_string())
-        } else {
-            Ok(stdout)
-        }
+        Ok(PreparedCommandResult {
+            response: if stdout.is_empty() {
+                "OK".to_string()
+            } else {
+                stdout
+            },
+            process_id,
+            exit_code,
+        })
     }
 
     fn render(&self) -> String {
@@ -539,4 +700,50 @@ fn session_control_event_id(session_id: &str, operation: &str, created_at: &str)
     let payload = format!("{session_id}:{operation}:{created_at}");
     let digest = Sha256::digest(payload.as_bytes());
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn session_started_at(
+    session: &SessionRecord,
+    state: &SessionControlStateRow,
+) -> Option<String> {
+    session
+        .started_at
+        .clone()
+        .or_else(|| state.started_at.clone())
+        .or_else(|| state.last_activity_at.clone())
+}
+
+fn session_runtime_seconds(session: &SessionRecord) -> Option<i64> {
+    let started_at = session.started_at.as_deref()?;
+    let started_at = parse_control_timestamp(started_at)?;
+    let seconds = Utc::now()
+        .signed_duration_since(started_at)
+        .num_seconds()
+        .max(0);
+    Some(seconds)
+}
+
+fn derive_process_state(
+    session: &SessionRecord,
+    attached: bool,
+    paused: bool,
+    response: Option<&str>,
+) -> String {
+    if !attached {
+        return "detached".to_string();
+    }
+
+    if paused {
+        return "paused".to_string();
+    }
+
+    if session.ended_at.is_some() || matches_terminal_status(&session.status) {
+        return "idle".to_string();
+    }
+
+    if response.is_some_and(looks_like_ready_response) {
+        return "waiting".to_string();
+    }
+
+    "busy".to_string()
 }

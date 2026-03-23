@@ -16,7 +16,7 @@ use crate::{
         restore::restore_session,
         session_control::{
             SessionControlRequest, SessionControlResult, attach_session, continue_session,
-            detach_session, resume_session,
+            detach_session, pause_session, resume_session,
         },
     },
     audit::config_audit::ConfigAuditTarget,
@@ -109,6 +109,19 @@ pub fn continue_existing_session(
         actor,
         connection,
         prompt: Some(prompt),
+    })
+}
+
+pub fn pause_existing_session(
+    session: &SessionRecord,
+    actor: &str,
+    connection: &Connection,
+) -> crate::actions::ActionResult<SessionControlResult> {
+    pause_session(&SessionControlRequest {
+        session,
+        actor,
+        connection,
+        prompt: None,
     })
 }
 

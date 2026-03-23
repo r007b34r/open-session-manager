@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import { I18nProvider } from "../lib/i18n";
@@ -140,6 +140,63 @@ describe("ActiveSessionCockpit", () => {
     expect(screen.getByText(/^busy$/i)).toBeInTheDocument();
     expect(screen.getByText(/^waiting$/i)).toBeInTheDocument();
     expect(screen.getByText(/^idle$/i)).toBeInTheDocument();
+  });
+
+  it("shows paused live HUD details", async () => {
+    const { ActiveSessionCockpit } = await import("./active-session-cockpit");
+
+    renderWithI18n(
+      <ActiveSessionCockpit
+        isRefreshing={false}
+        onRefresh={vi.fn()}
+        sessions={[
+          buildSession({
+            sessionId: "ses-paused",
+            title: "Paused Codex rollout",
+            sessionControl: {
+              supported: true,
+              available: true,
+              controller: "codex",
+              command: "codex",
+              attached: true,
+              runtimeState: "paused",
+              processState: "paused",
+              processId: 4321,
+              runtimeSeconds: 1200,
+              eventCount: 7,
+              totalTokens: 154
+            } as any
+          })
+        ]}
+      />
+    );
+
+    const pausedCard = screen.getByText(/paused codex rollout/i).closest("article");
+
+    expect(pausedCard).not.toBeNull();
+    expect(within(pausedCard as HTMLElement).getByText(/^paused$/i)).toBeInTheDocument();
+
+    const processIdRow = within(pausedCard as HTMLElement)
+      .getByText(/^process id$/i)
+      .closest("div");
+    const runtimeRow = within(pausedCard as HTMLElement)
+      .getByText(/^runtime \(sec\)$/i)
+      .closest("div");
+    const eventsLine = within(pausedCard as HTMLElement)
+      .getByText(/^events$/i)
+      .closest("p");
+    const tokensLine = within(pausedCard as HTMLElement)
+      .getByText(/^tokens$/i)
+      .closest("p");
+
+    expect(processIdRow).not.toBeNull();
+    expect(runtimeRow).not.toBeNull();
+    expect(eventsLine).not.toBeNull();
+    expect(tokensLine).not.toBeNull();
+    expect(processIdRow).toHaveTextContent(/^Process ID\s*4321$/i);
+    expect(runtimeRow).toHaveTextContent(/^Runtime \(sec\)\s*1200$/i);
+    expect(eventsLine).toHaveTextContent(/^Events:\s*7$/i);
+    expect(tokensLine).toHaveTextContent(/^Tokens:\s*154$/i);
   });
 });
 

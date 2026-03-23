@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
@@ -168,6 +168,65 @@ describe("SessionDetail", () => {
       </I18nProvider>
     );
     expect(screen.getByText(/control status: idle/i)).toBeInTheDocument();
+  });
+
+  it("展示 paused 运行态和 live HUD 字段", () => {
+    renderWithI18n(
+      <SessionDetail
+        session={buildSessionDetailRecord({
+          sessionControl: {
+            supported: true,
+            available: true,
+            controller: "codex",
+            command: "codex",
+            attached: true,
+            runtimeState: "paused",
+            processState: "paused",
+            processId: 4321,
+            exitCode: 0,
+            startedAt: "2026-03-23T03:45:00Z",
+            runtimeSeconds: 1200,
+            eventCount: 7,
+            inputTokens: 120,
+            outputTokens: 34,
+            totalTokens: 154,
+            lastActivityAt: "2026-03-23T04:05:30Z"
+          } as any
+        })}
+      />
+    );
+
+    const controlSection = screen
+      .getByRole("heading", { name: /session control/i })
+      .closest("section");
+
+    expect(controlSection).not.toBeNull();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^control status:\s*paused$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^process state:\s*paused$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^process id:\s*4,321$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^exit code:\s*0$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^runtime \(sec\):\s*1,200$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^control events:\s*7$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(/^control tokens:\s*154$/i)
+    ).toBeInTheDocument();
+    expect(
+      within(controlSection as HTMLElement).getByText(
+        /^last control activity:\s*2026-03-23T04:05:30Z$/i
+      )
+    ).toBeInTheDocument();
   });
 
   it("busy 会话会禁用继续按钮并提示等待当前运行完成", async () => {

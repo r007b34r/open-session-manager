@@ -23,6 +23,7 @@ export type CostSource = "reported" | "estimated" | "mixed" | "unknown";
 
 export type SessionRuntimeState =
   | "busy"
+  | "paused"
   | "waiting"
   | "idle"
   | "detached"
@@ -32,6 +33,7 @@ export type SessionContinueGuard =
   | "ok"
   | "detached"
   | "unavailable"
+  | "paused"
   | "busy"
   | "throttled";
 
@@ -53,6 +55,7 @@ export type SessionControlRecord = {
   controller: string;
   command: string;
   attached: boolean;
+  paused?: boolean;
   runtimeState?: SessionRuntimeState;
   lastCommand?: string;
   lastPrompt?: string;
@@ -60,6 +63,16 @@ export type SessionControlRecord = {
   lastError?: string;
   lastResumedAt?: string;
   lastContinuedAt?: string;
+  processState?: string;
+  processId?: number;
+  exitCode?: number;
+  startedAt?: string;
+  runtimeSeconds?: number;
+  eventCount?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  lastActivityAt?: string;
 };
 
 export type SessionDetailRecord = SessionListItem & {
@@ -1039,10 +1052,14 @@ export function recordSessionResume(
       sessionControl: {
         ...resolveSessionControlState(session),
         attached: true,
+        paused: false,
         available: true,
         runtimeState: "waiting",
+        processState: "waiting",
         lastResponse: "READY from demo resume",
         lastResumedAt: new Date().toISOString(),
+        lastActivityAt: new Date().toISOString(),
+        eventCount: (resolveSessionControlState(session).eventCount ?? 0) + 1,
       },
     };
   });
@@ -1080,11 +1097,15 @@ export function recordSessionContinue(
       sessionControl: {
         ...resolveSessionControlState(session),
         attached: true,
+        paused: false,
         available: true,
         runtimeState: "waiting",
+        processState: "waiting",
         lastPrompt: input.prompt,
         lastResponse: `READY from demo continue: ${input.prompt}`,
         lastContinuedAt: new Date().toISOString(),
+        lastActivityAt: new Date().toISOString(),
+        eventCount: (resolveSessionControlState(session).eventCount ?? 0) + 1,
       },
     };
   });
@@ -1120,6 +1141,10 @@ export function getSessionContinueGuard(
     return "busy";
   }
 
+  if (control.runtimeState === "paused") {
+    return "paused";
+  }
+
   if (isContinueCooldownActive(control.lastContinuedAt, now)) {
     return "throttled";
   }
@@ -1141,9 +1166,13 @@ export function recordSessionAttach(
       sessionControl: {
         ...resolveSessionControlState(session),
         attached: true,
+        paused: false,
         available: true,
         runtimeState: "busy",
+        processState: "busy",
         lastResponse: "Session attached for follow-up prompts.",
+        lastActivityAt: new Date().toISOString(),
+        eventCount: (resolveSessionControlState(session).eventCount ?? 0) + 1,
       },
     };
   });
@@ -1176,8 +1205,12 @@ export function recordSessionDetach(
       sessionControl: {
         ...resolveSessionControlState(session),
         attached: false,
+        paused: false,
         runtimeState: "detached",
+        processState: "detached",
         lastResponse: "Session detached from follow-up prompts.",
+        lastActivityAt: new Date().toISOString(),
+        eventCount: (resolveSessionControlState(session).eventCount ?? 0) + 1,
       },
     };
   });
@@ -1628,9 +1661,12 @@ function normalizeSessionDetailRecord(
 function normalizeSessionControlRecord(
   control: SessionControlRecord,
 ): SessionControlRecord {
+  const runtimeState = normalizeSessionRuntimeState(control.runtimeState, control);
   return {
     ...control,
-    runtimeState: normalizeSessionRuntimeState(control.runtimeState, control),
+    paused:
+      typeof control.paused === "boolean" ? control.paused : runtimeState === "paused",
+    runtimeState,
     lastCommand:
       typeof control.lastCommand === "string" ? control.lastCommand : undefined,
     lastPrompt:
@@ -1648,6 +1684,21 @@ function normalizeSessionControlRecord(
     lastContinuedAt:
       typeof control.lastContinuedAt === "string"
         ? control.lastContinuedAt
+        : undefined,
+    processState:
+      typeof control.processState === "string" ? control.processState : undefined,
+    processId: normalizeOptionalNumber(control.processId),
+    exitCode: normalizeOptionalNumber(control.exitCode),
+    startedAt:
+      typeof control.startedAt === "string" ? control.startedAt : undefined,
+    runtimeSeconds: normalizeOptionalNumber(control.runtimeSeconds),
+    eventCount: normalizeOptionalNumber(control.eventCount),
+    inputTokens: normalizeOptionalNumber(control.inputTokens),
+    outputTokens: normalizeOptionalNumber(control.outputTokens),
+    totalTokens: normalizeOptionalNumber(control.totalTokens),
+    lastActivityAt:
+      typeof control.lastActivityAt === "string"
+        ? control.lastActivityAt
         : undefined,
   };
 }
@@ -1675,6 +1726,7 @@ function buildDemoSessionControl(
       controller: "codex",
       command: "codex",
       attached: false,
+      paused: false,
       runtimeState: "detached",
     };
   }
@@ -1689,6 +1741,7 @@ function buildDemoSessionControl(
       controller: "claude-code",
       command: "claude",
       attached: false,
+      paused: false,
       runtimeState: "detached",
     };
   }
@@ -1707,11 +1760,16 @@ function resolveSessionControlState(
       controller: "unsupported",
       command: "",
       attached: false,
+      paused: false,
       runtimeState: "unavailable",
     };
 
   return {
     ...control,
+    paused:
+      typeof control.paused === "boolean"
+        ? control.paused
+        : normalizeSessionRuntimeState(control.runtimeState, control) === "paused",
     runtimeState: normalizeSessionRuntimeState(control.runtimeState, control),
   };
 }
@@ -2163,11 +2221,16 @@ function isCostSource(value: unknown): value is CostSource {
 function isSessionRuntimeState(value: unknown): value is SessionRuntimeState {
   return (
     value === "busy" ||
+    value === "paused" ||
     value === "waiting" ||
     value === "idle" ||
     value === "detached" ||
     value === "unavailable"
   );
+}
+
+function normalizeOptionalNumber(value: unknown) {
+  return typeof value === "number" ? value : undefined;
 }
 
 function normalizeOptionalCost(value: unknown) {
@@ -2189,7 +2252,7 @@ function normalizeSessionRuntimeState(
   value: unknown,
   control: Pick<
     SessionControlRecord,
-    "attached" | "available" | "lastError" | "lastResponse"
+    "attached" | "available" | "paused" | "processState" | "lastError" | "lastResponse"
   >,
 ): SessionRuntimeState {
   if (isSessionRuntimeState(value)) {
@@ -2202,6 +2265,14 @@ function normalizeSessionRuntimeState(
 
   if (!control.attached) {
     return "detached";
+  }
+
+  if (
+    control.paused === true ||
+    (typeof control.processState === "string" &&
+      control.processState.toLowerCase() === "paused")
+  ) {
+    return "paused";
   }
 
   if (typeof control.lastError === "string" && control.lastError.trim()) {

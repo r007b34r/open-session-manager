@@ -15,6 +15,7 @@ import {
   recordSessionContinue,
   applySoftDelete,
   fetchDashboardSnapshot,
+  getSessionContinueGuard,
   type DashboardSnapshot,
 } from "./api";
 
@@ -680,5 +681,22 @@ describe("session control fallback", () => {
     });
 
     expect(nextSnapshot).toEqual(throttledSnapshot);
+  });
+
+  it("paused 会话会返回专门的 continue guard", async () => {
+    window.localStorage.setItem("open-session-manager.enable-demo-data", "1");
+    const current = await fetchDashboardSnapshot();
+    const pausedSession = {
+      ...current.sessions[0],
+      sessionControl: {
+        ...current.sessions[0].sessionControl,
+        supported: true,
+        available: true,
+        attached: true,
+        runtimeState: "paused" as any,
+      },
+    };
+
+    expect(getSessionContinueGuard(pausedSession)).toBe("paused");
   });
 });

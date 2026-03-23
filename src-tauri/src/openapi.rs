@@ -8,7 +8,7 @@ pub fn openapi_document(app: &AppState) -> Value {
         "info": {
             "title": "open Session Manager Local API",
             "version": app.version,
-            "description": "Local read-only API for browsing OSM session inventory and details."
+            "description": "Local API for browsing OSM session inventory, details, and session control actions."
         },
         "servers": [
             {
@@ -198,6 +198,122 @@ pub fn openapi_document(app: &AppState) -> Value {
                         "404": { "$ref": "#/components/responses/NotFound" }
                     }
                 }
+            },
+            "/api/v1/sessions/{sessionId}/resume": {
+                "post": {
+                    "summary": "Resume a controllable session",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+                    "responses": {
+                        "200": {
+                            "description": "Updated session detail after resume",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SessionDetail" }
+                                }
+                            }
+                        },
+                        "400": { "$ref": "#/components/responses/BadRequest" },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
+            },
+            "/api/v1/sessions/{sessionId}/pause": {
+                "post": {
+                    "summary": "Pause a controllable session",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+                    "responses": {
+                        "200": {
+                            "description": "Updated session detail after pause",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SessionDetail" }
+                                }
+                            }
+                        },
+                        "400": { "$ref": "#/components/responses/BadRequest" },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
+            },
+            "/api/v1/sessions/{sessionId}/attach": {
+                "post": {
+                    "summary": "Attach a controllable session",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+                    "responses": {
+                        "200": {
+                            "description": "Updated session detail after attach",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SessionDetail" }
+                                }
+                            }
+                        },
+                        "400": { "$ref": "#/components/responses/BadRequest" },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
+            },
+            "/api/v1/sessions/{sessionId}/detach": {
+                "post": {
+                    "summary": "Detach a controllable session",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+                    "responses": {
+                        "200": {
+                            "description": "Updated session detail after detach",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SessionDetail" }
+                                }
+                            }
+                        },
+                        "400": { "$ref": "#/components/responses/BadRequest" },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
+            },
+            "/api/v1/sessions/{sessionId}/continue": {
+                "post": {
+                    "summary": "Send a follow-up prompt into a controllable session",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [{ "$ref": "#/components/parameters/SessionId" }],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/ContinueSessionRequest" },
+                                "example": {
+                                    "prompt": "Continue with verification"
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Updated session detail after continue",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SessionDetail" }
+                                }
+                            }
+                        },
+                        "400": { "$ref": "#/components/responses/BadRequest" },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
             }
         },
         "components": {
@@ -265,12 +381,30 @@ pub fn openapi_document(app: &AppState) -> Value {
                         }
                     }
                 },
+                "BadRequest": {
+                    "description": "Request cannot be served in the current mode",
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                            "example": { "error": "session control API is unavailable while serving fixture snapshots" }
+                        }
+                    }
+                },
                 "NotFound": {
                     "description": "Requested session was not found",
                     "content": {
                         "application/json": {
                             "schema": { "$ref": "#/components/schemas/ErrorResponse" },
                             "example": { "error": "session not found: claude-ses-1" }
+                        }
+                    }
+                },
+                "Conflict": {
+                    "description": "Action is blocked by current session state or assistant execution constraints",
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                            "example": { "error": "continue is blocked while the session is paused; resume it before sending another prompt" }
                         }
                     }
                 }
@@ -290,6 +424,13 @@ pub fn openapi_document(app: &AppState) -> Value {
                     "required": ["error"],
                     "properties": {
                         "error": { "type": "string" }
+                    }
+                },
+                "ContinueSessionRequest": {
+                    "type": "object",
+                    "required": ["prompt"],
+                    "properties": {
+                        "prompt": { "type": "string" }
                     }
                 },
                 "SessionInventoryResponse": {

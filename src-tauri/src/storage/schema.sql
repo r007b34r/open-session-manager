@@ -114,12 +114,24 @@ CREATE TABLE IF NOT EXISTS session_control_state (
     controller TEXT NOT NULL,
     available INTEGER NOT NULL DEFAULT 0,
     attached INTEGER NOT NULL DEFAULT 0,
+    paused INTEGER NOT NULL DEFAULT 0,
     last_command TEXT,
     last_prompt TEXT,
     last_response TEXT,
     last_error TEXT,
     last_resumed_at TEXT,
-    last_continued_at TEXT
+    last_continued_at TEXT,
+    paused_at TEXT,
+    process_state TEXT,
+    process_id INTEGER,
+    exit_code INTEGER,
+    started_at TEXT,
+    runtime_seconds INTEGER,
+    event_count INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL DEFAULT 0,
+    last_activity_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS session_control_events (

@@ -11,6 +11,7 @@ use crate::{
             commit_git_project as commit_git_project_action,
             continue_existing_session as continue_existing_session_action, delete_session,
             detach_existing_session as detach_existing_session_action,
+            pause_existing_session as pause_existing_session_action,
             export_session, resume_existing_session as resume_existing_session_action,
             push_git_project as push_git_project_action,
             switch_git_project_branch as switch_git_project_branch_action,
@@ -41,6 +42,7 @@ pub fn run() -> Result<(), String> {
             export_session_markdown,
             push_git_project,
             detach_existing_session,
+            pause_existing_session,
             resume_existing_session,
             continue_existing_session,
             soft_delete_session,
@@ -253,6 +255,25 @@ pub async fn continue_existing_session(
         let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
 
         continue_existing_session_action(&indexed.session, &prompt, &actor, &connection)
+            .map_err(|error| error.to_string())?;
+
+        build_snapshot_with_runtime(&context, &paths)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn pause_existing_session(session_id: String) -> Result<DashboardSnapshot, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+    let actor = resolve_actor();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let indexed = resolve_indexed_session(&context, &session_id)?;
+        let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
+
+        pause_existing_session_action(&indexed.session, &actor, &connection)
             .map_err(|error| error.to_string())?;
 
         build_snapshot_with_runtime(&context, &paths)
@@ -519,7 +540,8 @@ mod tests {
         expand_session_detail,
         export_session_markdown, get_session_detail, list_session_inventory,
         ListSessionInventoryRequest,
-        load_dashboard_snapshot, resume_existing_session, save_dashboard_preferences,
+        load_dashboard_snapshot, pause_existing_session, resume_existing_session,
+        save_dashboard_preferences,
         SearchSessionInventoryRequest,
         search_session_inventory, soft_delete_session, view_session_detail,
         push_git_project, switch_git_project_branch, write_config_artifact,
@@ -546,6 +568,9 @@ mod tests {
 
         let attach = attach_existing_session("session-id".to_string());
         assert_future(&attach);
+
+        let pause = pause_existing_session("session-id".to_string());
+        assert_future(&pause);
 
         let continue_session = continue_existing_session(
             "session-id".to_string(),

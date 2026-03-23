@@ -212,6 +212,48 @@ export function SessionDetail({
                   {copy.sessionDetail.fields.lastContinueAt}:{" "}
                   {sessionControl.lastContinuedAt ?? unknownValue}
                 </li>
+                <li>
+                  {copy.sessionDetail.fields.processState}:{" "}
+                  {sessionControl.processState ?? unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.processId}:{" "}
+                  {typeof sessionControl.processId === "number"
+                    ? formatCount(sessionControl.processId)
+                    : unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.exitCode}:{" "}
+                  {typeof sessionControl.exitCode === "number"
+                    ? formatCount(sessionControl.exitCode)
+                    : unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.startedAt}:{" "}
+                  {sessionControl.startedAt ?? unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.runtimeSeconds}:{" "}
+                  {typeof sessionControl.runtimeSeconds === "number"
+                    ? formatCount(sessionControl.runtimeSeconds)
+                    : unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.controlEvents}:{" "}
+                  {typeof sessionControl.eventCount === "number"
+                    ? formatCount(sessionControl.eventCount)
+                    : unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.controlTokens}:{" "}
+                  {typeof sessionControl.totalTokens === "number"
+                    ? formatCount(sessionControl.totalTokens)
+                    : unknownValue}
+                </li>
+                <li>
+                  {copy.sessionDetail.fields.lastControlActivity}:{" "}
+                  {sessionControl.lastActivityAt ?? unknownValue}
+                </li>
               </ul>
               <label className="search-label" htmlFor="session-continue-prompt">
                 {copy.sessionDetail.fields.continuePrompt}
@@ -280,6 +322,11 @@ export function SessionDetail({
               {continueGuard === "busy" ? (
                 <p className="action-hint">
                   {copy.sessionDetail.continueGuardHints.busy}
+                </p>
+              ) : null}
+              {continueGuard === "paused" ? (
+                <p className="action-hint">
+                  {copy.sessionDetail.continueGuardHints.paused}
                 </p>
               ) : null}
               {continueGuard === "throttled" ? (
@@ -559,6 +606,7 @@ function translateSessionControlStatus(
   statuses: {
     attached: string;
     detached: string;
+    paused: string;
     busy: string;
     waiting: string;
     idle: string;
@@ -572,6 +620,8 @@ function translateSessionControlStatus(
   }
 
   switch (control.runtimeState) {
+    case "paused":
+      return statuses.paused;
     case "busy":
       return statuses.busy;
     case "waiting":

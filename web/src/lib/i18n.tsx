@@ -100,12 +100,17 @@ type Messages = {
       fields: {
         command: string;
         lastSeen: string;
+        processId: string;
+        runtimeSeconds: string;
         lastResponse: string;
         lastError: string;
+        eventCount: string;
+        totalTokens: string;
       };
       statuses: {
         attached: string;
         ready: string;
+        paused: string;
         busy: string;
         waiting: string;
         idle: string;
@@ -207,10 +212,11 @@ type Messages = {
     cleanupRequirement: string;
     controlUnavailable: string;
     continuePlaceholder: string;
-    continueGuardHints: {
-      busy: string;
-      throttled: string;
-    };
+      continueGuardHints: {
+        busy: string;
+        paused: string;
+        throttled: string;
+      };
     exportPathLabel: string;
     actions: {
       exportMarkdown: string;
@@ -239,12 +245,20 @@ type Messages = {
       continuePrompt: string;
       lastPrompt: string;
       lastResponse: string;
-      lastError: string;
-      lastResumeAt: string;
-      lastContinueAt: string;
-      assistant: string;
-      environment: string;
-      project: string;
+        lastError: string;
+        lastResumeAt: string;
+        lastContinueAt: string;
+        processState: string;
+        processId: string;
+        exitCode: string;
+        startedAt: string;
+        runtimeSeconds: string;
+        controlEvents: string;
+        controlTokens: string;
+        lastControlActivity: string;
+        assistant: string;
+        environment: string;
+        project: string;
       source: string;
       progress: string;
       completion: string;
@@ -259,12 +273,13 @@ type Messages = {
       totalTokens: string;
       costUsd: string;
     };
-    statuses: {
-      attached: string;
-      detached: string;
-      busy: string;
-      waiting: string;
-      idle: string;
+      statuses: {
+        attached: string;
+        detached: string;
+        paused: string;
+        busy: string;
+        waiting: string;
+        idle: string;
       unavailable: string;
       searchHit: string;
     };
@@ -520,12 +535,17 @@ const messages: Record<Language, Messages> = {
         fields: {
           command: "Command",
           lastSeen: "Last seen",
+          processId: "Process ID",
+          runtimeSeconds: "Runtime (sec)",
           lastResponse: "Last response",
           lastError: "Last error",
+          eventCount: "Events",
+          totalTokens: "Tokens",
         },
         statuses: {
           attached: "Attached",
           ready: "Ready",
+          paused: "Paused",
           busy: "Busy",
           waiting: "Waiting",
           idle: "Idle",
@@ -650,6 +670,7 @@ const messages: Record<Language, Messages> = {
       continuePlaceholder: "Send a follow-up prompt back into this session",
       continueGuardHints: {
         busy: "Wait for the current run to report READY or go idle before sending another prompt.",
+        paused: "Resume this paused session before sending another follow-up prompt.",
         throttled: "Wait a moment before sending another follow-up prompt.",
       },
       exportPathLabel: "Markdown saved to",
@@ -683,6 +704,14 @@ const messages: Record<Language, Messages> = {
         lastError: "Last error",
         lastResumeAt: "Last resume",
         lastContinueAt: "Last continue",
+        processState: "Process state",
+        processId: "Process ID",
+        exitCode: "Exit code",
+        startedAt: "Started at",
+        runtimeSeconds: "Runtime (sec)",
+        controlEvents: "Control events",
+        controlTokens: "Control tokens",
+        lastControlActivity: "Last control activity",
         assistant: "Assistant",
         environment: "Environment",
         project: "Project",
@@ -703,6 +732,7 @@ const messages: Record<Language, Messages> = {
       statuses: {
         attached: "Attached",
         detached: "Detached",
+        paused: "Paused",
         busy: "Busy",
         waiting: "Waiting",
         idle: "Idle",
@@ -1028,12 +1058,17 @@ const messages: Record<Language, Messages> = {
         fields: {
           command: "命令",
           lastSeen: "最近时间",
+          processId: "进程 ID",
+          runtimeSeconds: "运行秒数",
           lastResponse: "最近响应",
           lastError: "最近错误",
+          eventCount: "事件数",
+          totalTokens: "令牌数",
         },
         statuses: {
           attached: "已附着",
           ready: "可恢复",
+          paused: "已暂停",
           busy: "忙碌中",
           waiting: "等待下一步",
           idle: "空闲",
@@ -1152,6 +1187,7 @@ const messages: Record<Language, Messages> = {
       continuePlaceholder: "向当前会话继续发送一条跟进提示",
       continueGuardHints: {
         busy: "当前会话还在运行中，等它进入 READY 或空闲态后再发送下一条提示。",
+        paused: "先恢复这个已暂停的会话，再发送新的继续提示。",
         throttled: "刚刚已经发送过继续提示，请稍等片刻再重试。",
       },
       exportPathLabel: "Markdown 已保存到",
@@ -1185,6 +1221,14 @@ const messages: Record<Language, Messages> = {
         lastError: "最近错误",
         lastResumeAt: "最近恢复",
         lastContinueAt: "最近继续运行",
+        processState: "进程状态",
+        processId: "进程 ID",
+        exitCode: "退出码",
+        startedAt: "启动时间",
+        runtimeSeconds: "运行秒数",
+        controlEvents: "控制事件数",
+        controlTokens: "控制令牌数",
+        lastControlActivity: "最近控制活动",
         assistant: "助手",
         environment: "环境",
         project: "项目",
@@ -1205,6 +1249,7 @@ const messages: Record<Language, Messages> = {
       statuses: {
         attached: "已附着",
         detached: "未附着",
+        paused: "已暂停",
         busy: "忙碌中",
         waiting: "等待下一步",
         idle: "空闲",
