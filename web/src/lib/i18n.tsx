@@ -132,6 +132,8 @@ type Messages = {
         aheadBehind: string;
         latestCommit: string;
         recentCommits: string;
+        workspaceExplorer: string;
+        workspaceTruncated: string;
         commitSha: string;
         commitAuthor: string;
         commitAuthoredAt: string;
@@ -569,6 +571,8 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "Ahead/Behind",
           latestCommit: "Latest commit",
           recentCommits: "Recent commits",
+          workspaceExplorer: "Workspace explorer",
+          workspaceTruncated: "Preview capped to the first 48 entries.",
           commitSha: "SHA",
           commitAuthor: "Author",
           commitAuthoredAt: "Authored at",
@@ -1091,6 +1095,8 @@ const messages: Record<Language, Messages> = {
           aheadBehind: "领先/落后",
           latestCommit: "最近提交",
           recentCommits: "最近提交历史",
+          workspaceExplorer: "工作区文件树",
+          workspaceTruncated: "大型仓库预览仅显示前 48 条。",
           commitSha: "SHA",
           commitAuthor: "作者",
           commitAuthoredAt: "提交时间",

@@ -55,6 +55,33 @@ describe("GitProjectPanel", () => {
     expect(commitRow).toHaveTextContent("Author: r007b34r");
     expect(commitRow).toHaveTextContent("Authored at: 2026-03-23T03:00:00.000Z");
   });
+
+  it("renders a read-only workspace explorer with relative paths and truncation hint", () => {
+    const project = Object.assign(buildProject(), {
+      workspaceEntries: [
+        { relativePath: "README.md", kind: "file", depth: 0 },
+        { relativePath: "src", kind: "directory", depth: 0 },
+        { relativePath: "src/main.rs", kind: "file", depth: 1 }
+      ],
+      workspaceTruncated: true
+    }) as GitProjectRecord;
+
+    renderWithI18n(
+      <GitProjectPanel
+        auditEvents={[]}
+        onCommit={vi.fn()}
+        onPush={vi.fn()}
+        onSwitchBranch={vi.fn()}
+        projects={[project]}
+      />
+    );
+
+    expect(screen.getByText(/workspace explorer/i)).toBeInTheDocument();
+    expect(screen.getByText("README.md")).toBeInTheDocument();
+    expect(screen.getByText("src/")).toBeInTheDocument();
+    expect(screen.getByText("src/main.rs")).toBeInTheDocument();
+    expect(screen.getByText(/preview capped to the first/i)).toBeInTheDocument();
+  });
 });
 
 function renderWithI18n(node: ReactNode) {

@@ -34,16 +34,18 @@ describe("SessionTable", () => {
     );
 
     expect(
-      screen.getByRole("columnheader", { name: /session/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /refactor wsl collector handshake/i })
-    ).toBeInTheDocument();
+      screen.getAllByRole("columnheader", { name: /session/i })
+    ).toHaveLength(2);
+    const primarySessionButton = screen.getByRole("button", {
+      name: /refactor wsl collector handshake/i
+    });
+
+    expect(primarySessionButton).toBeInTheDocument();
+    expect(primarySessionButton).toHaveTextContent(/wsl: ubuntu/i);
+    expect(primarySessionButton).toHaveTextContent(/ses-001/i);
     expect(screen.getByText(/codex/i)).toBeInTheDocument();
     expect(screen.getByText(/65%/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-03-15 12:40/i)).toBeInTheDocument();
-    expect(screen.getByText(/wsl: ubuntu/i)).toBeInTheDocument();
-    expect(screen.getByText(/ses-001/i)).toBeInTheDocument();
   });
 
   it("allows selecting a session row through an explicit workspace control", async () => {

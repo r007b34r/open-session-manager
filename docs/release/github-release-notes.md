@@ -22,7 +22,7 @@
   - `Claude Code` 不再把纯 `file-history-snapshot` JSONL 当候选会话
 - snapshot 现在会把 session index cache 持久化到 SQLite，并按文件变化做增量重建
 - Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
-- `Codex / Claude Code / GitHub Copilot CLI / OpenCode` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
+- `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
 - `serve` 现在额外暴露 `/metrics` Prometheus 指标端点，可直接采集 sessions/configs/git projects/doctor findings/audit events
 - `serve` 现在还支持本地 automation server：可通过 `POST /api/v1/automation/tasks` 触发 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，再通过 `GET /api/v1/automation/tasks/{taskId}` 读取稳定回执
 - `serve` 现在支持 `POST /api/v1/auth/local-token`，可为本地壳层发行 loopback-only 的短期签名 Bearer token；受保护路由可接受静态 Bearer 或短期 token
@@ -120,7 +120,7 @@
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的统一 provider presets、套用和恢复检测值
 - 配置 snippet library、本地持久化、JSON 导入导出和 save/apply/export/import 审计事件
 - SQLite session index cache、增量重建和 index run 统计
-- `Codex / Claude Code / GitHub Copilot CLI / OpenCode` 的真实 resume / continue，以及对应的 session control 状态面板
+- `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` 的真实 resume / continue，以及对应的 session control 状态面板
 - `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 的 usage / cost 汇总
 - 本地价格目录估算、`reported / estimated / unknown` 成本来源，以及 overview 日级 usage timeline
 - 总览里的 model breakdown 与 provider/platform breakdown
@@ -159,7 +159,7 @@
 以下内容不包含在 `v0.3.0 Public Preview` 承诺范围内：
 
 - 语义搜索、hybrid ranking 和更大历史库压测
-- 除 `Codex / Claude Code / GitHub Copilot CLI / OpenCode` 之外的真实会话控制、attach / detach、pause / resume 和进程观测
+- 未来新增连接器的真实会话控制、attach / detach、pause / resume 和进程观测
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider 健康探测和自动切换
 - 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器

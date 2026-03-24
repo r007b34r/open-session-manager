@@ -73,7 +73,13 @@
         "available": true,
         "controller": "codex",
         "command": "codex",
-        "attached": false
+        "attached": false,
+        "paused": false,
+        "runtimeState": "detached",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -138,7 +144,13 @@
         "available": true,
         "controller": "claude-code",
         "command": "claude",
-        "attached": false
+        "attached": false,
+        "paused": false,
+        "runtimeState": "detached",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -193,11 +205,17 @@
         "costSource": "reported"
       },
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "opencode",
-        "command": "",
-        "attached": false
+        "command": "opencode",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -254,11 +272,17 @@
         "costSource": "estimated"
       },
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "gemini-cli",
-        "command": "",
-        "attached": false
+        "command": "gemini",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -308,11 +332,17 @@
       ],
       "todoItems": [],
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "github-copilot-cli",
-        "command": "",
-        "attached": false
+        "command": "copilot",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -362,11 +392,17 @@
       ],
       "todoItems": [],
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "factory-droid",
-        "command": "",
-        "attached": false
+        "command": "droid",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -416,11 +452,17 @@
       ],
       "todoItems": [],
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "factory-droid",
-        "command": "",
-        "attached": false
+        "command": "droid",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     },
     {
@@ -480,11 +522,17 @@
         "costSource": "reported"
       },
       "sessionControl": {
-        "supported": false,
+        "supported": true,
         "available": false,
         "controller": "openclaw",
-        "command": "",
-        "attached": false
+        "command": "openclaw",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
       }
     }
   ],
@@ -504,7 +552,8 @@
         "third_party_base_url",
         "dangerous_approval_policy",
         "dangerous_sandbox"
-      ]
+      ],
+      "mcpServers": []
     },
     {
       "artifactId": "36e05b0b0a842b7f70b070cf2e29f5c9234a87742fe151b7fc0ad05da87ef7d6",
@@ -520,6 +569,17 @@
         "third_party_base_url",
         "dangerous_permissions",
         "shell_hook"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "36e05b0b0a842b7f70b070cf2e29f5c9234a87742fe151b7fc0ad05da87ef7d6:hooks",
+          "name": "hooks",
+          "enabled": true,
+          "status": "enabled",
+          "transport": "embedded",
+          "args": [],
+          "configJson": "{\n  \"SessionStart\": [\n    {\n      \"hooks\": [\n        {\n          \"command\": \"powershell -File bootstrap.ps1\",\n          \"timeout\": 30,\n          \"type\": \"command\"\n        }\n      ]\n    }\n  ]\n}"
+        }
       ]
     },
     {
@@ -535,6 +595,17 @@
       "risks": [
         "third_party_provider",
         "dangerous_permissions"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "93616c2ef15b7a7d5d5326bda0ae7d917baff4cac22087ff809b9e61e8f94a0e:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "enabled",
+          "transport": "embedded",
+          "args": [],
+          "configJson": "{\n  \"enabled\": true\n}"
+        }
       ]
     },
     {
@@ -549,6 +620,20 @@
       "officialOrProxy": "proxy",
       "risks": [
         "third_party_base_url"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "20711656a1e007f1a7871275fd50a400a8db158c35bef8352572b4d339cdb17b:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "node",
+          "args": [
+            "mcp-filesystem.js"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\"\n}"
+        }
       ]
     },
     {
@@ -564,6 +649,20 @@
       "risks": [
         "third_party_base_url",
         "dangerous_permissions"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "684853c955cc64fcbc29595fbf5fecb66ccf15fb8ce995757d543bb6672869c0:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "node",
+          "args": [
+            "mcp-filesystem.js"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\"\n}"
+        }
       ]
     },
     {
@@ -580,6 +679,32 @@
         "third_party_provider",
         "third_party_base_url",
         "dangerous_permissions"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "dd72ceaf64110e5c53b743970a6693944ccc9336daa18345d9a7fbebc13d1ba5:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "node",
+          "args": [
+            "mcp-filesystem.js"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\"\n}"
+        },
+        {
+          "serverId": "dd72ceaf64110e5c53b743970a6693944ccc9336daa18345d9a7fbebc13d1ba5:postgres",
+          "name": "postgres",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "uvx",
+          "args": [
+            "mcp-postgres"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-postgres\"\n  ],\n  \"command\": \"uvx\"\n}"
+        }
       ]
     },
     {
@@ -595,9 +720,11 @@
       "risks": [
         "third_party_provider",
         "dangerous_permissions"
-      ]
+      ],
+      "mcpServers": []
     }
   ],
+  "gitProjects": [],
   "doctorFindings": [],
   "auditEvents": [],
   "usageOverview": {

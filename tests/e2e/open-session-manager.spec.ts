@@ -222,7 +222,7 @@ test("shows the active session cockpit and refreshes runtime status", async ({
   await cockpit.getByRole("button", { name: /refresh cockpit/i }).click();
 
   await expect(cockpit.getByText(/ready from refreshed snapshot/i)).toBeVisible();
-  await expect(cockpit.getByText(/^attached$/i)).toBeVisible();
+  await expect(cockpit.getByText(/^waiting$/i)).toBeVisible();
 });
 
 function buildRuntimeSnapshot(lastResponse: string, attached: boolean) {

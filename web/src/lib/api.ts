@@ -158,6 +158,12 @@ export type GitCommitRecord = {
   authoredAt: string;
 };
 
+export type GitWorkspaceEntryRecord = {
+  relativePath: string;
+  kind: string;
+  depth: number;
+};
+
 export type GitProjectRecord = {
   projectPath: string;
   repoRoot: string;
@@ -173,6 +179,8 @@ export type GitProjectRecord = {
   lastCommitSummary?: string;
   lastCommitAt?: string;
   recentCommits: GitCommitRecord[];
+  workspaceEntries?: GitWorkspaceEntryRecord[];
+  workspaceTruncated?: boolean;
 };
 
 export type UsageTotalsRecord = {
@@ -621,6 +629,16 @@ const fallbackSnapshot: DashboardSnapshot = {
           authoredAt: "2026-03-23T01:10:00.000Z",
         },
       ],
+      workspaceEntries: [
+        { relativePath: "README.md", kind: "file", depth: 0 },
+        { relativePath: "docs", kind: "directory", depth: 0 },
+        { relativePath: "docs/specs", kind: "directory", depth: 1 },
+        { relativePath: "src-tauri", kind: "directory", depth: 0 },
+        { relativePath: "src-tauri/src", kind: "directory", depth: 1 },
+        { relativePath: "web", kind: "directory", depth: 0 },
+        { relativePath: "web/src", kind: "directory", depth: 1 }
+      ],
+      workspaceTruncated: true,
     },
   ],
   doctorFindings: [
@@ -1909,8 +1927,22 @@ function isGitProjectRecord(value: unknown): value is GitProjectRecord {
     typeof value.untrackedFiles === "number" &&
     typeof value.ahead === "number" &&
     typeof value.behind === "number" &&
+    (!("workspaceEntries" in value) ||
+      (Array.isArray(value.workspaceEntries) &&
+        value.workspaceEntries.every(isGitWorkspaceEntryRecord))) &&
+    (!("workspaceTruncated" in value) ||
+      typeof value.workspaceTruncated === "boolean") &&
     Array.isArray(value.recentCommits) &&
     value.recentCommits.every(isGitCommitRecord)
+  );
+}
+
+function isGitWorkspaceEntryRecord(value: unknown): value is GitWorkspaceEntryRecord {
+  return (
+    isRecord(value) &&
+    typeof value.relativePath === "string" &&
+    typeof value.kind === "string" &&
+    typeof value.depth === "number"
   );
 }
 
@@ -1937,11 +1969,30 @@ function normalizeGitProjectRecord(
       typeof project.lastCommitAt === "string"
         ? project.lastCommitAt
         : undefined,
+    workspaceEntries: Array.isArray(project.workspaceEntries)
+      ? project.workspaceEntries
+          .filter(isGitWorkspaceEntryRecord)
+          .map(normalizeGitWorkspaceEntryRecord)
+      : [],
+    workspaceTruncated:
+      typeof project.workspaceTruncated === "boolean"
+        ? project.workspaceTruncated
+        : false,
     recentCommits: Array.isArray(project.recentCommits)
       ? project.recentCommits
           .filter(isGitCommitRecord)
           .map(normalizeGitCommitRecord)
       : [],
+  };
+}
+
+function normalizeGitWorkspaceEntryRecord(
+  entry: GitWorkspaceEntryRecord
+): GitWorkspaceEntryRecord {
+  return {
+    relativePath: entry.relativePath.trim(),
+    kind: entry.kind.trim(),
+    depth: Number.isFinite(entry.depth) ? Math.max(0, entry.depth) : 0
   };
 }
 

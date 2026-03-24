@@ -128,6 +128,9 @@ fn execute_session_control(
         "claude-code" => build_claude_command(&controller, request.session, prompt),
         "opencode" => build_opencode_command(&controller, request.session, prompt),
         "github-copilot-cli" => build_copilot_command(&controller, request.session, prompt),
+        "gemini-cli" => build_gemini_command(&controller, request.session, prompt),
+        "factory-droid" => build_droid_command(&controller, request.session, prompt),
+        "openclaw" => build_openclaw_command(&controller, request.session, prompt),
         other => {
             return Err(ActionError::Precondition(format!(
                 "session control is not supported for {other}"
@@ -412,6 +415,24 @@ fn resolve_controller(session: &SessionRecord) -> ActionResult<ResolvedControlle
             controller: "github-copilot-cli",
             command: env::var("OPEN_SESSION_MANAGER_COPILOT_COMMAND")
                 .unwrap_or_else(|_| "copilot".to_string()),
+            working_dir,
+        }),
+        "gemini-cli" => Ok(ResolvedController {
+            controller: "gemini-cli",
+            command: env::var("OPEN_SESSION_MANAGER_GEMINI_COMMAND")
+                .unwrap_or_else(|_| "gemini".to_string()),
+            working_dir,
+        }),
+        "factory-droid" => Ok(ResolvedController {
+            controller: "factory-droid",
+            command: env::var("OPEN_SESSION_MANAGER_DROID_COMMAND")
+                .unwrap_or_else(|_| "droid".to_string()),
+            working_dir,
+        }),
+        "openclaw" => Ok(ResolvedController {
+            controller: "openclaw",
+            command: env::var("OPEN_SESSION_MANAGER_OPENCLAW_COMMAND")
+                .unwrap_or_else(|_| "openclaw".to_string()),
             working_dir,
         }),
         assistant => Err(ActionError::Precondition(format!(
@@ -743,6 +764,61 @@ fn build_opencode_command(
             "run".to_string(),
             "--session".to_string(),
             session.session_id.clone(),
+            prompt.to_string(),
+        ],
+        working_dir: controller.working_dir.clone(),
+        output_file: None,
+    })
+}
+
+fn build_gemini_command(
+    controller: &ResolvedController,
+    session: &SessionRecord,
+    prompt: &str,
+) -> ActionResult<PreparedCommand> {
+    Ok(PreparedCommand {
+        command: controller.command.clone(),
+        args: vec![
+            "--resume".to_string(),
+            session.session_id.clone(),
+            "-p".to_string(),
+            prompt.to_string(),
+        ],
+        working_dir: controller.working_dir.clone(),
+        output_file: None,
+    })
+}
+
+fn build_droid_command(
+    controller: &ResolvedController,
+    session: &SessionRecord,
+    prompt: &str,
+) -> ActionResult<PreparedCommand> {
+    Ok(PreparedCommand {
+        command: controller.command.clone(),
+        args: vec![
+            "exec".to_string(),
+            "-s".to_string(),
+            session.session_id.clone(),
+            prompt.to_string(),
+        ],
+        working_dir: controller.working_dir.clone(),
+        output_file: None,
+    })
+}
+
+fn build_openclaw_command(
+    controller: &ResolvedController,
+    session: &SessionRecord,
+    prompt: &str,
+) -> ActionResult<PreparedCommand> {
+    Ok(PreparedCommand {
+        command: controller.command.clone(),
+        args: vec![
+            "agent".to_string(),
+            "--session-id".to_string(),
+            session.session_id.clone(),
+            "--message".to_string(),
             prompt.to_string(),
         ],
         working_dir: controller.working_dir.clone(),

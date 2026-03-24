@@ -55,6 +55,7 @@ export function GitProjectPanel({
             const filteredCommits = project.recentCommits.filter((commit) =>
               matchesCommitFilter(commit, historyFilter)
             );
+            const workspaceEntries = project.workspaceEntries ?? [];
 
             return (
               <article className="config-card" key={project.repoRoot}>
@@ -160,6 +161,31 @@ export function GitProjectPanel({
                       })}
                     </ul>
                   </>
+                ) : null}
+
+                {workspaceEntries.length > 0 ? (
+                  <div className="git-workspace-explorer">
+                    <strong>{copy.overview.git.fields.workspaceExplorer}</strong>
+                    <ul className="git-workspace-list">
+                      {workspaceEntries.map((entry) => (
+                        <li
+                          className="git-workspace-entry"
+                          key={`${project.repoRoot}:${entry.relativePath}`}
+                          style={{ paddingInlineStart: `${entry.depth * 16}px` }}
+                        >
+                          <code>
+                            {entry.relativePath}
+                            {entry.kind === "directory" ? "/" : ""}
+                          </code>
+                        </li>
+                      ))}
+                    </ul>
+                    {project.workspaceTruncated ? (
+                      <p className="panel-copy">
+                        {copy.overview.git.fields.workspaceTruncated}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
 
                 {latestEvent ? (

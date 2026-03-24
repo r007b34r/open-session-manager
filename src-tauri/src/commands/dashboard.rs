@@ -262,6 +262,10 @@ pub struct GitProjectRecord {
     pub last_commit_at: Option<String>,
     #[serde(default)]
     pub recent_commits: Vec<GitCommitRecord>,
+    #[serde(default)]
+    pub workspace_entries: Vec<GitWorkspaceEntryRecord>,
+    #[serde(default)]
+    pub workspace_truncated: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -271,6 +275,14 @@ pub struct GitCommitRecord {
     pub summary: String,
     pub author: String,
     pub authored_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitWorkspaceEntryRecord {
+    pub relative_path: String,
+    pub kind: String,
+    pub depth: u8,
 }
 
 #[derive(Debug, Serialize)]
@@ -524,6 +536,8 @@ fn build_git_project_records(sessions: &[SessionDetailRecord]) -> Vec<GitProject
                 last_commit_summary: inspected.last_commit_summary.clone(),
                 last_commit_at: inspected.last_commit_at.clone(),
                 recent_commits: inspected.recent_commits.clone(),
+                workspace_entries: inspected.workspace_entries.clone(),
+                workspace_truncated: inspected.workspace_truncated,
             });
 
         entry.session_count += 1;
@@ -559,6 +573,8 @@ struct GitProjectInspection {
     last_commit_summary: Option<String>,
     last_commit_at: Option<String>,
     recent_commits: Vec<GitCommitRecord>,
+    workspace_entries: Vec<GitWorkspaceEntryRecord>,
+    workspace_truncated: bool,
 }
 
 fn inspect_git_project(project_path: &Path) -> Option<GitProjectInspection> {
@@ -583,6 +599,8 @@ fn inspect_git_project(project_path: &Path) -> Option<GitProjectInspection> {
     let last_commit_at = recent_commits
         .first()
         .map(|commit| commit.authored_at.clone());
+    let (workspace_entries, workspace_truncated) =
+        inspect_git_workspace(Path::new(&repo_root));
 
     Some(GitProjectInspection {
         repo_root,
@@ -597,6 +615,8 @@ fn inspect_git_project(project_path: &Path) -> Option<GitProjectInspection> {
         last_commit_summary,
         last_commit_at,
         recent_commits,
+        workspace_entries,
+        workspace_truncated,
     })
 }
 
@@ -617,6 +637,110 @@ fn run_git_command(project_path: &Path, args: &[&str]) -> Option<String> {
 
 fn normalize_git_path(value: &str) -> String {
     PathBuf::from(value.trim()).display().to_string()
+}
+
+const GIT_WORKSPACE_PREVIEW_MAX_DEPTH: u8 = 3;
+const GIT_WORKSPACE_PREVIEW_LIMIT: usize = 48;
+
+fn inspect_git_workspace(repo_root: &Path) -> (Vec<GitWorkspaceEntryRecord>, bool) {
+    let mut entries = Vec::new();
+    let mut truncated = false;
+    collect_git_workspace_entries(repo_root, repo_root, 0, &mut entries, &mut truncated);
+    (entries, truncated)
+}
+
+fn collect_git_workspace_entries(
+    repo_root: &Path,
+    current: &Path,
+    depth: u8,
+    entries: &mut Vec<GitWorkspaceEntryRecord>,
+    truncated: &mut bool,
+) {
+    if depth >= GIT_WORKSPACE_PREVIEW_MAX_DEPTH || *truncated {
+        return;
+    }
+
+    let Ok(read_dir) = fs::read_dir(current) else {
+        return;
+    };
+    let mut children = read_dir.filter_map(Result::ok).collect::<Vec<_>>();
+    children.sort_by(|left, right| compare_git_workspace_entries(left, right));
+
+    for child in children {
+        if entries.len() >= GIT_WORKSPACE_PREVIEW_LIMIT {
+            *truncated = true;
+            return;
+        }
+
+        let file_name = child.file_name().to_string_lossy().to_string();
+        if should_skip_git_workspace_entry(&file_name) {
+            continue;
+        }
+
+        let Ok(file_type) = child.file_type() else {
+            continue;
+        };
+        let child_path = child.path();
+        let Ok(relative_path) = child_path.strip_prefix(repo_root) else {
+            continue;
+        };
+        let display_path = normalize_relative_git_workspace_path(relative_path);
+        if display_path.is_empty() {
+            continue;
+        }
+
+        let is_directory = file_type.is_dir();
+        entries.push(GitWorkspaceEntryRecord {
+            relative_path: display_path,
+            kind: if is_directory {
+                "directory".to_string()
+            } else {
+                "file".to_string()
+            },
+            depth,
+        });
+
+        if is_directory {
+            collect_git_workspace_entries(repo_root, &child_path, depth + 1, entries, truncated);
+        }
+    }
+}
+
+fn compare_git_workspace_entries(left: &fs::DirEntry, right: &fs::DirEntry) -> std::cmp::Ordering {
+    let left_dir = left.file_type().map(|value| value.is_dir()).unwrap_or(false);
+    let right_dir = right.file_type().map(|value| value.is_dir()).unwrap_or(false);
+    right_dir
+        .cmp(&left_dir)
+        .then_with(|| {
+            left.file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .cmp(&right.file_name().to_string_lossy().to_ascii_lowercase())
+        })
+}
+
+fn should_skip_git_workspace_entry(name: &str) -> bool {
+    matches!(
+        name.trim().to_ascii_lowercase().as_str(),
+        ".git"
+            | ".worktrees"
+            | "node_modules"
+            | "target"
+            | "dist"
+            | "build"
+            | ".next"
+            | ".turbo"
+            | ".venv"
+            | "venv"
+            | "__pycache__"
+    )
+}
+
+fn normalize_relative_git_workspace_path(path: &Path) -> String {
+    path.components()
+        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 struct ParsedGitStatus {
@@ -1211,6 +1335,23 @@ fn build_session_control_record(
             "github-copilot-cli".to_string(),
             env::var("OPEN_SESSION_MANAGER_COPILOT_COMMAND")
                 .unwrap_or_else(|_| "copilot".to_string()),
+        ),
+        "gemini-cli" => (
+            true,
+            "gemini-cli".to_string(),
+            env::var("OPEN_SESSION_MANAGER_GEMINI_COMMAND")
+                .unwrap_or_else(|_| "gemini".to_string()),
+        ),
+        "factory-droid" => (
+            true,
+            "factory-droid".to_string(),
+            env::var("OPEN_SESSION_MANAGER_DROID_COMMAND").unwrap_or_else(|_| "droid".to_string()),
+        ),
+        "openclaw" => (
+            true,
+            "openclaw".to_string(),
+            env::var("OPEN_SESSION_MANAGER_OPENCLAW_COMMAND")
+                .unwrap_or_else(|_| "openclaw".to_string()),
         ),
         assistant => (false, assistant.to_string(), String::new()),
     };
@@ -2819,6 +2960,69 @@ mod tests {
     }
 
     #[test]
+    fn fixture_snapshot_marks_gemini_session_control_supported() {
+        with_cleared_env_vars(&["OPEN_SESSION_MANAGER_GEMINI_COMMAND"], || {
+            let snapshot =
+                build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
+            let gemini_session = snapshot
+                .sessions
+                .iter()
+                .find(|session| session.session_id == "gemini-ses-1")
+                .expect("gemini fixture session exists");
+            let control = gemini_session
+                .session_control
+                .as_ref()
+                .expect("gemini fixture session control exists");
+
+            assert!(control.supported);
+            assert_eq!(control.controller, "gemini-cli");
+            assert_eq!(control.command, "gemini");
+        });
+    }
+
+    #[test]
+    fn fixture_snapshot_marks_factory_droid_session_control_supported() {
+        with_cleared_env_vars(&["OPEN_SESSION_MANAGER_DROID_COMMAND"], || {
+            let snapshot =
+                build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
+            let droid_session = snapshot
+                .sessions
+                .iter()
+                .find(|session| session.session_id == "droid-session-1")
+                .expect("factory droid fixture session exists");
+            let control = droid_session
+                .session_control
+                .as_ref()
+                .expect("factory droid fixture session control exists");
+
+            assert!(control.supported);
+            assert_eq!(control.controller, "factory-droid");
+            assert_eq!(control.command, "droid");
+        });
+    }
+
+    #[test]
+    fn fixture_snapshot_marks_openclaw_session_control_supported() {
+        with_cleared_env_vars(&["OPEN_SESSION_MANAGER_OPENCLAW_COMMAND"], || {
+            let snapshot =
+                build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
+            let openclaw_session = snapshot
+                .sessions
+                .iter()
+                .find(|session| session.session_id == "openclaw-ses-1")
+                .expect("openclaw fixture session exists");
+            let control = openclaw_session
+                .session_control
+                .as_ref()
+                .expect("openclaw fixture session control exists");
+
+            assert!(control.supported);
+            assert_eq!(control.controller, "openclaw");
+            assert_eq!(control.command, "openclaw");
+        });
+    }
+
+    #[test]
     fn local_snapshot_ignores_codex_scaffolding_when_deriving_title_and_highlights() {
         let sandbox = temp_root();
         let home_dir = sandbox.join("home");
@@ -3571,6 +3775,37 @@ mod tests {
                 .and_then(|commit| commit.get("summary"))
                 .and_then(Value::as_str),
             Some("feat: seed git dashboard")
+        );
+        let workspace_entries = project
+            .get("workspaceEntries")
+            .and_then(Value::as_array)
+            .expect("workspace explorer entries should be serialized");
+        assert!(
+            workspace_entries.iter().any(|entry| {
+                entry
+                    .get("relativePath")
+                    .and_then(Value::as_str)
+                    .is_some_and(|path| path == "README.md")
+            }),
+            "workspace explorer should include README.md"
+        );
+        assert!(
+            workspace_entries.iter().any(|entry| {
+                entry
+                    .get("relativePath")
+                    .and_then(Value::as_str)
+                    .is_some_and(|path| path == "notes.txt")
+            }),
+            "workspace explorer should include dirty tracked files"
+        );
+        assert!(
+            workspace_entries.iter().all(|entry| {
+                entry
+                    .get("relativePath")
+                    .and_then(Value::as_str)
+                    .is_some_and(|path| !path.starts_with(".git"))
+            }),
+            "workspace explorer must not leak .git internals"
         );
     }
 

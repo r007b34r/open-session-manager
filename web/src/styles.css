@@ -1133,6 +1133,33 @@ a {
   margin: 0;
 }
 
+.git-workspace-explorer {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.git-workspace-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.git-workspace-entry {
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.git-workspace-entry code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+
 .mcp-viewer-panel {
   display: grid;
   gap: 16px;

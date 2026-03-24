@@ -1040,6 +1040,233 @@ fn serve_command_controls_opencode_session_via_http() {
     );
 }
 
+#[test]
+fn serve_command_controls_gemini_session_via_http() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("gemini.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".gemini")
+            .join("tmp")
+            .join("project_hash_a")
+            .join("chats")
+            .join("session-gemini-demo.json"),
+        "gemini/tmp/project_hash_a/chats/session-gemini-demo.json",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_gemini_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let gemini_command = fake_command_path(&bin_dir, "gemini");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_GEMINI_COMMAND",
+            gemini_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let resume = post_json_with_token(
+        port,
+        "/api/v1/sessions/gemini-ses-1/resume",
+        "osm-local-token",
+        None,
+    );
+    assert_eq!(resume.get("assistant").and_then(Value::as_str), Some("gemini-cli"));
+    assert_eq!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("controller"))
+            .and_then(Value::as_str),
+        Some("gemini-cli")
+    );
+    assert!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("lastResponse"))
+            .and_then(Value::as_str)
+            .is_some_and(|response| response.contains("READY"))
+    );
+
+    let continued = post_json_with_token(
+        port,
+        "/api/v1/sessions/gemini-ses-1/continue",
+        "osm-local-token",
+        Some(r#"{"prompt":"Continue with Gemini verification"}"#),
+    );
+    assert_eq!(
+        continued
+            .get("sessionControl")
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with Gemini verification")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read gemini log")
+            .contains("--resume gemini-ses-1")
+    );
+}
+
+#[test]
+fn serve_command_controls_factory_droid_session_via_http() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("droid.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".factory")
+            .join("sessions")
+            .join("project-a")
+            .join("droid-session-1.jsonl"),
+        "factory/sessions/project-a/droid-session-1.jsonl",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_droid_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let droid_command = fake_command_path(&bin_dir, "droid");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some(("OPEN_SESSION_MANAGER_DROID_COMMAND", droid_command.as_path())),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let resume = post_json_with_token(
+        port,
+        "/api/v1/sessions/droid-session-1/resume",
+        "osm-local-token",
+        None,
+    );
+    assert_eq!(
+        resume.get("assistant").and_then(Value::as_str),
+        Some("factory-droid")
+    );
+    assert_eq!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("controller"))
+            .and_then(Value::as_str),
+        Some("factory-droid")
+    );
+    assert!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("lastResponse"))
+            .and_then(Value::as_str)
+            .is_some_and(|response| response.contains("READY"))
+    );
+
+    let continued = post_json_with_token(
+        port,
+        "/api/v1/sessions/droid-session-1/continue",
+        "osm-local-token",
+        Some(r#"{"prompt":"Continue with Factory Droid verification"}"#),
+    );
+    assert_eq!(
+        continued
+            .get("sessionControl")
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with Factory Droid verification")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read droid log")
+            .contains("exec -s droid-session-1")
+    );
+}
+
+#[test]
+fn serve_command_controls_openclaw_session_via_http() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("openclaw.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".openclaw")
+            .join("agents")
+            .join("agent-main")
+            .join("sessions")
+            .join("openclaw-ses-1.jsonl"),
+        "openclaw/agents/agent-main/sessions/openclaw-ses-1.jsonl",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_openclaw_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let openclaw_command = fake_command_path(&bin_dir, "openclaw");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_OPENCLAW_COMMAND",
+            openclaw_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let resume = post_json_with_token(
+        port,
+        "/api/v1/sessions/openclaw-ses-1/resume",
+        "osm-local-token",
+        None,
+    );
+    assert_eq!(resume.get("assistant").and_then(Value::as_str), Some("openclaw"));
+    assert_eq!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("controller"))
+            .and_then(Value::as_str),
+        Some("openclaw")
+    );
+    assert!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("lastResponse"))
+            .and_then(Value::as_str)
+            .is_some_and(|response| response.contains("READY"))
+    );
+
+    let continued = post_json_with_token(
+        port,
+        "/api/v1/sessions/openclaw-ses-1/continue",
+        "osm-local-token",
+        Some(r#"{"prompt":"Continue with OpenClaw verification"}"#),
+    );
+    assert_eq!(
+        continued
+            .get("sessionControl")
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with OpenClaw verification")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read openclaw log")
+            .contains("--session-id openclaw-ses-1")
+    );
+}
+
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = env::temp_dir().join(format!(
@@ -1372,6 +1599,129 @@ fn write_fake_opencode_executable(bin_dir: &Path, log_path: &Path) {
 
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
             .expect("chmod fake opencode");
+    }
+}
+
+fn write_fake_gemini_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("gemini.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake gemini\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake gemini");
+        return;
+    }
+
+    let script_path = bin_dir.join("gemini");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake gemini\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake gemini");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake gemini");
+    }
+}
+
+fn write_fake_droid_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("droid.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake droid\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake droid");
+        return;
+    }
+
+    let script_path = bin_dir.join("droid");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake droid\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake droid");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake droid");
+    }
+}
+
+fn write_fake_openclaw_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("openclaw.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake openclaw\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake openclaw");
+        return;
+    }
+
+    let script_path = bin_dir.join("openclaw");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake openclaw\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake openclaw");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake openclaw");
     }
 }
 
