@@ -82,6 +82,48 @@ describe("GitProjectPanel", () => {
     expect(screen.getByText("src/main.rs")).toBeInTheDocument();
     expect(screen.getByText(/preview capped to the first/i)).toBeInTheDocument();
   });
+
+  it("loads a read-only file preview when a workspace file is selected", async () => {
+    const user = userEvent.setup();
+    const onPreviewFile = vi.fn().mockResolvedValue({
+      repoRoot: "C:/Projects/osm",
+      relativePath: "README.md",
+      content: "# OSM\n",
+      truncated: false,
+      byteSize: 6,
+      lineCount: 1
+    });
+    const project = Object.assign(buildProject(), {
+      workspaceEntries: [
+        { relativePath: "README.md", kind: "file", depth: 0 },
+        { relativePath: "src", kind: "directory", depth: 0 }
+      ]
+    }) as GitProjectRecord;
+
+    renderWithI18n(
+      <GitProjectPanel
+        auditEvents={[]}
+        onCommit={vi.fn()}
+        onPreviewFile={onPreviewFile}
+        onPush={vi.fn()}
+        onSwitchBranch={vi.fn()}
+        projects={[project]}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /preview readme\.md/i }));
+
+    expect(onPreviewFile).toHaveBeenCalledWith({
+      repoRoot: "C:/Projects/osm",
+      relativePath: "README.md"
+    });
+    expect(
+      await screen.findByRole("textbox", { name: /file preview/i })
+    ).toHaveValue("# OSM\n");
+    expect(
+      screen.queryByRole("button", { name: /preview src/i })
+    ).not.toBeInTheDocument();
+  });
 });
 
 function renderWithI18n(node: ReactNode) {

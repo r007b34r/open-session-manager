@@ -15,10 +15,13 @@ import {
   applySoftDelete,
   fetchDashboardSnapshot,
   isConfigWritebackAvailable,
+  previewGitProjectFile,
   type ConfigWritebackInput,
   type DashboardSnapshot,
   type GitProjectBranchSwitchInput,
   type GitProjectCommitInput,
+  type GitProjectFilePreviewInput,
+  type GitProjectFilePreviewRecord,
   type GitProjectPushInput,
   type LocalAuditEventInput
 } from "./lib/api";
@@ -324,6 +327,16 @@ export function App() {
     });
   };
 
+  const handleGitProjectPreview = (
+    input: GitProjectFilePreviewInput,
+  ): Promise<GitProjectFilePreviewRecord> => {
+    if (!snapshot) {
+      return Promise.reject(new Error("Snapshot not loaded."));
+    }
+
+    return previewGitProjectFile(snapshot, input);
+  };
+
   const handleRefreshSnapshot = () => {
     loadSnapshot({ refresh: true });
   };
@@ -374,6 +387,7 @@ export function App() {
               handleAuditEvent,
               handleGitProjectCommit,
               handleGitProjectBranchSwitch,
+              handleGitProjectPreview,
               handleGitProjectPush,
               handleRefreshSnapshot,
               isRefreshingSnapshot
@@ -408,6 +422,9 @@ function renderRoute(
   onAuditEvent: (input: LocalAuditEventInput) => void,
   onGitProjectCommit: (input: GitProjectCommitInput) => void,
   onGitProjectBranchSwitch: (input: GitProjectBranchSwitchInput) => void,
+  onGitProjectPreview: (
+    input: GitProjectFilePreviewInput,
+  ) => Promise<GitProjectFilePreviewRecord>,
   onGitProjectPush: (input: GitProjectPushInput) => void,
   onRefreshSnapshot: () => void,
   isRefreshingSnapshot: boolean
@@ -462,6 +479,7 @@ function renderRoute(
         isRefreshing={isRefreshingSnapshot}
         onGitProjectBranchSwitch={onGitProjectBranchSwitch}
         onGitProjectCommit={onGitProjectCommit}
+        onGitProjectPreview={onGitProjectPreview}
         onGitProjectPush={onGitProjectPush}
         onRefreshSnapshot={onRefreshSnapshot}
         snapshot={snapshot}

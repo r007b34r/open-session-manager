@@ -183,6 +183,20 @@ export type GitProjectRecord = {
   workspaceTruncated?: boolean;
 };
 
+export type GitProjectFilePreviewInput = {
+  repoRoot: string;
+  relativePath: string;
+};
+
+export type GitProjectFilePreviewRecord = {
+  repoRoot: string;
+  relativePath: string;
+  content: string;
+  truncated: boolean;
+  byteSize: number;
+  lineCount: number;
+};
+
 export type UsageTotalsRecord = {
   sessionsWithUsage: number;
   inputTokens: number;
@@ -1481,6 +1495,39 @@ export async function applyGitProjectPush(
   return current;
 }
 
+export async function previewGitProjectFile(
+  current: DashboardSnapshot,
+  input: GitProjectFilePreviewInput,
+): Promise<GitProjectFilePreviewRecord> {
+  const relativePath = normalizeGitRelativePath(input.relativePath);
+  if (!relativePath) {
+    throw new Error("Relative path is required.");
+  }
+
+  const nativePreview = await tryInvokeNativeCommand<GitProjectFilePreviewRecord>(
+    "preview_git_project_file",
+    {
+      repoRoot: input.repoRoot,
+      relativePath,
+    },
+  );
+
+  if (nativePreview && isGitProjectFilePreviewRecord(nativePreview)) {
+    return normalizeGitProjectFilePreviewRecord(nativePreview);
+  }
+
+  if (shouldUseDemoData()) {
+    return buildDemoGitProjectFilePreview(current, {
+      repoRoot: input.repoRoot,
+      relativePath,
+    });
+  }
+
+  throw new Error(
+    "Git file preview is only available in the desktop runtime or demo mode.",
+  );
+}
+
 export function hasSuccessfulMarkdownExport(
   auditEvents: AuditEventRecord[],
   sessionId: string,
@@ -1937,6 +1984,20 @@ function isGitProjectRecord(value: unknown): value is GitProjectRecord {
   );
 }
 
+function isGitProjectFilePreviewRecord(
+  value: unknown,
+): value is GitProjectFilePreviewRecord {
+  return (
+    isRecord(value) &&
+    typeof value.repoRoot === "string" &&
+    typeof value.relativePath === "string" &&
+    typeof value.content === "string" &&
+    typeof value.truncated === "boolean" &&
+    typeof value.byteSize === "number" &&
+    typeof value.lineCount === "number"
+  );
+}
+
 function isGitWorkspaceEntryRecord(value: unknown): value is GitWorkspaceEntryRecord {
   return (
     isRecord(value) &&
@@ -1986,11 +2047,24 @@ function normalizeGitProjectRecord(
   };
 }
 
+function normalizeGitProjectFilePreviewRecord(
+  preview: GitProjectFilePreviewRecord,
+): GitProjectFilePreviewRecord {
+  return {
+    repoRoot: preview.repoRoot.trim(),
+    relativePath: normalizeGitRelativePath(preview.relativePath),
+    content: preview.content,
+    truncated: preview.truncated,
+    byteSize: Number.isFinite(preview.byteSize) ? Math.max(0, preview.byteSize) : 0,
+    lineCount: Number.isFinite(preview.lineCount) ? Math.max(0, preview.lineCount) : 0,
+  };
+}
+
 function normalizeGitWorkspaceEntryRecord(
   entry: GitWorkspaceEntryRecord
 ): GitWorkspaceEntryRecord {
   return {
-    relativePath: entry.relativePath.trim(),
+    relativePath: normalizeGitRelativePath(entry.relativePath),
     kind: entry.kind.trim(),
     depth: Number.isFinite(entry.depth) ? Math.max(0, entry.depth) : 0
   };
@@ -2004,6 +2078,75 @@ function normalizeGitCommitRecord(commit: GitCommitRecord): GitCommitRecord {
     author: commit.author.trim(),
     authoredAt: commit.authoredAt.trim(),
   };
+}
+
+function buildDemoGitProjectFilePreview(
+  current: DashboardSnapshot,
+  input: GitProjectFilePreviewInput,
+): GitProjectFilePreviewRecord {
+  const project = (current.gitProjects ?? []).find(
+    (candidate) => candidate.repoRoot === input.repoRoot,
+  );
+  if (!project) {
+    throw new Error(`Git project not found: ${input.repoRoot}`);
+  }
+
+  const entry = (project.workspaceEntries ?? []).find(
+    (candidate) =>
+      normalizeGitRelativePath(candidate.relativePath) === input.relativePath,
+  );
+  if (!entry || entry.kind !== "file") {
+    throw new Error(`Workspace file not found: ${input.relativePath}`);
+  }
+
+  const demoContent =
+    buildDemoGitPreviewContent(project.repoRoot, input.relativePath) ??
+    [
+      `# ${input.relativePath}`,
+      "",
+      "Synthetic browser preview fallback.",
+      "Use the desktop runtime to read the real file content.",
+    ].join("\n");
+  const byteSize = new TextEncoder().encode(demoContent).length;
+
+  return {
+    repoRoot: project.repoRoot,
+    relativePath: input.relativePath,
+    content: demoContent,
+    truncated: false,
+    byteSize,
+    lineCount: countPreviewLines(demoContent),
+  };
+}
+
+function buildDemoGitPreviewContent(repoRoot: string, relativePath: string) {
+  const key = `${repoRoot}:${relativePath}`;
+  switch (key) {
+    case "C:/Users/Max/Desktop/2026年3月15日:README.md":
+      return [
+        "# open Session Manager",
+        "",
+        "- Local session retention and cleanup governance",
+        "- Native Windows + Linux + WSL discovery",
+        "- Safe Markdown export before quarantine",
+      ].join("\n");
+    case "C:/Projects/osm:README.md":
+      return "# OSM\n";
+    default:
+      return undefined;
+  }
+}
+
+function countPreviewLines(value: string) {
+  if (!value) {
+    return 0;
+  }
+
+  return value.split(/\r?\n/).length;
+}
+
+function normalizeGitRelativePath(value: string) {
+  return value.trim().replace(/\\/g, "/").replace(/^\.\/+/, "");
 }
 
 function isSessionControlRecord(value: unknown): value is SessionControlRecord {

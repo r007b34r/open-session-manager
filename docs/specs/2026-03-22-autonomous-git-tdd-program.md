@@ -129,7 +129,7 @@
 | `GIT-04` | P1 | done | commit history view | 历史视图支持筛选与详情 |
 | `GIT-05` | P1 | done | project grouping | Sessions 与 Config 页面已按项目分组展示，并有 Web / App 测试覆盖 |
 | `GIT-06` | P1 | done | file explorer | Git 面板已展示只读文件树与相对路径预览，大仓库会给出截断提示，并通过 Rust/Web/visual verify 回归 |
-| `GIT-07` | P1 | todo | file preview / editor | 预览与只读编辑模式测试通过 |
+| `GIT-07` | P1 | done | file preview / editor | Git 文件树支持按需只读预览，包含路径逃逸保护与只读 editor 测试 |
 | `GIT-08` | P1 | done | browser preview | `web/package.json` 已提供正式 `preview/browser` 脚本，Playwright E2E 统一复用 build 后的 preview 链路 |
 
 ### 4.7 配置、provider 与密钥治理

@@ -5,6 +5,8 @@ import type {
   DashboardSnapshot,
   GitProjectBranchSwitchInput,
   GitProjectCommitInput,
+  GitProjectFilePreviewInput,
+  GitProjectFilePreviewRecord,
   GitProjectPushInput
 } from "../lib/api";
 import { UsagePanel } from "../components/usage-panel";
@@ -15,6 +17,7 @@ type OverviewRouteProps = {
   isRefreshing: boolean;
   onGitProjectCommit: (input: GitProjectCommitInput) => void;
   onGitProjectBranchSwitch: (input: GitProjectBranchSwitchInput) => void;
+  onGitProjectPreview: (input: GitProjectFilePreviewInput) => Promise<GitProjectFilePreviewRecord>;
   onGitProjectPush: (input: GitProjectPushInput) => void;
   onRefreshSnapshot: () => void;
 };
@@ -24,6 +27,7 @@ export function OverviewRoute({
   isRefreshing,
   onGitProjectCommit,
   onGitProjectBranchSwitch,
+  onGitProjectPreview,
   onGitProjectPush,
   onRefreshSnapshot
 }: OverviewRouteProps) {
@@ -109,6 +113,7 @@ export function OverviewRoute({
       <GitProjectPanel
         auditEvents={snapshot.auditEvents}
         onCommit={onGitProjectCommit}
+        onPreviewFile={onGitProjectPreview}
         onPush={onGitProjectPush}
         onSwitchBranch={onGitProjectBranchSwitch}
         projects={snapshot.gitProjects ?? []}

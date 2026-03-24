@@ -1154,10 +1154,96 @@ a {
   background: rgba(255, 255, 255, 0.68);
 }
 
-.git-workspace-entry code {
+.git-workspace-entry.is-previewable {
+  padding: 0;
+  overflow: hidden;
+}
+
+.git-workspace-entry.is-selected {
+  border-color: rgba(157, 61, 15, 0.24);
+  background: linear-gradient(135deg, rgba(247, 217, 191, 0.68), rgba(255, 251, 246, 0.92));
+}
+
+.git-workspace-button {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.git-workspace-button:disabled {
+  cursor: progress;
+}
+
+.git-workspace-action {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.git-workspace-entry code,
+.git-workspace-label {
   display: block;
+  min-width: 0;
   overflow-wrap: anywhere;
   font-size: 0.85rem;
+}
+
+.git-preview-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(31, 39, 34, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 242, 231, 0.96));
+}
+
+.git-preview-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin: 0;
+}
+
+.git-preview-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.git-preview-meta dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.git-preview-meta dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.git-preview-textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid rgba(31, 39, 34, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px 16px;
+  color: var(--ink);
+  font: 0.84rem/1.55 "Consolas", "Cascadia Mono", monospace;
 }
 
 .mcp-viewer-panel {

@@ -1,6 +1,11 @@
-use std::{env, path::PathBuf};
+use std::{
+    env,
+    fs::File,
+    io::Read,
+    path::{Component, Path, PathBuf},
+};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
@@ -33,6 +38,19 @@ use crate::{
 
 pub use crate::commands::query::{ListSessionInventoryRequest, SearchSessionInventoryRequest};
 
+const GIT_FILE_PREVIEW_MAX_BYTES: usize = 64 * 1024;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitProjectFilePreview {
+    pub repo_root: String,
+    pub relative_path: String,
+    pub content: String,
+    pub truncated: bool,
+    pub byte_size: u64,
+    pub line_count: usize,
+}
+
 pub fn run() -> Result<(), String> {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -41,6 +59,7 @@ pub fn run() -> Result<(), String> {
             attach_existing_session,
             export_session_markdown,
             push_git_project,
+            preview_git_project_file,
             detach_existing_session,
             pause_existing_session,
             resume_existing_session,
@@ -414,6 +433,22 @@ pub async fn push_git_project(
     .map_err(|error| error.to_string())?
 }
 
+#[tauri::command]
+pub async fn preview_git_project_file(
+    repo_root: String,
+    relative_path: String,
+) -> Result<GitProjectFilePreview, String> {
+    let context = build_discovery_context();
+    let paths = build_runtime_paths().map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let resolved_repo_root = resolve_git_repo_root(&context, &paths, &repo_root)?;
+        build_git_project_file_preview(&resolved_repo_root, &relative_path)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
 fn resolve_indexed_session(
     context: &DiscoveryContext,
     session_id: &str,
@@ -513,6 +548,105 @@ fn resolve_git_repo_root_fallback(repo_root: &str) -> Option<PathBuf> {
     }
 }
 
+fn build_git_project_file_preview(
+    repo_root: &Path,
+    relative_path: &str,
+) -> Result<GitProjectFilePreview, String> {
+    let canonical_repo_root = repo_root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve repo root {}: {error}", repo_root.display()))?;
+    let normalized_relative_path = normalize_git_relative_path(relative_path)?;
+    let resolved_path =
+        resolve_git_project_preview_path(&canonical_repo_root, &normalized_relative_path)?;
+    let mut file = File::open(&resolved_path)
+        .map_err(|error| format!("failed to open {}: {error}", resolved_path.display()))?;
+    let byte_size = file
+        .metadata()
+        .map_err(|error| format!("failed to read metadata for {}: {error}", resolved_path.display()))?
+        .len();
+    let mut preview_bytes = Vec::with_capacity(GIT_FILE_PREVIEW_MAX_BYTES.min(byte_size as usize));
+    file.by_ref()
+        .take(GIT_FILE_PREVIEW_MAX_BYTES as u64 + 1)
+        .read_to_end(&mut preview_bytes)
+        .map_err(|error| format!("failed to read preview for {}: {error}", resolved_path.display()))?;
+
+    let truncated = preview_bytes.len() > GIT_FILE_PREVIEW_MAX_BYTES;
+    if truncated {
+        preview_bytes.truncate(GIT_FILE_PREVIEW_MAX_BYTES);
+    }
+
+    if preview_bytes.contains(&0) {
+        return Err(format!(
+            "binary file preview is not supported: {}",
+            resolved_path.display()
+        ));
+    }
+
+    let content = String::from_utf8_lossy(&preview_bytes).into_owned();
+    let line_count = if content.is_empty() {
+        0
+    } else {
+        content.lines().count()
+    };
+
+    Ok(GitProjectFilePreview {
+        repo_root: canonical_repo_root.display().to_string(),
+        relative_path: normalized_relative_path,
+        content,
+        truncated: truncated || byte_size > GIT_FILE_PREVIEW_MAX_BYTES as u64,
+        byte_size,
+        line_count,
+    })
+}
+
+fn normalize_git_relative_path(value: &str) -> Result<String, String> {
+    let normalized = value.trim().replace('\\', "/");
+    if normalized.is_empty() {
+        return Err("relative path is required".to_string());
+    }
+
+    let path = Path::new(&normalized);
+    if path.is_absolute()
+        || path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "requested path points outside the repository root: {normalized}"
+        ));
+    }
+
+    Ok(normalized)
+}
+
+fn resolve_git_project_preview_path(
+    repo_root: &Path,
+    relative_path: &str,
+) -> Result<PathBuf, String> {
+    let candidate = repo_root.join(relative_path);
+    let resolved = candidate
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve preview path {}: {error}", candidate.display()))?;
+
+    if !resolved.starts_with(repo_root) {
+        return Err(format!(
+            "requested path points outside the repository root: {relative_path}"
+        ));
+    }
+
+    let metadata = resolved
+        .metadata()
+        .map_err(|error| format!("failed to read metadata for {}: {error}", resolved.display()))?;
+    if !metadata.is_file() {
+        return Err(format!("preview target is not a file: {}", resolved.display()));
+    }
+
+    Ok(resolved)
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -532,9 +666,10 @@ mod tests {
         attach_existing_session, commit_git_project, continue_existing_session,
         detach_existing_session, expand_session_detail, export_session_markdown,
         get_session_detail, list_session_inventory, load_dashboard_snapshot,
-        pause_existing_session, push_git_project, resume_existing_session,
-        save_dashboard_preferences, search_session_inventory, soft_delete_session,
-        switch_git_project_branch, view_session_detail, write_config_artifact,
+        pause_existing_session, preview_git_project_file, push_git_project,
+        resume_existing_session, save_dashboard_preferences, search_session_inventory,
+        soft_delete_session, switch_git_project_branch, view_session_detail,
+        write_config_artifact,
     };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
@@ -621,6 +756,12 @@ mod tests {
 
         let push = push_git_project("C:/Projects/osm".to_string(), None);
         assert_future(&push);
+
+        let preview = preview_git_project_file(
+            "C:/Projects/osm".to_string(),
+            "README.md".to_string(),
+        );
+        assert_future(&preview);
     }
 
     #[test]
@@ -846,6 +987,48 @@ mod tests {
                 assert_eq!(
                     git(&repo_root, &["branch", "--show-current"]),
                     "feature/git-dashboard"
+                );
+            })
+        });
+    }
+
+    #[test]
+    fn git_project_file_preview_reads_files_and_rejects_escape() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let repo_root = sandbox.join("repos").join("git-preview");
+
+        init_git_repo(&repo_root);
+        fs::create_dir_all(repo_root.join("src")).expect("create src");
+        fs::write(repo_root.join("src").join("main.rs"), "fn main() {}\n")
+            .expect("write preview file");
+        seed_git_project_session(&home_dir, &repo_root);
+
+        with_home_dir(&home_dir, || {
+            tauri::async_runtime::block_on(async {
+                let preview = preview_git_project_file(
+                    repo_root.display().to_string(),
+                    "src/main.rs".to_string(),
+                )
+                .await
+                .expect("preview repo file");
+
+                assert_eq!(preview.relative_path, "src/main.rs");
+                assert!(preview.content.contains("fn main()"));
+                assert!(preview.byte_size > 0);
+                assert!(preview.line_count > 0);
+
+                let escaped = preview_git_project_file(
+                    repo_root.display().to_string(),
+                    "..\\secret.txt".to_string(),
+                )
+                .await;
+
+                assert!(escaped.is_err());
+                assert!(
+                    escaped
+                        .err()
+                        .is_some_and(|error| error.contains("outside the repository root"))
                 );
             })
         });

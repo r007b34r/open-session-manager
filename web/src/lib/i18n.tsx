@@ -138,6 +138,10 @@ type Messages = {
         commitAuthor: string;
         commitAuthoredAt: string;
         lastAction: string;
+        filePreview: string;
+        previewPath: string;
+        previewBytes: string;
+        previewLines: string;
       };
       actions: {
         commitMessage: string;
@@ -148,6 +152,12 @@ type Messages = {
         historyFilter: string;
         showDetails: string;
         hideDetails: string;
+        previewFile: string;
+      };
+      preview: {
+        loading: string;
+        loadFailed: string;
+        truncated: string;
       };
       guardrails: {
         cleanBeforeSwitch: string;
@@ -577,6 +587,10 @@ const messages: Record<Language, Messages> = {
           commitAuthor: "Author",
           commitAuthoredAt: "Authored at",
           lastAction: "Last action",
+          filePreview: "File preview",
+          previewPath: "Path",
+          previewBytes: "Bytes",
+          previewLines: "Lines",
         },
         actions: {
           commitMessage: "Commit message",
@@ -587,6 +601,12 @@ const messages: Record<Language, Messages> = {
           historyFilter: "Filter history",
           showDetails: "Show details for",
           hideDetails: "Hide details for",
+          previewFile: "Preview",
+        },
+        preview: {
+          loading: "Loading file preview...",
+          loadFailed: "File preview could not be loaded",
+          truncated: "Preview truncated to the safe read-only byte limit.",
         },
         guardrails: {
           cleanBeforeSwitch:
@@ -1101,6 +1121,10 @@ const messages: Record<Language, Messages> = {
           commitAuthor: "作者",
           commitAuthoredAt: "提交时间",
           lastAction: "最近动作",
+          filePreview: "文件预览",
+          previewPath: "路径",
+          previewBytes: "字节数",
+          previewLines: "行数",
         },
         actions: {
           commitMessage: "提交说明",
@@ -1111,6 +1135,12 @@ const messages: Record<Language, Messages> = {
           historyFilter: "筛选历史",
           showDetails: "展开详情",
           hideDetails: "收起详情",
+          previewFile: "预览",
+        },
+        preview: {
+          loading: "正在加载文件预览...",
+          loadFailed: "文件预览加载失败",
+          truncated: "预览内容已按安全只读字节上限截断。",
         },
         guardrails: {
           cleanBeforeSwitch: "先清掉本地脏区，再切换分支。",

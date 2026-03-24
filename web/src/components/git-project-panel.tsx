@@ -4,6 +4,8 @@ import type {
   AuditEventRecord,
   GitProjectBranchSwitchInput,
   GitProjectCommitInput,
+  GitProjectFilePreviewInput,
+  GitProjectFilePreviewRecord,
   GitProjectPushInput,
   GitProjectRecord
 } from "../lib/api";
@@ -13,14 +15,23 @@ type GitProjectPanelProps = {
   projects: GitProjectRecord[];
   auditEvents: AuditEventRecord[];
   onCommit: (input: GitProjectCommitInput) => void;
+  onPreviewFile?: (input: GitProjectFilePreviewInput) => Promise<GitProjectFilePreviewRecord>;
   onSwitchBranch: (input: GitProjectBranchSwitchInput) => void;
   onPush: (input: GitProjectPushInput) => void;
+};
+
+type GitPreviewState = {
+  status: "loading" | "ready" | "error";
+  requestKey: string;
+  preview?: GitProjectFilePreviewRecord;
+  error?: string;
 };
 
 export function GitProjectPanel({
   projects,
   auditEvents,
   onCommit,
+  onPreviewFile,
   onSwitchBranch,
   onPush
 }: GitProjectPanelProps) {
@@ -29,6 +40,12 @@ export function GitProjectPanel({
   const [branchDrafts, setBranchDrafts] = useState<Record<string, string>>({});
   const [historyFilters, setHistoryFilters] = useState<Record<string, string>>({});
   const [expandedCommits, setExpandedCommits] = useState<Record<string, string | undefined>>({});
+  const [selectedPreviewPaths, setSelectedPreviewPaths] = useState<
+    Record<string, string | undefined>
+  >({});
+  const [previewStates, setPreviewStates] = useState<Record<string, GitPreviewState | undefined>>(
+    {}
+  );
   const latestGitEvents = buildLatestGitEventMap(auditEvents);
 
   return (
@@ -56,6 +73,8 @@ export function GitProjectPanel({
               matchesCommitFilter(commit, historyFilter)
             );
             const workspaceEntries = project.workspaceEntries ?? [];
+            const selectedPreviewPath = selectedPreviewPaths[project.repoRoot];
+            const previewState = previewStates[project.repoRoot];
 
             return (
               <article className="config-card" key={project.repoRoot}>
@@ -167,23 +186,147 @@ export function GitProjectPanel({
                   <div className="git-workspace-explorer">
                     <strong>{copy.overview.git.fields.workspaceExplorer}</strong>
                     <ul className="git-workspace-list">
-                      {workspaceEntries.map((entry) => (
-                        <li
-                          className="git-workspace-entry"
-                          key={`${project.repoRoot}:${entry.relativePath}`}
-                          style={{ paddingInlineStart: `${entry.depth * 16}px` }}
-                        >
-                          <code>
-                            {entry.relativePath}
-                            {entry.kind === "directory" ? "/" : ""}
-                          </code>
-                        </li>
-                      ))}
+                      {workspaceEntries.map((entry) => {
+                        const isPreviewable = entry.kind === "file" && typeof onPreviewFile === "function";
+                        const isSelected = selectedPreviewPath === entry.relativePath;
+                        const requestLabel =
+                          entry.kind === "directory"
+                            ? `${entry.relativePath}/`
+                            : entry.relativePath;
+
+                        return (
+                          <li
+                            className={[
+                              "git-workspace-entry",
+                              isPreviewable ? "is-previewable" : "",
+                              isSelected ? "is-selected" : ""
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={`${project.repoRoot}:${entry.relativePath}`}
+                            style={{ paddingInlineStart: `${entry.depth * 16}px` }}
+                          >
+                            {isPreviewable ? (
+                              <button
+                                type="button"
+                                aria-label={`${copy.overview.git.actions.previewFile} ${entry.relativePath}`}
+                                className="git-workspace-button"
+                                disabled={previewState?.status === "loading" && isSelected}
+                                onClick={() => {
+                                  if (!onPreviewFile) {
+                                    return;
+                                  }
+
+                                  const requestKey = `${project.repoRoot}:${entry.relativePath}:${Date.now()}`;
+                                  setSelectedPreviewPaths((current) => ({
+                                    ...current,
+                                    [project.repoRoot]: entry.relativePath
+                                  }));
+                                  setPreviewStates((current) => ({
+                                    ...current,
+                                    [project.repoRoot]: {
+                                      status: "loading",
+                                      requestKey
+                                    }
+                                  }));
+
+                                  void onPreviewFile({
+                                    repoRoot: project.repoRoot,
+                                    relativePath: entry.relativePath
+                                  })
+                                    .then((preview) => {
+                                      setPreviewStates((current) =>
+                                        current[project.repoRoot]?.requestKey !== requestKey
+                                          ? current
+                                          : {
+                                              ...current,
+                                              [project.repoRoot]: {
+                                                status: "ready",
+                                                requestKey,
+                                                preview
+                                              }
+                                            }
+                                      );
+                                    })
+                                    .catch((error: unknown) => {
+                                      setPreviewStates((current) =>
+                                        current[project.repoRoot]?.requestKey !== requestKey
+                                          ? current
+                                          : {
+                                              ...current,
+                                              [project.repoRoot]: {
+                                                status: "error",
+                                                requestKey,
+                                                error:
+                                                  error instanceof Error
+                                                    ? error.message
+                                                    : copy.overview.git.preview.loadFailed
+                                              }
+                                            }
+                                      );
+                                    });
+                                }}
+                              >
+                                <span className="git-workspace-action">
+                                  {copy.overview.git.actions.previewFile}
+                                </span>
+                                <code className="git-workspace-label">{requestLabel}</code>
+                              </button>
+                            ) : (
+                              <code className="git-workspace-label">{requestLabel}</code>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                     {project.workspaceTruncated ? (
                       <p className="panel-copy">
                         {copy.overview.git.fields.workspaceTruncated}
                       </p>
+                    ) : null}
+                    {typeof onPreviewFile === "function" && selectedPreviewPath ? (
+                      <div className="git-preview-card">
+                        <div className="config-card-topline">
+                          <strong>{copy.overview.git.fields.filePreview}</strong>
+                          <code className="git-workspace-label">{selectedPreviewPath}</code>
+                        </div>
+                        {previewState?.status === "loading" ? (
+                          <p className="panel-copy">{copy.overview.git.preview.loading}</p>
+                        ) : null}
+                        {previewState?.status === "error" ? (
+                          <p className="action-hint">
+                            {copy.overview.git.preview.loadFailed}
+                            {previewState.error ? `: ${previewState.error}` : ""}
+                          </p>
+                        ) : null}
+                        {previewState?.status === "ready" && previewState.preview ? (
+                          <>
+                            <dl className="git-preview-meta">
+                              <div>
+                                <dt>{copy.overview.git.fields.previewPath}</dt>
+                                <dd>{previewState.preview.relativePath}</dd>
+                              </div>
+                              <div>
+                                <dt>{copy.overview.git.fields.previewBytes}</dt>
+                                <dd>{previewState.preview.byteSize}</dd>
+                              </div>
+                              <div>
+                                <dt>{copy.overview.git.fields.previewLines}</dt>
+                                <dd>{previewState.preview.lineCount}</dd>
+                              </div>
+                            </dl>
+                            <textarea
+                              aria-label={copy.overview.git.fields.filePreview}
+                              className="git-preview-textarea"
+                              readOnly
+                              value={previewState.preview.content}
+                            />
+                            {previewState.preview.truncated ? (
+                              <p className="panel-copy">{copy.overview.git.preview.truncated}</p>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
