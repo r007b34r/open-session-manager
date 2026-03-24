@@ -25,6 +25,7 @@
 - `Codex / Claude Code / GitHub Copilot CLI / OpenCode` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
 - `serve` 现在额外暴露 `/metrics` Prometheus 指标端点，可直接采集 sessions/configs/git projects/doctor findings/audit events
 - `serve` 现在还支持本地 automation server：可通过 `POST /api/v1/automation/tasks` 触发 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，再通过 `GET /api/v1/automation/tasks/{taskId}` 读取稳定回执
+- `serve` 现在支持 `POST /api/v1/auth/local-token`，可为本地壳层发行 loopback-only 的短期签名 Bearer token；受保护路由可接受静态 Bearer 或短期 token
 - Web 详情页补上了一键恢复、继续提示、最近控制结果和导出落盘路径提示
 - 总览页新增 `active session cockpit`，可直接查看当前可控会话、最近控制响应，并手动刷新运行时状态
 - 支持 usage / cost analytics：

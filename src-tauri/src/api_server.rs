@@ -11,7 +11,7 @@ use std::{
 
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::{
         HeaderMap, StatusCode,
         header::{AUTHORIZATION, CONTENT_TYPE},
@@ -19,9 +19,11 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
-use chrono::Utc;
+use chrono::{TimeDelta, Utc};
+use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use crate::{
     AppState,
@@ -55,6 +57,7 @@ struct ApiState {
     fixtures_path: Option<PathBuf>,
     audit_db_path: Option<PathBuf>,
     api_token: Option<String>,
+    auth_signing_secret: String,
     automation_tasks: Arc<Mutex<HashMap<String, AutomationTaskReceipt>>>,
     next_automation_task_id: Arc<AtomicU64>,
 }
@@ -104,6 +107,12 @@ struct ContinueSessionRequest {
     prompt: String,
 }
 
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalShellTokenRequest {
+    ttl_seconds: Option<u64>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AutomationTaskRequest {
@@ -132,6 +141,18 @@ struct AutomationTaskReceipt {
     error: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalShellTokenResponse {
+    token: String,
+    scheme: &'static str,
+    expires_at: String,
+    ttl_seconds: u64,
+}
+
+const DEFAULT_LOCAL_SHELL_TOKEN_TTL_SECONDS: u64 = 300;
+const MAX_LOCAL_SHELL_TOKEN_TTL_SECONDS: u64 = 3600;
+
 pub fn run(args: &[String]) -> Result<(), String> {
     let config = parse_config(args)?;
     let host = config.host.unwrap_or_else(|| "127.0.0.1".to_string());
@@ -145,6 +166,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
         fixtures_path: config.fixtures_path,
         audit_db_path: config.audit_db_path,
         api_token: config.api_token,
+        auth_signing_secret: generate_auth_signing_secret(),
         automation_tasks: Arc::new(Mutex::new(HashMap::new())),
         next_automation_task_id: Arc::new(AtomicU64::new(1)),
     };
@@ -154,9 +176,12 @@ pub fn run(args: &[String]) -> Result<(), String> {
         let listener = tokio::net::TcpListener::bind(address)
             .await
             .map_err(|error| error.to_string())?;
-        axum::serve(listener, router(state))
-            .await
-            .map_err(|error| error.to_string())
+        axum::serve(
+            listener,
+            router(state).into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .map_err(|error| error.to_string())
     })
 }
 
@@ -165,6 +190,7 @@ fn router(state: ApiState) -> Router {
         .route("/health", get(health))
         .route("/metrics", get(metrics))
         .route("/openapi.json", get(openapi))
+        .route("/api/v1/auth/local-token", post(issue_local_shell_token))
         .route("/api/v1/automation/tasks", post(create_automation_task))
         .route(
             "/api/v1/automation/tasks/{taskId}",
@@ -226,6 +252,16 @@ async fn metrics(
 
 async fn openapi(State(state): State<ApiState>) -> Json<Value> {
     Json(openapi_document(&state.app))
+}
+
+async fn issue_local_shell_token(
+    State(state): State<ApiState>,
+    ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
+    Json(request): Json<LocalShellTokenRequest>,
+) -> Result<Json<LocalShellTokenResponse>, ApiError> {
+    ensure_local_shell_auth_is_enabled(&state)?;
+    ensure_loopback_client(remote_addr)?;
+    Ok(Json(build_local_shell_token_response(&state, &request)))
 }
 
 async fn create_automation_task(
@@ -533,7 +569,9 @@ fn authorize(state: &ApiState, headers: &HeaderMap) -> Result<(), ApiError> {
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "));
 
-    if provided == Some(expected_token) {
+    if provided == Some(expected_token)
+        || provided.is_some_and(|token| verify_local_shell_token(state, token))
+    {
         return Ok(());
     }
 
@@ -541,6 +579,106 @@ fn authorize(state: &ApiState, headers: &HeaderMap) -> Result<(), ApiError> {
         status: StatusCode::UNAUTHORIZED,
         message: "missing or invalid bearer token".to_string(),
     })
+}
+
+fn ensure_local_shell_auth_is_enabled(state: &ApiState) -> Result<(), ApiError> {
+    if state.api_token.is_some() {
+        return Ok(());
+    }
+
+    Err(ApiError::conflict(
+        "local shell auth token issuance requires bearer auth to be enabled".to_string(),
+    ))
+}
+
+fn ensure_loopback_client(remote_addr: SocketAddr) -> Result<(), ApiError> {
+    if remote_addr.ip().is_loopback() {
+        return Ok(());
+    }
+
+    Err(ApiError::forbidden(
+        "local shell auth token issuance is restricted to loopback clients".to_string(),
+    ))
+}
+
+fn build_local_shell_token_response(
+    state: &ApiState,
+    request: &LocalShellTokenRequest,
+) -> LocalShellTokenResponse {
+    let ttl_seconds = request
+        .ttl_seconds
+        .unwrap_or(DEFAULT_LOCAL_SHELL_TOKEN_TTL_SECONDS)
+        .min(MAX_LOCAL_SHELL_TOKEN_TTL_SECONDS);
+    let expires_at = Utc::now()
+        + TimeDelta::seconds(i64::try_from(ttl_seconds).expect("ttl seconds should fit into i64"));
+    let expires_at_timestamp = expires_at.timestamp();
+    let nonce = format!(
+        "{:x}-{}",
+        Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+        std::process::id()
+    );
+    let payload = build_local_shell_token_payload(expires_at_timestamp, &nonce);
+    let signature = sign_local_shell_token(&state.auth_signing_secret, &payload);
+
+    LocalShellTokenResponse {
+        token: format!("osm-local-v1.{expires_at_timestamp}.{nonce}.{signature}"),
+        scheme: "Bearer",
+        expires_at: expires_at.to_rfc3339(),
+        ttl_seconds,
+    }
+}
+
+fn verify_local_shell_token(state: &ApiState, token: &str) -> bool {
+    let mut parts = token.split('.');
+    let Some(prefix) = parts.next() else {
+        return false;
+    };
+    let Some(expires_at_timestamp) = parts.next() else {
+        return false;
+    };
+    let Some(nonce) = parts.next() else {
+        return false;
+    };
+    let Some(signature) = parts.next() else {
+        return false;
+    };
+
+    if prefix != "osm-local-v1" || parts.next().is_some() {
+        return false;
+    }
+
+    let Ok(expires_at_timestamp) = expires_at_timestamp.parse::<i64>() else {
+        return false;
+    };
+
+    if Utc::now().timestamp() >= expires_at_timestamp {
+        return false;
+    }
+
+    let payload = build_local_shell_token_payload(expires_at_timestamp, nonce);
+    sign_local_shell_token(&state.auth_signing_secret, &payload) == signature
+}
+
+fn build_local_shell_token_payload(expires_at_timestamp: i64, nonce: &str) -> String {
+    format!("osm-local-v1:{expires_at_timestamp}:{nonce}")
+}
+
+fn sign_local_shell_token(secret: &str, payload: &str) -> String {
+    let digest = Sha256::digest(format!("{secret}:{payload}").as_bytes());
+    hex_encode(digest.as_slice())
+}
+
+fn generate_auth_signing_secret() -> String {
+    let secret = random::<[u8; 32]>();
+    hex_encode(secret)
+}
+
+fn hex_encode(bytes: impl AsRef<[u8]>) -> String {
+    bytes
+        .as_ref()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 #[derive(Debug)]
@@ -574,6 +712,13 @@ impl ApiError {
     fn conflict(message: impl ToString) -> Self {
         Self {
             status: StatusCode::CONFLICT,
+            message: message.to_string(),
+        }
+    }
+
+    fn forbidden(message: impl ToString) -> Self {
+        Self {
+            status: StatusCode::FORBIDDEN,
             message: message.to_string(),
         }
     }

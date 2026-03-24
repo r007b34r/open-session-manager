@@ -186,7 +186,7 @@
 | `API-06` | P1 | done | `list/search/get/view/expand` 对外接口 | Tauri command 与 CLI 已共享 `commands::query` 查询层，桌面单测与 CLI 集成测试均已覆盖 |
 | `API-07` | P2 | done | Prometheus metrics | `serve` 已暴露 `/metrics` Prometheus 文本指标，并通过鉴权与集成测试覆盖 |
 | `API-08` | P0 | done | health / doctor checks | `doctor` 可发现关键环境问题 |
-| `API-09` | P1 | todo | 远程壳层鉴权 | token/JWT 或本地授权测试通过 |
+| `API-09` | P1 | done | 远程壳层鉴权 | `serve` 已支持 loopback-only 短期本地签名令牌发行，受保护路由可同时接受静态 Bearer 与短期签名 token，并有过期/集成测试覆盖 |
 
 ### 4.11 质量、诊断与运维
 

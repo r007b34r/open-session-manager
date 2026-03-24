@@ -37,6 +37,7 @@
 | Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
 | Local automation server | 已实现 | `cargo run -- serve` 已支持 `POST /api/v1/automation/tasks` 和 `GET /api/v1/automation/tasks/{taskId}`，首批任务覆盖 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，并返回稳定 receipt |
+| Remote shell auth | 已实现 | `serve` 已支持 `POST /api/v1/auth/local-token` 发行 loopback-only 的短期本地签名 Bearer token，受保护路由可接受静态 Bearer 或短期 token |
 | Prometheus metrics endpoint | 已实现 | `/metrics` 会返回本地 Prometheus 文本指标，覆盖 sessions/configs/git projects/doctor findings/audit events，并支持可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
 | MCP session query server | 已实现 | `cargo run -- mcp` 会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 tools，并复用同一套 Rust 查询层 |

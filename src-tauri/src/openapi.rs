@@ -67,6 +67,34 @@ pub fn openapi_document(app: &AppState) -> Value {
                     }
                 }
             },
+            "/api/v1/auth/local-token": {
+                "post": {
+                    "summary": "Issue a short-lived local shell bearer token",
+                    "requestBody": {
+                        "required": false,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/LocalShellTokenRequest" },
+                                "example": {
+                                    "ttlSeconds": 300
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Issued local shell bearer token",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/LocalShellTokenResponse" }
+                                }
+                            }
+                        },
+                        "403": { "$ref": "#/components/responses/Forbidden" },
+                        "409": { "$ref": "#/components/responses/Conflict" }
+                    }
+                }
+            },
             "/api/v1/automation/tasks": {
                 "post": {
                     "summary": "Trigger an automation task",
@@ -483,6 +511,15 @@ pub fn openapi_document(app: &AppState) -> Value {
                             "example": { "error": "continue is blocked while the session is paused; resume it before sending another prompt" }
                         }
                     }
+                },
+                "Forbidden": {
+                    "description": "Current caller is not allowed to perform the operation",
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                            "example": { "error": "local shell auth token issuance is restricted to loopback clients" }
+                        }
+                    }
                 }
             },
             "schemas": {
@@ -507,6 +544,22 @@ pub fn openapi_document(app: &AppState) -> Value {
                     "required": ["prompt"],
                     "properties": {
                         "prompt": { "type": "string" }
+                    }
+                },
+                "LocalShellTokenRequest": {
+                    "type": "object",
+                    "properties": {
+                        "ttlSeconds": { "type": "integer", "minimum": 0, "maximum": 3600 }
+                    }
+                },
+                "LocalShellTokenResponse": {
+                    "type": "object",
+                    "required": ["token", "scheme", "expiresAt", "ttlSeconds"],
+                    "properties": {
+                        "token": { "type": "string" },
+                        "scheme": { "type": "string", "enum": ["Bearer"] },
+                        "expiresAt": { "type": "string" },
+                        "ttlSeconds": { "type": "integer", "minimum": 0 }
                     }
                 },
                 "AutomationTaskRequest": {

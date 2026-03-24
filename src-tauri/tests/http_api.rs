@@ -193,6 +193,134 @@ fn serve_command_requires_bearer_token_when_configured() {
 }
 
 #[test]
+fn serve_command_issues_local_shell_token_and_accepts_it() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let issued = http_post_json(
+        port,
+        "/api/v1/auth/local-token",
+        None,
+        Some(r#"{"ttlSeconds":300}"#),
+    );
+    assert_eq!(
+        issued.status, 200,
+        "unexpected status for /api/v1/auth/local-token"
+    );
+    let issued_body =
+        serde_json::from_slice::<Value>(&issued.body).expect("issued token body is json");
+
+    let token = issued_body
+        .get("token")
+        .and_then(Value::as_str)
+        .expect("issued token should be present");
+    assert_eq!(
+        issued_body.get("scheme").and_then(Value::as_str),
+        Some("Bearer")
+    );
+    assert!(
+        issued_body
+            .get("expiresAt")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty())
+    );
+
+    let authorized = get_json_with_token(port, "/api/v1/sessions", token);
+    assert!(
+        authorized
+            .get("sessions")
+            .and_then(Value::as_array)
+            .is_some_and(|sessions| sessions.iter().any(|session| {
+                session.get("sessionId").and_then(Value::as_str) == Some("claude-ses-1")
+            }))
+    );
+
+    let openapi = get_json(port, "/openapi.json");
+    assert!(
+        openapi
+            .get("paths")
+            .and_then(|paths| paths.get("/api/v1/auth/local-token"))
+            .and_then(|path| path.get("post"))
+            .is_some()
+    );
+    assert!(
+        openapi
+            .get("components")
+            .and_then(|components| components.get("schemas"))
+            .and_then(|schemas| schemas.get("LocalShellTokenRequest"))
+            .is_some()
+    );
+    assert!(
+        openapi
+            .get("components")
+            .and_then(|components| components.get("schemas"))
+            .and_then(|schemas| schemas.get("LocalShellTokenResponse"))
+            .is_some()
+    );
+}
+
+#[test]
+fn serve_command_rejects_expired_local_shell_token() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let issued = http_post_json(
+        port,
+        "/api/v1/auth/local-token",
+        None,
+        Some(r#"{"ttlSeconds":0}"#),
+    );
+    assert_eq!(
+        issued.status, 200,
+        "unexpected status for /api/v1/auth/local-token"
+    );
+    let issued_body =
+        serde_json::from_slice::<Value>(&issued.body).expect("issued token body is json");
+    let token = issued_body
+        .get("token")
+        .and_then(Value::as_str)
+        .expect("issued token should be present");
+
+    let unauthorized = http_get(port, "/api/v1/sessions", Some(token));
+    assert_eq!(unauthorized.status, 401);
+    assert!(
+        serde_json::from_slice::<Value>(&unauthorized.body)
+            .expect("unauthorized body is json")
+            .get("error")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains("bearer token"))
+    );
+}
+
+#[test]
 fn serve_command_exposes_prometheus_metrics() {
     let sandbox = temp_root();
     let home_dir = sandbox.join("home");
