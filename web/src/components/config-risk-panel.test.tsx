@@ -191,6 +191,58 @@ describe("ConfigRiskPanel", () => {
     );
   });
 
+  it("allows editing qwen cli configs from the risk panel", async () => {
+    const user = userEvent.setup();
+    const onSaveConfig = vi.fn();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-005",
+            assistant: "Qwen CLI",
+            scope: "Global",
+            path: "~/.qwen/settings.json",
+            provider: "openai",
+            model: "qwen3-coder-plus",
+            baseUrl: "https://qwen-relay.example/v1",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_base_url"]
+          }
+        ]}
+        onSaveConfig={onSaveConfig}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    await user.clear(screen.getByLabelText(/^model$/i));
+    await user.type(screen.getByLabelText(/^model$/i), "qwen3-coder-max");
+    await user.clear(screen.getByLabelText(/endpoint/i));
+    await user.type(screen.getByLabelText(/endpoint/i), "https://api.openai.com/v1");
+    await user.type(screen.getByLabelText(/new key/i), "sk-qwen-new-123454321");
+    await user.click(screen.getByRole("button", { name: /review changes/i }));
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i
+      })
+    );
+    await user.click(screen.getByRole("button", { name: /apply reviewed changes/i }));
+
+    expect(onSaveConfig).toHaveBeenCalledWith({
+      artifactId: "cfg-005",
+      assistant: "Qwen CLI",
+      scope: "Global",
+      path: "~/.qwen/settings.json",
+      provider: "openai",
+      model: "qwen3-coder-max",
+      baseUrl: "https://api.openai.com/v1",
+      secret: "sk-qwen-new-123454321"
+    });
+  });
+
   it("saves a reusable snippet and reapplies it back to the current draft", async () => {
     const user = userEvent.setup();
     const onAuditEvent = vi.fn();

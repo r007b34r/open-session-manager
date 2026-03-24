@@ -1,0 +1,31 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+  "model": {
+    "name": "qwen3-coder-lite"
+  },
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen3-coder-lite",
+        "name": "Qwen3 Coder Lite",
+        "envKey": "OPENAI_API_KEY",
+        "baseUrl": "https://qwen-project-relay.example/v1"
+      }
+    ]
+  },
+  "settings": {
+    "env": {
+      "OPENAI_API_KEY": "sk-qwen-project-1234567890"
+    }
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["mcp-project-filesystem.js"]
+    }
+  }
+}

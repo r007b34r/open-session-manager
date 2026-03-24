@@ -243,7 +243,7 @@ fn backup_source_paths(target: &ConfigAuditTarget) -> ActionResult<Vec<PathBuf>>
         _ => vec![target.path.clone()],
     };
 
-    if target.assistant == "gemini-cli" {
+    if matches!(target.assistant.as_str(), "gemini-cli" | "qwen-cli") {
         let env_path = target.path.parent().unwrap_or(&target.path).join(".env");
         if env_path.exists() {
             paths.push(env_path);
@@ -268,6 +268,7 @@ fn apply_update(target: &ConfigAuditTarget, update: &ConfigWritebackUpdate) -> A
         "github-copilot-cli" => apply_copilot_update(target, update),
         "factory-droid" => apply_factory_update(target, update),
         "gemini-cli" => apply_gemini_update(target, update),
+        "qwen-cli" => apply_qwen_update(target, update),
         "openclaw" => apply_openclaw_update(target, update),
         assistant => Err(ActionError::Precondition(format!(
             "config writeback is not supported yet for {assistant}"
@@ -412,6 +413,73 @@ fn apply_openclaw_update(
     write_json_file(&target.path, &parsed)
 }
 
+fn apply_qwen_update(
+    target: &ConfigAuditTarget,
+    update: &ConfigWritebackUpdate,
+) -> ActionResult<()> {
+    let mut parsed = load_json_file(&target.path)?;
+    let current_audit = audit_config(target)?;
+    let current_provider = current_audit
+        .config
+        .provider
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+
+    if let Some(provider) = &update.provider
+        && provider != &current_provider
+    {
+        return Err(ActionError::Precondition(
+            "qwen-cli provider renames are not supported safely yet".to_string(),
+        ));
+    }
+
+    let selected_type = parsed
+        .get("security")
+        .and_then(|value| value.get("auth"))
+        .and_then(|value| value.get("selectedType"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let desired_model = update
+        .model
+        .as_deref()
+        .or(current_audit.config.model.as_deref());
+
+    if let Some(model) = &update.model {
+        parsed["model"]["name"] = Value::String(model.clone());
+    }
+
+    let provider_env_key = qwen_provider_env_key(&parsed, selected_type.as_deref(), desired_model);
+
+    if let Some(base_url) = &update.base_url {
+        if !update_qwen_provider_field(
+            &mut parsed,
+            selected_type.as_deref(),
+            desired_model,
+            "baseUrl",
+            Value::String(base_url.clone()),
+        ) {
+            parsed["security"]["auth"]["baseUrl"] = Value::String(base_url.clone());
+        }
+    }
+
+    if let Some(secret) = &update.secret {
+        if let Some(env_key) = provider_env_key {
+            let env_path = target.path.parent().unwrap_or(&target.path).join(".env");
+            if env_path.exists() {
+                let mut env_map = parse_dotenv(&fs::read_to_string(&env_path)?);
+                env_map.insert(env_key, secret.clone());
+                fs::write(&env_path, serialize_dotenv(&env_map))?;
+            } else {
+                parsed["settings"]["env"][env_key] = Value::String(secret.clone());
+            }
+        } else {
+            parsed["security"]["auth"]["apiKey"] = Value::String(secret.clone());
+        }
+    }
+
+    write_json_file(&target.path, &parsed)
+}
+
 fn load_json_file(path: &Path) -> ActionResult<Value> {
     Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
 }
@@ -485,6 +553,73 @@ fn resolve_factory_write_path(path: &Path) -> PathBuf {
         }
         _ => path.to_path_buf(),
     }
+}
+
+fn qwen_provider_env_key(
+    parsed: &Value,
+    selected_type: Option<&str>,
+    model: Option<&str>,
+) -> Option<String> {
+    qwen_provider_entry(parsed, selected_type, model)
+        .and_then(|entry| entry.get("envKey"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+}
+
+fn qwen_provider_entry<'a>(
+    parsed: &'a Value,
+    selected_type: Option<&str>,
+    model: Option<&str>,
+) -> Option<&'a Value> {
+    let selected_type = selected_type?;
+    let providers = parsed
+        .get("modelProviders")
+        .and_then(|value| value.get(selected_type))
+        .and_then(Value::as_array)?;
+
+    if let Some(model) = model
+        && let Some(entry) = providers
+            .iter()
+            .find(|entry| entry.get("id").and_then(Value::as_str) == Some(model))
+    {
+        return Some(entry);
+    }
+
+    providers.first()
+}
+
+fn update_qwen_provider_field(
+    parsed: &mut Value,
+    selected_type: Option<&str>,
+    model: Option<&str>,
+    field: &str,
+    next_value: Value,
+) -> bool {
+    let Some(selected_type) = selected_type else {
+        return false;
+    };
+    let Some(providers) = parsed
+        .get_mut("modelProviders")
+        .and_then(|value| value.get_mut(selected_type))
+        .and_then(Value::as_array_mut)
+    else {
+        return false;
+    };
+
+    let index = if let Some(model) = model {
+        providers
+            .iter()
+            .position(|entry| entry.get("id").and_then(Value::as_str) == Some(model))
+            .unwrap_or(0)
+    } else {
+        0
+    };
+
+    let Some(entry) = providers.get_mut(index).and_then(Value::as_object_mut) else {
+        return false;
+    };
+    entry.insert(field.to_string(), next_value);
+    true
 }
 
 fn audit_state_json(audit: &AssistantConfigAudit) -> String {

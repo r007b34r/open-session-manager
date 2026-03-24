@@ -1,0 +1,32 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+  "model": {
+    "name": "qwen3-coder-plus"
+  },
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen3-coder-plus",
+        "name": "Qwen3 Coder Plus",
+        "envKey": "OPENAI_API_KEY",
+        "baseUrl": "https://qwen-relay.example/v1"
+      }
+    ]
+  },
+  "settings": {
+    "env": {}
+  },
+  "checkpointing": {
+    "enabled": true
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["mcp-filesystem.js"]
+    }
+  }
+}

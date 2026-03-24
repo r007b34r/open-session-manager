@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-21T21:46:43.198Z",
+  "generatedAt": "2026-03-24T05:27:40.267Z",
   "fixtures": [
     {
       "id": "codex-session",
@@ -173,8 +173,8 @@
         "farion1231/cc-switch",
         "endorhq/rover"
       ],
-      "contentHash": "73e870dea67cb9adf840e6d790558079aced060ba89535f54d4b10532f9bfe08",
-      "fileCount": 14,
+      "contentHash": "8d1efff05a6500841e5dd9971aa7d0ead18100a5d4cea3b5e2fe9bac93c5888c",
+      "fileCount": 17,
       "files": [
         {
           "relativePath": "configs/claude/settings.json",
@@ -231,6 +231,18 @@
         {
           "relativePath": "configs/opencode/opencode.json",
           "contentHash": "e6a58069785485f70d68532b53a5e28dcd50ebb39248f52bdb74522843c89a8b"
+        },
+        {
+          "relativePath": "configs/qwen/.env",
+          "contentHash": "c9b81ac97e859fe1d21d273758708d350dc710e4af779212966334a7139d1c5d"
+        },
+        {
+          "relativePath": "configs/qwen/project/.qwen/settings.json",
+          "contentHash": "23d15ca093d8efbf59b0040a79c132dc34691fc53133e95824133af3ad89ead1"
+        },
+        {
+          "relativePath": "configs/qwen/settings.json",
+          "contentHash": "fb1f61f4ace2b98611fd0e7a77f09f6decabf3004bc0d6299cb83dfc2ed97e77"
         }
       ]
     }

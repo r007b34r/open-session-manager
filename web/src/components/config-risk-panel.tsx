@@ -653,6 +653,8 @@ function isEditableAssistant(assistant: string) {
     "factory droid",
     "gemini-cli",
     "gemini cli",
+    "qwen-cli",
+    "qwen cli",
     "openclaw",
     "open claw"
   ].includes(assistant.trim().toLowerCase());

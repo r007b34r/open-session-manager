@@ -12,7 +12,7 @@
     },
     {
       "label": "risky_configs",
-      "value": "7",
+      "value": "8",
       "note": "relay_wide_permissions_or_shell_hooks"
     },
     {
@@ -776,6 +776,34 @@
       "mcpServers": [
         {
           "serverId": "684853c955cc64fcbc29595fbf5fecb66ccf15fb8ce995757d543bb6672869c0:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "node",
+          "args": [
+            "mcp-filesystem.js"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\"\n}"
+        }
+      ]
+    },
+    {
+      "artifactId": "7c6f02cd0d6ba846a447f2937c088c03245cf1b43a01e54142fcdb16cea8bf9c",
+      "assistant": "qwen-cli",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\qwen\\settings.json",
+      "provider": "openai",
+      "model": "qwen3-coder-plus",
+      "baseUrl": "https://qwen-relay.example/v1",
+      "maskedSecret": "***7890",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_base_url"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "7c6f02cd0d6ba846a447f2937c088c03245cf1b43a01e54142fcdb16cea8bf9c:filesystem",
           "name": "filesystem",
           "enabled": true,
           "status": "configured",

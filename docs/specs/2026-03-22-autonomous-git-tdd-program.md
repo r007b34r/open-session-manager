@@ -23,8 +23,8 @@
 
 截至 2026-03-22，OSM 已经具备：
 
-- `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Factory Droid / OpenClaw` 会话发现与解析
-- 上述 7 类助手的配置读取、风险审计和部分项目级配置发现
+- `Codex / Claude Code / OpenCode / Gemini CLI / GitHub Copilot CLI / Qwen CLI / Roo Code / Factory Droid / OpenClaw` 会话发现与解析
+- 上述 8 类助手的配置读取、风险审计和部分项目级配置发现
 - transcript digest、todo 提取、Markdown 导出、handoff 导出、软删除、恢复
 - 本地加权 lexical 搜索、命中片段和来源标签
 - SQLite 会话索引缓存、增量重建和 index run 统计
@@ -55,7 +55,7 @@
 | `ADP-05` | P1 | todo | `Amp` 会话与配置适配 | fixture + Rust adapter 测试通过，支持矩阵更新 |
 | `ADP-06` | P2 | todo | `ChatGPT` 本地导出导入 | snapshot 能展示导入来源、主题和时间线 |
 | `ADP-07` | P2 | todo | `Pi` 会话与配置适配 | fixture + Rust adapter 测试通过 |
-| `ADP-08` | P1 | partial | `Qwen CLI` 会话与配置适配 | 会话发现、摘要、transcript、usage 与 fixture 已落地；配置治理待补 |
+| `ADP-08` | P1 | done | `Qwen CLI` 会话与配置适配 | 会话发现、摘要、transcript、usage、用户级与项目级配置发现、安全写回、备份回滚与文档收口已落地 |
 | `ADP-09` | P1 | partial | `Roo Code` 会话与配置适配 | 会话发现、摘要、transcript、usage 与 fixture 已落地；配置治理待补 |
 | `ADP-10` | P2 | todo | `Kilo` 会话与配置适配 | fixture + Rust adapter 测试通过 |
 | `ADP-11` | P2 | todo | `Mux` 会话与配置适配 | fixture + Rust adapter 测试通过 |

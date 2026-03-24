@@ -438,6 +438,15 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
                 .join("config.json"),
         ),
         ConfigAuditTarget::new(
+            "qwen-cli",
+            "global",
+            "fixtures",
+            fixtures_root
+                .join("configs")
+                .join("qwen")
+                .join("settings.json"),
+        ),
+        ConfigAuditTarget::new(
             "factory-droid",
             "global",
             "fixtures",
@@ -1816,6 +1825,14 @@ fn derive_project_config_targets(sessions: &[SessionDetailRecord]) -> Vec<Config
                     target_path,
                 ));
             }
+            "qwen-cli" => {
+                targets.push(ConfigAuditTarget::new(
+                    "qwen-cli",
+                    "project",
+                    session.environment.clone(),
+                    project_path.join(".qwen").join("settings.json"),
+                ));
+            }
             _ => {}
         }
     }
@@ -2798,6 +2815,11 @@ mod tests {
             .iter()
             .find(|config| config.assistant == "gemini-cli")
             .expect("gemini config fixture exists");
+        let qwen_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "qwen-cli")
+            .expect("qwen config fixture exists");
         let openclaw_config = snapshot
             .configs
             .iter()
@@ -2860,6 +2882,8 @@ mod tests {
                 .any(|highlight| { highlight.content.contains("export candidates") })
         );
         assert_eq!(gemini_config.provider, "google");
+        assert_eq!(qwen_config.provider, "openai");
+        assert_eq!(qwen_config.masked_secret, "***7890");
         assert_eq!(openclaw_config.provider, "openrouter");
     }
 
@@ -3424,6 +3448,93 @@ mod tests {
             Some("openrouter/anthropic/claude-sonnet-4")
         );
         assert_eq!(factory_config.masked_secret, "***7890");
+    }
+
+    #[test]
+    fn local_snapshot_discovers_qwen_user_and_project_configs() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let qwen_root = home_dir.join(".qwen");
+        let qwen_session_root = qwen_root
+            .join("projects")
+            .join("C--Projects-Qwen-Project")
+            .join("chats");
+        let qwen_project = sandbox.join("projects").join("qwen-project");
+        let qwen_project_config_dir = qwen_project.join(".qwen");
+        let qwen_project_json =
+            serde_json::to_string(&qwen_project.display().to_string()).expect("serialize path");
+
+        fs::create_dir_all(&qwen_session_root).expect("create qwen session root");
+        fs::create_dir_all(&qwen_project_config_dir).expect("create qwen project config dir");
+
+        fs::copy(
+            fixtures_root().join("configs/qwen/settings.json"),
+            qwen_root.join("settings.json"),
+        )
+        .expect("copy qwen user config");
+        fs::copy(
+            fixtures_root().join("configs/qwen/.env"),
+            qwen_root.join(".env"),
+        )
+        .expect("copy qwen user env");
+        fs::copy(
+            fixtures_root().join("configs/qwen/project/.qwen/settings.json"),
+            qwen_project_config_dir.join("settings.json"),
+        )
+        .expect("copy qwen project config");
+
+        fs::write(
+            qwen_session_root.join("session-project.jsonl"),
+            format!(
+                concat!(
+                    "{{\"sessionId\":\"qwen-project-1\",\"cwd\":{},",
+                    "\"timestamp\":\"2026-03-16T12:00:00.000Z\",\"type\":\"user\",",
+                    "\"content\":\"Audit project-level Qwen config.\"}}\n",
+                    "{{\"sessionId\":\"qwen-project-1\",\"cwd\":{},",
+                    "\"timestamp\":\"2026-03-16T12:00:04.000Z\",\"type\":\"assistant\",",
+                    "\"content\":\"Project config points at a separate relay.\"}}\n"
+                ),
+                qwen_project_json,
+                qwen_project_json
+            ),
+        )
+        .expect("write qwen project session");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        let qwen_user_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "qwen-cli" && config.scope == "global")
+            .expect("qwen user config should be discovered");
+        let qwen_project_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "qwen-cli" && config.scope == "project")
+            .expect("qwen project config should be discovered");
+
+        assert_eq!(qwen_user_config.model.as_deref(), Some("qwen3-coder-plus"));
+        assert_eq!(qwen_user_config.masked_secret, "***7890");
+        assert!(
+            qwen_project_config
+                .path
+                .replace('\\', "/")
+                .ends_with(".qwen/settings.json")
+        );
+        assert_eq!(qwen_project_config.model.as_deref(), Some("qwen3-coder-lite"));
+        assert_eq!(qwen_project_config.masked_secret, "***7890");
+        assert!(
+            qwen_project_config
+                .risks
+                .iter()
+                .any(|risk| risk == "third_party_base_url")
+        );
     }
 
     #[test]

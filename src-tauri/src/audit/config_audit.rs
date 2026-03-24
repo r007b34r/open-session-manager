@@ -89,6 +89,7 @@ pub fn audit_config(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAu
         "claude-code" => audit_claude_code(target),
         "opencode" => audit_opencode(target),
         "gemini-cli" => audit_gemini_cli(target),
+        "qwen-cli" => audit_qwen_cli(target),
         "github-copilot-cli" => audit_github_copilot_cli(target),
         "factory-droid" => audit_factory_droid(target),
         "openclaw" => audit_openclaw(target),
@@ -373,6 +374,143 @@ fn audit_gemini_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAu
                 official_or_proxy: official_or_proxy.clone(),
                 last_modified_at: file_modified_at(&env_path)
                     .or_else(|| file_modified_at(&target.path)),
+            })
+            .collect(),
+        risk_flags,
+    })
+}
+
+fn audit_qwen_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
+    let settings_text = fs::read_to_string(&target.path)?;
+    let parsed: Value = serde_json::from_str(&settings_text)?;
+    let env_path = target.path.parent().unwrap_or(&target.path).join(".env");
+    let dotenv = if env_path.exists() {
+        parse_dotenv(&fs::read_to_string(&env_path)?)
+    } else {
+        HashMap::new()
+    };
+
+    let selected_type = parsed
+        .get("security")
+        .and_then(|value| value.get("auth"))
+        .and_then(|value| value.get("selectedType"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let model = parsed
+        .get("model")
+        .and_then(|value| value.get("name").or_else(|| value.get("id")))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let provider = qwen_provider_name(
+        selected_type
+            .as_deref()
+            .or_else(|| qwen_model_provider_key(&parsed, model.as_deref())),
+    );
+    let active_model_provider =
+        qwen_active_model_provider(&parsed, selected_type.as_deref(), model.as_deref());
+    let env_key = active_model_provider
+        .and_then(|value| value.get("envKey"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let base_url = active_model_provider
+        .and_then(|value| value.get("baseUrl").or_else(|| value.get("baseURL")))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            parsed
+                .get("security")
+                .and_then(|value| value.get("auth"))
+                .and_then(|value| value.get("baseUrl").or_else(|| value.get("baseURL")))
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned)
+        });
+    let settings_env = parsed
+        .get("settings")
+        .and_then(|value| value.get("env"))
+        .and_then(Value::as_object);
+    let (secret, location, source_type, last_modified_at) =
+        if let Some(env_key) = env_key.as_deref() {
+            if let Some(value) = settings_env
+                .and_then(|env| env.get(env_key))
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned)
+            {
+                (
+                    Some(value),
+                    format!("settings.env.{env_key}"),
+                    "json".to_string(),
+                    file_modified_at(&target.path),
+                )
+            } else if let Some(value) = dotenv.get(env_key).cloned() {
+                (
+                    Some(value),
+                    format!(".env.{env_key}"),
+                    "dotenv".to_string(),
+                    file_modified_at(&env_path).or_else(|| file_modified_at(&target.path)),
+                )
+            } else {
+                (
+                    parsed
+                        .get("security")
+                        .and_then(|value| value.get("auth"))
+                        .and_then(|value| value.get("apiKey").or_else(|| value.get("api_key")))
+                        .and_then(Value::as_str)
+                        .map(ToOwned::to_owned),
+                    "security.auth.apiKey".to_string(),
+                    "json".to_string(),
+                    file_modified_at(&target.path),
+                )
+            }
+        } else {
+            (
+                parsed
+                    .get("security")
+                    .and_then(|value| value.get("auth"))
+                    .and_then(|value| value.get("apiKey").or_else(|| value.get("api_key")))
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned),
+                "security.auth.apiKey".to_string(),
+                "json".to_string(),
+                file_modified_at(&target.path),
+            )
+        };
+    let permissions_json = json!({
+        "selectedType": selected_type,
+        "checkpointing": parsed.get("checkpointing").cloned().unwrap_or(Value::Object(Map::new())),
+        "security": parsed.get("security").cloned().unwrap_or(Value::Object(Map::new())),
+    })
+    .to_string();
+    let mcp = parsed
+        .get("mcpServers")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+    let official_or_proxy = classify_endpoint(provider.as_deref(), base_url.as_deref());
+    let risk_flags = qwen_risk_flags(
+        provider.as_deref(),
+        base_url.as_deref(),
+        selected_type.as_deref(),
+        secret.is_some(),
+    );
+
+    Ok(AssistantConfigAudit {
+        config: build_config_artifact(
+            target,
+            provider.clone(),
+            model,
+            base_url.clone(),
+            permissions_json,
+            mcp.to_string(),
+        ),
+        secrets: secret
+            .into_iter()
+            .map(|value| SecretMaterial {
+                provider: provider.clone().unwrap_or_else(|| "openai".to_string()),
+                kind: "api_key".to_string(),
+                location: location.clone(),
+                source_type: source_type.clone(),
+                value,
+                official_or_proxy: official_or_proxy.clone(),
+                last_modified_at: last_modified_at.clone(),
             })
             .collect(),
         risk_flags,
@@ -755,6 +893,25 @@ fn openclaw_risk_flags(
     flags
 }
 
+fn qwen_risk_flags(
+    provider: Option<&str>,
+    base_url: Option<&str>,
+    selected_type: Option<&str>,
+    has_secret: bool,
+) -> Vec<RiskFlag> {
+    let mut flags = endpoint_risk_flags(provider, base_url);
+
+    if selected_type != Some("qwen-oauth") && !has_secret {
+        flags.push(RiskFlag::new(
+            "missing_primary_secret",
+            "high",
+            "Qwen CLI is not using Qwen OAuth and no API key was detected.",
+        ));
+    }
+
+    flags
+}
+
 fn copilot_risk_flags(
     provider: Option<&str>,
     base_url: Option<&str>,
@@ -905,7 +1062,7 @@ fn classify_endpoint(provider: Option<&str>, base_url: Option<&str>) -> String {
 fn is_official_provider(provider: &str) -> bool {
     matches!(
         provider,
-        "openai" | "anthropic" | "opencode" | "google" | "github"
+        "openai" | "anthropic" | "opencode" | "google" | "github" | "qwen-oauth"
     )
 }
 
@@ -920,6 +1077,7 @@ fn is_official_base_url(provider: Option<&str>, base_url: &str) -> bool {
         Some("google") => host.ends_with("googleapis.com") || host.ends_with("google.com"),
         Some("github") => host.ends_with("github.com"),
         Some("opencode") => host.ends_with("opencode.ai"),
+        Some("qwen-oauth") => host.ends_with("aliyuncs.com") || host.ends_with("dashscope.com"),
         Some("openrouter") => host.ends_with("openrouter.ai"),
         _ => false,
     }
@@ -948,6 +1106,54 @@ fn provider_table_location(provider: Option<&str>, field: &str) -> String {
 fn provider_option_location(provider: Option<&str>, field: &str) -> String {
     let provider = provider.unwrap_or("default");
     format!("provider.{provider}.options.{field}")
+}
+
+fn qwen_provider_name(selected_type: Option<&str>) -> Option<String> {
+    match selected_type?.trim() {
+        "gemini" | "vertex-ai" => Some("google".to_string()),
+        other if !other.is_empty() => Some(other.to_string()),
+        _ => None,
+    }
+}
+
+fn qwen_model_provider_key<'a>(parsed: &'a Value, model: Option<&str>) -> Option<&'a str> {
+    let providers = parsed.get("modelProviders")?.as_object()?;
+    for (provider, entries) in providers {
+        let Some(entries) = entries.as_array() else {
+            continue;
+        };
+        if entries.iter().any(|entry| {
+            entry.get("id").and_then(Value::as_str) == model
+                || entry.get("name").and_then(Value::as_str) == model
+        }) {
+            return Some(provider.as_str());
+        }
+    }
+
+    providers.keys().next().map(String::as_str)
+}
+
+fn qwen_active_model_provider<'a>(
+    parsed: &'a Value,
+    selected_type: Option<&str>,
+    model: Option<&str>,
+) -> Option<&'a Value> {
+    let selected_type = selected_type.or_else(|| qwen_model_provider_key(parsed, model))?;
+    let providers = parsed
+        .get("modelProviders")
+        .and_then(|value| value.get(selected_type))
+        .and_then(Value::as_array)?;
+
+    if let Some(model) = model
+        && let Some(entry) = providers.iter().find(|entry| {
+            entry.get("id").and_then(Value::as_str) == Some(model)
+                || entry.get("name").and_then(Value::as_str) == Some(model)
+        })
+    {
+        return Some(entry);
+    }
+
+    providers.first()
 }
 
 fn parse_dotenv(content: &str) -> HashMap<String, String> {

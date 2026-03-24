@@ -126,6 +126,33 @@ fn audits_gemini_config_and_masks_credentials() {
 }
 
 #[test]
+fn audits_qwen_config_and_masks_credentials() {
+    let qwen = audit_config(&ConfigAuditTarget::new(
+        "qwen-cli",
+        "user",
+        "global",
+        fixtures_root().join("qwen").join("settings.json"),
+    ))
+    .expect("qwen config parses");
+
+    assert_eq!(qwen.config.assistant, "qwen-cli");
+    assert_eq!(qwen.config.provider.as_deref(), Some("openai"));
+    assert_eq!(qwen.config.model.as_deref(), Some("qwen3-coder-plus"));
+    assert_eq!(
+        qwen.config.base_url.as_deref(),
+        Some("https://qwen-relay.example/v1")
+    );
+    assert!(has_flag(&qwen.risk_flags, "third_party_base_url"));
+    assert!(qwen.config.mcp_json.contains("filesystem"));
+
+    let credentials = build_credential_artifacts(&qwen.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "openai");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert_eq!(credentials[0].masked_value, "***7890");
+}
+
+#[test]
 fn audits_openclaw_config_and_detects_proxy_risks() {
     let openclaw = audit_config(&ConfigAuditTarget::new(
         "openclaw",

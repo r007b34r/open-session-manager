@@ -44,6 +44,14 @@ const PRESETS_BY_ASSISTANT: Record<string, ProviderPreset[]> = {
       baseUrl: "https://generativelanguage.googleapis.com/v1beta"
     }
   ],
+  "qwen-cli": [
+    {
+      id: "openai_official",
+      provider: "openai",
+      model: "qwen3-coder-plus",
+      baseUrl: "https://api.openai.com/v1"
+    }
+  ],
   openclaw: [
     {
       id: "openrouter_official",

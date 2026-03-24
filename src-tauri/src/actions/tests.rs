@@ -1240,6 +1240,79 @@ fn writes_back_and_rolls_back_gemini_config_with_backup_and_audit() {
 }
 
 #[test]
+fn writes_back_and_rolls_back_qwen_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join(".qwen");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "qwen-cli",
+        "user",
+        "global",
+        config_root.join("settings.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("qwen").join("settings.json"),
+        config_root.join("settings.json"),
+    )
+    .expect("copy qwen config");
+    fs::copy(
+        fixtures_root.join("qwen").join(".env"),
+        config_root.join(".env"),
+    )
+    .expect("copy qwen env");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("openai".to_string()),
+            model: Some("qwen3-coder-max".to_string()),
+            base_url: Some("https://api.openai.com/v1".to_string()),
+            secret: Some("sk-qwen-new-123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write qwen config");
+
+    let after = audit_config(&target).expect("re-audit qwen config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(after.config.model.as_deref(), Some("qwen3-coder-max"));
+    assert_eq!(after.config.provider.as_deref(), Some("openai"));
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://api.openai.com/v1")
+    );
+    assert!(!has_flag(&after.risk_flags, "third_party_base_url"));
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback qwen config");
+
+    let restored = audit_config(&target).expect("restore qwen config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+
+    assert_eq!(restored.config.model.as_deref(), Some("qwen3-coder-plus"));
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://qwen-relay.example/v1")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***7890");
+}
+
+#[test]
 fn writes_back_and_rolls_back_openclaw_config_with_backup_and_audit() {
     let sandbox = temp_root();
     let fixtures_root = config_fixtures_root();

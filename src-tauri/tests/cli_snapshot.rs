@@ -56,7 +56,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .expect("usage overview exists");
 
     assert_eq!(sessions.len(), 10);
-    assert_eq!(configs.len(), 7);
+    assert_eq!(configs.len(), 8);
     assert_eq!(
         sessions[0]
             .get("title")
@@ -117,6 +117,15 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
                 && config.get("maskedSecret").and_then(Value::as_str) == Some("***7890")
         }),
         "fixture snapshot should include Factory Droid config governance data"
+    );
+    assert!(
+        configs.iter().any(|config| {
+            config.get("assistant").and_then(Value::as_str) == Some("qwen-cli")
+                && config.get("model").and_then(Value::as_str) == Some("qwen3-coder-plus")
+                && config.get("baseUrl").and_then(Value::as_str)
+                    == Some("https://qwen-relay.example/v1")
+        }),
+        "fixture snapshot should include Qwen CLI config governance data"
     );
 
     let assistants = sessions
