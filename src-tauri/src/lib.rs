@@ -12,6 +12,8 @@ pub mod openapi;
 pub mod preferences;
 pub mod session_text;
 pub mod storage;
+#[cfg(test)]
+pub mod test_support;
 pub mod transcript;
 pub mod usage;
 

@@ -183,8 +183,12 @@ struct RunningMcpServer {
 
 impl RunningMcpServer {
     fn notify(&mut self, payload: Value) {
-        writeln!(self.stdin, "{}", serde_json::to_string(&payload).expect("serialize payload"))
-            .expect("write notification");
+        writeln!(
+            self.stdin,
+            "{}",
+            serde_json::to_string(&payload).expect("serialize payload")
+        )
+        .expect("write notification");
         self.stdin.flush().expect("flush notification");
     }
 
@@ -195,7 +199,10 @@ impl RunningMcpServer {
 
     fn read_response(&mut self) -> Value {
         let mut line = String::new();
-        let bytes = self.stdout.read_line(&mut line).expect("read response line");
+        let bytes = self
+            .stdout
+            .read_line(&mut line)
+            .expect("read response line");
         assert!(bytes > 0, "mcp server exited before returning a response");
         serde_json::from_str(line.trim()).expect("response line is json")
     }

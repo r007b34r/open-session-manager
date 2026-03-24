@@ -112,7 +112,11 @@ pub fn list_sessions_with_request(
         sessions.retain(|session| session.assistant.eq_ignore_ascii_case(&normalized));
     }
 
-    sort_session_entries(&mut sessions, request.sort_by.as_deref(), request.descending);
+    sort_session_entries(
+        &mut sessions,
+        request.sort_by.as_deref(),
+        request.descending,
+    );
     let total = sessions.len();
     let sessions = paginate(sessions, request.offset, request.limit);
 
@@ -168,9 +172,10 @@ pub fn search_sessions_with_request(
         .sessions
         .iter()
         .filter(|session| {
-            request.assistant.as_ref().is_none_or(|assistant| {
-                session.assistant.eq_ignore_ascii_case(assistant.trim())
-            })
+            request
+                .assistant
+                .as_ref()
+                .is_none_or(|assistant| session.assistant.eq_ignore_ascii_case(assistant.trim()))
         })
         .filter_map(|session| score_session(session, &terms))
         .collect::<Vec<_>>();
@@ -481,7 +486,9 @@ fn matches_term(text: &str, term: &OwnedSearchTerm) -> bool {
 }
 
 fn tokenize(text: &str) -> Vec<&str> {
-    text.split_whitespace().filter(|token| !token.is_empty()).collect()
+    text.split_whitespace()
+        .filter(|token| !token.is_empty())
+        .collect()
 }
 
 fn phrase_bonus(field: &SearchField, term: &OwnedSearchTerm) -> f64 {
@@ -587,11 +594,7 @@ fn sort_session_entries(
     });
 }
 
-fn sort_search_hits(
-    hits: &mut [SearchHit],
-    sort_by: Option<&str>,
-    descending: Option<bool>,
-) {
+fn sort_search_hits(hits: &mut [SearchHit], sort_by: Option<&str>, descending: Option<bool>) {
     let sort_by = sort_by.unwrap_or("score");
     let descending = descending.unwrap_or(true);
 

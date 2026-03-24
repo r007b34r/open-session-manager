@@ -181,7 +181,7 @@
 | `API-01` | P1 | done | REST API | 本地只读 `serve` 壳层已暴露 `health/list/search/get/view/expand`，并有分页、筛选、Bearer 鉴权集成测试覆盖 |
 | `API-02` | P1 | done | HTTP control API | 本地 `serve` 已暴露 `resume/pause/attach/detach/continue` POST 路由，并通过 Bearer 鉴权与 OpenAPI 集成测试 |
 | `API-03` | P1 | done | OpenAPI 文档 | `/openapi.json` 已暴露本地 REST API 的 OpenAPI 3.1 文档，`http_api` 已校验核心路由与示例字段 |
-| `API-04` | P1 | todo | agent automation server | 任务触发与回执测试通过 |
+| `API-04` | P1 | done | agent automation server | `serve` 已支持 `POST /api/v1/automation/tasks` 与 `GET /api/v1/automation/tasks/{taskId}`，首批覆盖 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，并通过回执集成测试 |
 | `API-05` | P1 | done | robot / json mode | CLI 已支持显式 `--json` 紧凑输出，HTTP 默认返回稳定 JSON，`cli_snapshot/http_api` 已覆盖 |
 | `API-06` | P1 | done | `list/search/get/view/expand` 对外接口 | Tauri command 与 CLI 已共享 `commands::query` 查询层，桌面单测与 CLI 集成测试均已覆盖 |
 | `API-07` | P2 | done | Prometheus metrics | `serve` 已暴露 `/metrics` Prometheus 文本指标，并通过鉴权与集成测试覆盖 |

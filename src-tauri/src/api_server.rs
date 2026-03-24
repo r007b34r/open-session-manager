@@ -1,18 +1,31 @@
-use std::{collections::BTreeMap, env, net::SocketAddr, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    env,
+    net::SocketAddr,
+    path::PathBuf,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
+};
 
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::{HeaderMap, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}},
+    http::{
+        HeaderMap, StatusCode,
+        header::{AUTHORIZATION, CONTENT_TYPE},
+    },
     response::IntoResponse,
     routing::{get, post},
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    actions::ActionError,
     AppState,
+    actions::ActionError,
     commands::{
         actions::{
             attach_existing_session as attach_existing_session_action,
@@ -42,6 +55,8 @@ struct ApiState {
     fixtures_path: Option<PathBuf>,
     audit_db_path: Option<PathBuf>,
     api_token: Option<String>,
+    automation_tasks: Arc<Mutex<HashMap<String, AutomationTaskReceipt>>>,
+    next_automation_task_id: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,6 +104,34 @@ struct ContinueSessionRequest {
     prompt: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AutomationTaskRequest {
+    kind: String,
+    session_id: Option<String>,
+    prompt: Option<String>,
+    query: Option<String>,
+    assistant: Option<String>,
+    limit: Option<usize>,
+    offset: Option<usize>,
+    sort_by: Option<String>,
+    descending: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AutomationTaskReceipt {
+    task_id: String,
+    kind: String,
+    status: String,
+    submitted_at: String,
+    completed_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
 pub fn run(args: &[String]) -> Result<(), String> {
     let config = parse_config(args)?;
     let host = config.host.unwrap_or_else(|| "127.0.0.1".to_string());
@@ -102,6 +145,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         fixtures_path: config.fixtures_path,
         audit_db_path: config.audit_db_path,
         api_token: config.api_token,
+        automation_tasks: Arc::new(Mutex::new(HashMap::new())),
+        next_automation_task_id: Arc::new(AtomicU64::new(1)),
     };
 
     let runtime = tokio::runtime::Runtime::new().map_err(|error| error.to_string())?;
@@ -120,11 +165,22 @@ fn router(state: ApiState) -> Router {
         .route("/health", get(health))
         .route("/metrics", get(metrics))
         .route("/openapi.json", get(openapi))
+        .route("/api/v1/automation/tasks", post(create_automation_task))
+        .route(
+            "/api/v1/automation/tasks/{taskId}",
+            get(get_automation_task),
+        )
         .route("/api/v1/sessions", get(list_sessions))
         .route("/api/v1/sessions/search", get(search_sessions))
         .route("/api/v1/sessions/{sessionId}", get(get_session_detail))
-        .route("/api/v1/sessions/{sessionId}/view", get(view_session_detail))
-        .route("/api/v1/sessions/{sessionId}/expand", get(expand_session_detail))
+        .route(
+            "/api/v1/sessions/{sessionId}/view",
+            get(view_session_detail),
+        )
+        .route(
+            "/api/v1/sessions/{sessionId}/expand",
+            get(expand_session_detail),
+        )
         .route(
             "/api/v1/sessions/{sessionId}/resume",
             post(resume_session_control),
@@ -170,6 +226,40 @@ async fn metrics(
 
 async fn openapi(State(state): State<ApiState>) -> Json<Value> {
     Json(openapi_document(&state.app))
+}
+
+async fn create_automation_task(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Json(request): Json<AutomationTaskRequest>,
+) -> Result<Json<AutomationTaskReceipt>, ApiError> {
+    authorize(&state, &headers)?;
+
+    let receipt = execute_automation_task(&state, request);
+    state
+        .automation_tasks
+        .lock()
+        .map_err(|_| ApiError::internal("automation task store is poisoned"))?
+        .insert(receipt.task_id.clone(), receipt.clone());
+
+    Ok(Json(receipt))
+}
+
+async fn get_automation_task(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Path(task_id): Path<String>,
+) -> Result<Json<AutomationTaskReceipt>, ApiError> {
+    authorize(&state, &headers)?;
+    let receipt = state
+        .automation_tasks
+        .lock()
+        .map_err(|_| ApiError::internal("automation task store is poisoned"))?
+        .get(&task_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found(format!("automation task not found: {task_id}")))?;
+
+    Ok(Json(receipt))
 }
 
 async fn list_sessions(
@@ -359,7 +449,9 @@ where
         &crate::domain::session::SessionRecord,
         &str,
         &rusqlite::Connection,
-    ) -> crate::actions::ActionResult<crate::actions::session_control::SessionControlResult>,
+    ) -> crate::actions::ActionResult<
+        crate::actions::session_control::SessionControlResult,
+    >,
 {
     if state.fixtures_path.is_some() {
         return Err(ApiError::bad_request(
@@ -536,7 +628,11 @@ fn render_prometheus_metrics(snapshot: &DashboardSnapshot) -> String {
         })
         .count() as u64;
 
-    append_metric_help(&mut body, "osm_sessions_total", "Total discovered sessions.");
+    append_metric_help(
+        &mut body,
+        "osm_sessions_total",
+        "Total discovered sessions.",
+    );
     append_metric(&mut body, "osm_sessions_total", session_count);
 
     append_metric_help(
@@ -561,10 +657,18 @@ fn render_prometheus_metrics(snapshot: &DashboardSnapshot) -> String {
         session_control_available_count,
     );
 
-    append_metric_help(&mut body, "osm_configs_total", "Total discovered config artifacts.");
+    append_metric_help(
+        &mut body,
+        "osm_configs_total",
+        "Total discovered config artifacts.",
+    );
     append_metric(&mut body, "osm_configs_total", config_count);
 
-    append_metric_help(&mut body, "osm_git_projects_total", "Total git projects in snapshot.");
+    append_metric_help(
+        &mut body,
+        "osm_git_projects_total",
+        "Total git projects in snapshot.",
+    );
     append_metric(&mut body, "osm_git_projects_total", git_project_count);
 
     append_metric_help(
@@ -594,7 +698,10 @@ fn render_prometheus_metrics(snapshot: &DashboardSnapshot) -> String {
         &mut body,
         "osm_configs_by_assistant",
         "Discovered configs grouped by assistant.",
-        snapshot.configs.iter().map(|config| config.assistant.as_str()),
+        snapshot
+            .configs
+            .iter()
+            .map(|config| config.assistant.as_str()),
     );
 
     body
@@ -645,4 +752,126 @@ fn escape_prometheus_label(value: &str) -> String {
         .replace('\\', "\\\\")
         .replace('\n', "\\n")
         .replace('"', "\\\"")
+}
+
+fn execute_automation_task(
+    state: &ApiState,
+    request: AutomationTaskRequest,
+) -> AutomationTaskReceipt {
+    let task_id = format!(
+        "task-{:06}",
+        state
+            .next_automation_task_id
+            .fetch_add(1, Ordering::Relaxed)
+    );
+    let submitted_at = Utc::now().to_rfc3339();
+    let kind = request.kind.clone();
+
+    let execution = match kind.as_str() {
+        "snapshot.refresh" => load_snapshot_data(state)
+            .and_then(|snapshot| serde_json::to_value(snapshot).map_err(ApiError::internal)),
+        "sessions.search" => {
+            let Some(query) = request.query else {
+                return AutomationTaskReceipt {
+                    task_id,
+                    kind,
+                    status: "failed".to_string(),
+                    submitted_at: submitted_at.clone(),
+                    completed_at: submitted_at,
+                    result: None,
+                    error: Some("automation task `sessions.search` requires `query`".to_string()),
+                };
+            };
+
+            load_snapshot_data(state).map(|snapshot| {
+                search_sessions_with_request(
+                    &snapshot,
+                    &SearchSessionInventoryRequest {
+                        query,
+                        assistant: request.assistant,
+                        limit: request.limit,
+                        offset: request.offset,
+                        sort_by: request.sort_by,
+                        descending: request.descending,
+                    },
+                )
+            })
+        }
+        "sessions.resume" => {
+            let Some(session_id) = request.session_id else {
+                return AutomationTaskReceipt {
+                    task_id,
+                    kind,
+                    status: "failed".to_string(),
+                    submitted_at: submitted_at.clone(),
+                    completed_at: submitted_at,
+                    result: None,
+                    error: Some(
+                        "automation task `sessions.resume` requires `sessionId`".to_string(),
+                    ),
+                };
+            };
+
+            execute_session_control_action(state, &session_id, |session, actor, connection| {
+                resume_existing_session_action(session, actor, connection)
+            })
+        }
+        "sessions.continue" => {
+            let Some(session_id) = request.session_id else {
+                return AutomationTaskReceipt {
+                    task_id,
+                    kind,
+                    status: "failed".to_string(),
+                    submitted_at: submitted_at.clone(),
+                    completed_at: submitted_at,
+                    result: None,
+                    error: Some(
+                        "automation task `sessions.continue` requires `sessionId`".to_string(),
+                    ),
+                };
+            };
+            let Some(prompt) = request.prompt else {
+                return AutomationTaskReceipt {
+                    task_id,
+                    kind,
+                    status: "failed".to_string(),
+                    submitted_at: submitted_at.clone(),
+                    completed_at: submitted_at,
+                    result: None,
+                    error: Some(
+                        "automation task `sessions.continue` requires `prompt`".to_string(),
+                    ),
+                };
+            };
+
+            execute_session_control_action(state, &session_id, |session, actor, connection| {
+                continue_existing_session_action(session, &prompt, actor, connection)
+            })
+        }
+        other => Err(ApiError::bad_request(format!(
+            "unsupported automation task kind: {other}"
+        ))),
+    };
+
+    let completed_at = Utc::now().to_rfc3339();
+    match execution {
+        Ok(result) => AutomationTaskReceipt {
+            task_id,
+            kind,
+            status: "completed".to_string(),
+            submitted_at,
+            completed_at,
+            result: Some(result),
+            error: None,
+        },
+        Err(error) => AutomationTaskReceipt {
+            task_id,
+            kind,
+            status: "failed".to_string(),
+            submitted_at,
+            completed_at,
+            result: None,
+            error: Some(error.message),
+        },
+    }
 }

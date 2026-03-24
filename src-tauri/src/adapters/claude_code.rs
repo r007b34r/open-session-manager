@@ -103,10 +103,13 @@ fn is_uuid_like(value: &str) -> bool {
         return false;
     }
 
-    value.chars().enumerate().all(|(index, character)| match index {
-        8 | 13 | 18 | 23 => character == '-',
-        _ => character.is_ascii_hexdigit(),
-    })
+    value
+        .chars()
+        .enumerate()
+        .all(|(index, character)| match index {
+            8 | 13 | 18 | 23 => character == '-',
+            _ => character.is_ascii_hexdigit(),
+        })
 }
 
 fn looks_like_claude_session_candidate(path: &Path) -> Result<bool, std::io::Error> {

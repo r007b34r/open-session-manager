@@ -36,6 +36,7 @@
 | Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle，并支持显式 `--json` 机器模式 |
 | Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
+| Local automation server | 已实现 | `cargo run -- serve` 已支持 `POST /api/v1/automation/tasks` 和 `GET /api/v1/automation/tasks/{taskId}`，首批任务覆盖 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，并返回稳定 receipt |
 | Prometheus metrics endpoint | 已实现 | `/metrics` 会返回本地 Prometheus 文本指标，覆盖 sessions/configs/git projects/doctor findings/audit events，并支持可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
 | MCP session query server | 已实现 | `cargo run -- mcp` 会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 tools，并复用同一套 Rust 查询层 |
@@ -94,7 +95,7 @@
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
 | 语义搜索 / hybrid ranking | 未纳入本版承诺 | 当前已实现本地加权搜索、search-as-you-type 防抖与取消，以及统一查询 API 的分页/过滤/排序，但还没有语义索引和混合排序 |
-| 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制已覆盖 `Codex / Claude Code / GitHub Copilot CLI / OpenCode`，但其余助手还没有统一的 attach/detach、pause/resume 与进程观测层 |
+| 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制与 automation server 已覆盖 `Codex / Claude Code / GitHub Copilot CLI / OpenCode`，但其余助手还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider 健康探测 / 自动切换 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、统一 provider presets 和共享 snippet library，但还没有健康探测、自动切换和熔断 |
 | 高级 analytics / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地价格目录估算、成本来源标注与日级 usage timeline，但还没有 model/platform breakdown、contribution graph、shareable stats 与更宽连接器覆盖 |

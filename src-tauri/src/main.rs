@@ -3,15 +3,15 @@
 use std::{env, path::PathBuf, process::ExitCode};
 
 use open_session_manager_core::{
+    api_server,
     commands::dashboard::{
         DashboardSnapshot, build_fixture_dashboard_snapshot_with_audit,
         build_local_dashboard_snapshot_with_audit, build_local_doctor_report,
     },
-    api_server,
-    mcp_server,
     commands::query::{expand_session, get_session, list_sessions, search_sessions, view_session},
     desktop,
     discovery::DiscoveryContext,
+    mcp_server,
     preferences::build_runtime_paths,
 };
 
@@ -136,16 +136,16 @@ fn run_search_command(args: &[String]) -> Result<String, String> {
 fn run_get_command(args: &[String]) -> Result<String, String> {
     let snapshot = load_snapshot_data(args)?;
     let session_id = require_flag_value(args, "--session")?;
-    let payload =
-        get_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
+    let payload = get_session(&snapshot, session_id)
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
     render_json(&payload, has_flag(args, "--json"))
 }
 
 fn run_view_command(args: &[String]) -> Result<String, String> {
     let snapshot = load_snapshot_data(args)?;
     let session_id = require_flag_value(args, "--session")?;
-    let payload =
-        view_session(&snapshot, session_id).ok_or_else(|| format!("session not found: {session_id}"))?;
+    let payload = view_session(&snapshot, session_id)
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
     render_json(&payload, has_flag(args, "--json"))
 }
 

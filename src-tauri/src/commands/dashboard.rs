@@ -45,9 +45,9 @@ use crate::{
     session_text::normalize_session_text,
     storage::sqlite::{
         SessionControlStateRow, SessionIndexCacheRow, SessionIndexRunRecord,
-        delete_session_index_cache_rows, insert_session_index_run,
-        list_session_index_cache_paths, load_audit_events, load_session_control_state,
-        load_session_index_cache_row, open_database, upsert_session_index_cache_row,
+        delete_session_index_cache_rows, insert_session_index_run, list_session_index_cache_paths,
+        load_audit_events, load_session_control_state, load_session_index_cache_row, open_database,
+        upsert_session_index_cache_row,
     },
     transcript::{TranscriptHighlight, TranscriptTodo, build_transcript_digest},
     usage::{
@@ -1218,7 +1218,8 @@ fn build_session_control_record(
     let persisted = connection
         .and_then(|db| load_session_control_state(db, &session.session_id).ok())
         .flatten();
-    let runtime_state = derive_session_control_runtime_state(session, available, persisted.as_ref());
+    let runtime_state =
+        derive_session_control_runtime_state(session, available, persisted.as_ref());
 
     SessionControlRecord {
         supported,
@@ -1251,7 +1252,9 @@ fn build_session_control_record(
             .and_then(|state| state.process_state.clone()),
         process_id: persisted.as_ref().and_then(|state| state.process_id),
         exit_code: persisted.as_ref().and_then(|state| state.exit_code),
-        started_at: persisted.as_ref().and_then(|state| state.started_at.clone()),
+        started_at: persisted
+            .as_ref()
+            .and_then(|state| state.started_at.clone()),
         runtime_seconds: persisted.as_ref().and_then(|state| state.runtime_seconds),
         event_count: persisted.as_ref().map_or(0, |state| state.event_count),
         input_tokens: persisted.as_ref().map_or(0, |state| state.input_tokens),
@@ -1313,7 +1316,9 @@ fn derive_session_control_runtime_state(
         return "waiting";
     }
 
-    if persisted.and_then(|state| state.last_error.as_deref()).is_some()
+    if persisted
+        .and_then(|state| state.last_error.as_deref())
+        .is_some()
         || persisted
             .and_then(|state| state.last_response.as_deref())
             .is_some_and(looks_like_ready_response)
@@ -2414,9 +2419,7 @@ fn looks_like_error_message(value: &str) -> bool {
 
 fn looks_like_ready_response(value: &str) -> bool {
     let lowered = value.to_ascii_lowercase();
-    lowered.contains("ready")
-        || lowered.contains("awaiting")
-        || lowered.contains("waiting for")
+    lowered.contains("ready") || lowered.contains("awaiting") || lowered.contains("waiting for")
 }
 
 fn matches_terminal_status(value: &str) -> bool {
@@ -2462,11 +2465,9 @@ fn normalize_project_path(value: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use std::{
-        env,
-        fs,
+        env, fs,
         path::PathBuf,
         process::Command,
-        sync::{Mutex, OnceLock},
         sync::atomic::{AtomicU64, Ordering},
         thread,
         time::Duration,
@@ -2481,6 +2482,7 @@ mod tests {
         storage::sqlite::{
             SessionControlStateRow, bootstrap_database, upsert_session_control_state,
         },
+        test_support::lock_env,
     };
 
     use super::{
@@ -2489,7 +2491,6 @@ mod tests {
     };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
-    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     #[test]
     fn local_snapshot_skips_invalid_session_files_and_keeps_valid_sessions() {
@@ -3069,10 +3070,7 @@ mod tests {
         let connection = Connection::open_in_memory().expect("open sqlite");
         bootstrap_database(&connection).expect("bootstrap schema");
 
-        let _guard = ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock env guard");
+        let _guard = lock_env();
         let original_command = env::var_os("OPEN_SESSION_MANAGER_CODEX_COMMAND");
         unsafe {
             env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", &command_path);
@@ -3209,28 +3207,38 @@ mod tests {
             Some(&connection),
         ))
         .expect("serialize detached control");
-        let busy =
-            serde_json::to_value(build_session_control_record(&busy_session, Some(&connection)))
-                .expect("serialize busy control");
+        let busy = serde_json::to_value(build_session_control_record(
+            &busy_session,
+            Some(&connection),
+        ))
+        .expect("serialize busy control");
         let waiting = serde_json::to_value(build_session_control_record(
             &waiting_session,
             Some(&connection),
         ))
         .expect("serialize waiting control");
-        let idle =
-            serde_json::to_value(build_session_control_record(&idle_session, Some(&connection)))
-                .expect("serialize idle control");
+        let idle = serde_json::to_value(build_session_control_record(
+            &idle_session,
+            Some(&connection),
+        ))
+        .expect("serialize idle control");
 
         assert_eq!(
             detached.get("runtimeState").and_then(Value::as_str),
             Some("detached")
         );
-        assert_eq!(busy.get("runtimeState").and_then(Value::as_str), Some("busy"));
+        assert_eq!(
+            busy.get("runtimeState").and_then(Value::as_str),
+            Some("busy")
+        );
         assert_eq!(
             waiting.get("runtimeState").and_then(Value::as_str),
             Some("waiting")
         );
-        assert_eq!(idle.get("runtimeState").and_then(Value::as_str), Some("idle"));
+        assert_eq!(
+            idle.get("runtimeState").and_then(Value::as_str),
+            Some("idle")
+        );
 
         match original_command {
             Some(value) => unsafe {
@@ -3258,10 +3266,7 @@ mod tests {
         let connection = Connection::open_in_memory().expect("open sqlite");
         bootstrap_database(&connection).expect("bootstrap schema");
 
-        let _guard = ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock env guard");
+        let _guard = lock_env();
         let original_command = env::var_os("OPEN_SESSION_MANAGER_CODEX_COMMAND");
         unsafe {
             env::set_var("OPEN_SESSION_MANAGER_CODEX_COMMAND", &command_path);
@@ -3309,19 +3314,37 @@ mod tests {
         ))
         .expect("serialize paused control");
 
-        assert_eq!(control.get("runtimeState").and_then(Value::as_str), Some("paused"));
-        assert_eq!(control.get("processState").and_then(Value::as_str), Some("paused"));
+        assert_eq!(
+            control.get("runtimeState").and_then(Value::as_str),
+            Some("paused")
+        );
+        assert_eq!(
+            control.get("processState").and_then(Value::as_str),
+            Some("paused")
+        );
         assert_eq!(control.get("processId").and_then(Value::as_i64), Some(4321));
         assert_eq!(control.get("exitCode").and_then(Value::as_i64), Some(0));
         assert_eq!(
             control.get("startedAt").and_then(Value::as_str),
             Some("2026-03-23T03:45:00Z")
         );
-        assert_eq!(control.get("runtimeSeconds").and_then(Value::as_i64), Some(1200));
+        assert_eq!(
+            control.get("runtimeSeconds").and_then(Value::as_i64),
+            Some(1200)
+        );
         assert_eq!(control.get("eventCount").and_then(Value::as_i64), Some(7));
-        assert_eq!(control.get("inputTokens").and_then(Value::as_i64), Some(120));
-        assert_eq!(control.get("outputTokens").and_then(Value::as_i64), Some(34));
-        assert_eq!(control.get("totalTokens").and_then(Value::as_i64), Some(154));
+        assert_eq!(
+            control.get("inputTokens").and_then(Value::as_i64),
+            Some(120)
+        );
+        assert_eq!(
+            control.get("outputTokens").and_then(Value::as_i64),
+            Some(34)
+        );
+        assert_eq!(
+            control.get("totalTokens").and_then(Value::as_i64),
+            Some(154)
+        );
         assert_eq!(
             control.get("lastActivityAt").and_then(Value::as_str),
             Some("2026-03-23T04:05:30Z")
@@ -3573,7 +3596,11 @@ mod tests {
         root
     }
 
-    fn build_control_session(session_id: &str, project_path: String, status: &str) -> SessionRecord {
+    fn build_control_session(
+        session_id: &str,
+        project_path: String,
+        status: &str,
+    ) -> SessionRecord {
         SessionRecord {
             session_id: session_id.to_string(),
             installation_id: None,
@@ -3628,10 +3655,7 @@ mod tests {
     }
 
     fn with_cleared_env_vars<T>(keys: &[&str], action: impl FnOnce() -> T) -> T {
-        let _guard = ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock env guard");
+        let _guard = lock_env();
         let original = keys
             .iter()
             .map(|key| ((*key).to_string(), env::var_os(key)))

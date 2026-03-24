@@ -2,10 +2,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::{
-        Mutex, OnceLock,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use rusqlite::Connection;
@@ -18,6 +15,7 @@ use crate::{
     },
     domain::session::{SessionInsight, SessionRecord},
     storage::sqlite::{SessionControlStateRow, bootstrap_database, upsert_session_control_state},
+    test_support::lock_env,
 };
 
 use super::{
@@ -41,7 +39,6 @@ use super::{
 };
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
-static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 #[test]
 fn exports_soft_deletes_restores_and_audits_session() {
@@ -86,10 +83,7 @@ fn exports_soft_deletes_restores_and_audits_session() {
         confidence: 0.92,
     };
 
-    let _guard = ENV_LOCK
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("lock env guard");
+    let _guard = lock_env();
     let export_result = export_session_markdown(&ExportRequest {
         session: &session,
         insight: &insight,
@@ -1634,7 +1628,9 @@ fn continues_attached_session_and_persists_audit_event_for_copilot() {
             available: true,
             attached: true,
             paused: false,
-            last_command: Some("copilot --resume=copilot-ses-1 -p \"Resume and report READY\"".to_string()),
+            last_command: Some(
+                "copilot --resume=copilot-ses-1 -p \"Resume and report READY\"".to_string(),
+            ),
             last_prompt: Some("Resume and report READY".to_string()),
             last_response: Some("READY from fake copilot".to_string()),
             last_error: None,
@@ -1685,7 +1681,10 @@ fn continues_attached_session_and_persists_audit_event_for_copilot() {
         .expect("control state should be persisted");
 
     assert_eq!(attached, 1);
-    assert_eq!(last_prompt, "Continue with the next Copilot verification step.");
+    assert_eq!(
+        last_prompt,
+        "Continue with the next Copilot verification step."
+    );
     assert!(last_response.contains("READY"));
     assert!(query_event_types(&connection).contains(&"session_continue".to_string()));
     assert!(
@@ -1850,7 +1849,9 @@ fn continues_attached_session_and_persists_audit_event_for_opencode() {
             available: true,
             attached: true,
             paused: false,
-            last_command: Some("opencode run --session opencode-ses-1 Resume and report READY".to_string()),
+            last_command: Some(
+                "opencode run --session opencode-ses-1 Resume and report READY".to_string(),
+            ),
             last_prompt: Some("Resume and report READY".to_string()),
             last_response: Some("READY from fake opencode".to_string()),
             last_error: None,
@@ -1901,7 +1902,10 @@ fn continues_attached_session_and_persists_audit_event_for_opencode() {
         .expect("control state should be persisted");
 
     assert_eq!(attached, 1);
-    assert_eq!(last_prompt, "Continue with the next OpenCode verification step.");
+    assert_eq!(
+        last_prompt,
+        "Continue with the next OpenCode verification step."
+    );
     assert!(last_response.contains("READY"));
     assert!(query_event_types(&connection).contains(&"session_continue".to_string()));
     assert!(
@@ -2724,10 +2728,7 @@ fn git_bare(repo_root: &Path, args: &[&str]) -> String {
 }
 
 fn with_path_prefix<T>(bin_dir: &Path, action: impl FnOnce() -> T) -> T {
-    let _guard = ENV_LOCK
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("lock env guard");
+    let _guard = lock_env();
 
     let original_path = env::var_os("PATH");
     let joined = match &original_path {

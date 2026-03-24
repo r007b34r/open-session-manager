@@ -70,7 +70,11 @@ pub fn resume_session(request: &SessionControlRequest<'_>) -> ActionResult<Sessi
 }
 
 pub fn continue_session(request: &SessionControlRequest<'_>) -> ActionResult<SessionControlResult> {
-    let Some(prompt) = request.prompt.map(str::trim).filter(|value| !value.is_empty()) else {
+    let Some(prompt) = request
+        .prompt
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
         return Err(ActionError::Precondition(
             "continue prompt must not be empty".to_string(),
         ));
@@ -483,18 +487,14 @@ fn ensure_continue_cooldown_elapsed(state: &SessionControlStateRow) -> ActionRes
         < CONTINUE_COOLDOWN_SECONDS
     {
         return Err(ActionError::Precondition(
-            "continue is cooling down; wait a moment before sending another prompt"
-                .to_string(),
+            "continue is cooling down; wait a moment before sending another prompt".to_string(),
         ));
     }
 
     Ok(())
 }
 
-fn session_is_busy_for_continue(
-    session: &SessionRecord,
-    state: &SessionControlStateRow,
-) -> bool {
+fn session_is_busy_for_continue(session: &SessionRecord, state: &SessionControlStateRow) -> bool {
     if !state.attached {
         return false;
     }
@@ -530,9 +530,7 @@ fn parse_control_timestamp(value: &str) -> Option<DateTime<Utc>> {
 
 fn looks_like_ready_response(value: &str) -> bool {
     let lowered = value.to_ascii_lowercase();
-    lowered.contains("ready")
-        || lowered.contains("awaiting")
-        || lowered.contains("waiting for")
+    lowered.contains("ready") || lowered.contains("awaiting") || lowered.contains("waiting for")
 }
 
 fn matches_terminal_status(value: &str) -> bool {
@@ -562,7 +560,9 @@ fn session_working_dir(session: &SessionRecord) -> PathBuf {
 }
 
 fn command_is_available(command: &str) -> bool {
-    if command.contains(std::path::MAIN_SEPARATOR) || command.contains('/') || command.contains('\\')
+    if command.contains(std::path::MAIN_SEPARATOR)
+        || command.contains('/')
+        || command.contains('\\')
     {
         return Path::new(command).exists();
     }
@@ -670,8 +670,10 @@ fn build_codex_command(
     prompt: &str,
 ) -> ActionResult<PreparedCommand> {
     let output_file = env::temp_dir().join(format!(
-        "osm-codex-session-control-{}.txt",
-        session.session_id
+        "osm-codex-session-control-{}-{}-{}.txt",
+        std::process::id(),
+        session.session_id,
+        Utc::now().timestamp_nanos_opt().unwrap_or_default()
     ));
 
     Ok(PreparedCommand {
@@ -754,10 +756,7 @@ fn session_control_event_id(session_id: &str, operation: &str, created_at: &str)
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn session_started_at(
-    session: &SessionRecord,
-    state: &SessionControlStateRow,
-) -> Option<String> {
+fn session_started_at(session: &SessionRecord, state: &SessionControlStateRow) -> Option<String> {
     session
         .started_at
         .clone()

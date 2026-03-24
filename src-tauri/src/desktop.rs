@@ -10,10 +10,10 @@ use crate::{
             attach_existing_session as attach_existing_session_action,
             commit_git_project as commit_git_project_action,
             continue_existing_session as continue_existing_session_action, delete_session,
-            detach_existing_session as detach_existing_session_action,
+            detach_existing_session as detach_existing_session_action, export_session,
             pause_existing_session as pause_existing_session_action,
-            export_session, resume_existing_session as resume_existing_session_action,
             push_git_project as push_git_project_action,
+            resume_existing_session as resume_existing_session_action,
             switch_git_project_branch as switch_git_project_branch_action,
             write_config_artifact as apply_config_writeback,
         },
@@ -22,8 +22,8 @@ use crate::{
             build_local_indexed_sessions, find_local_config_target,
         },
         query::{
-            expand_session, get_session, list_sessions_with_request,
-            search_sessions_with_request, view_session,
+            expand_session, get_session, list_sessions_with_request, search_sessions_with_request,
+            view_session,
         },
     },
     discovery::DiscoveryContext,
@@ -405,13 +405,8 @@ pub async fn push_git_project(
         let resolved_repo_root = resolve_git_repo_root(&context, &paths, &repo_root)?;
         let connection = open_database(&paths.audit_db_path).map_err(|error| error.to_string())?;
 
-        push_git_project_action(
-            &resolved_repo_root,
-            remote.as_deref(),
-            &actor,
-            &connection,
-        )
-        .map_err(|error| error.to_string())?;
+        push_git_project_action(&resolved_repo_root, remote.as_deref(), &actor, &connection)
+            .map_err(|error| error.to_string())?;
 
         build_snapshot_with_runtime(&context, &paths)
     })
@@ -525,30 +520,24 @@ mod tests {
         future::Future,
         path::{Path, PathBuf},
         process::Command,
-        sync::{
-            Mutex, OnceLock,
-            atomic::{AtomicU64, Ordering},
-        },
+        sync::atomic::{AtomicU64, Ordering},
     };
 
     use serde_json::Value;
 
+    use crate::test_support::lock_env;
+
     use super::{
-        ConfigWritebackPayload, attach_existing_session, commit_git_project,
-        continue_existing_session,
-        detach_existing_session,
-        expand_session_detail,
-        export_session_markdown, get_session_detail, list_session_inventory,
-        ListSessionInventoryRequest,
-        load_dashboard_snapshot, pause_existing_session, resume_existing_session,
-        save_dashboard_preferences,
-        SearchSessionInventoryRequest,
-        search_session_inventory, soft_delete_session, view_session_detail,
-        push_git_project, switch_git_project_branch, write_config_artifact,
+        ConfigWritebackPayload, ListSessionInventoryRequest, SearchSessionInventoryRequest,
+        attach_existing_session, commit_git_project, continue_existing_session,
+        detach_existing_session, expand_session_detail, export_session_markdown,
+        get_session_detail, list_session_inventory, load_dashboard_snapshot,
+        pause_existing_session, push_git_project, resume_existing_session,
+        save_dashboard_preferences, search_session_inventory, soft_delete_session,
+        switch_git_project_branch, view_session_detail, write_config_artifact,
     };
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
-    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     #[test]
     fn desktop_commands_are_async_futures() {
@@ -664,7 +653,9 @@ mod tests {
 
         with_home_dir(&home_dir, || {
             tauri::async_runtime::block_on(async {
-                let list = list_session_inventory(None).await.expect("list query command");
+                let list = list_session_inventory(None)
+                    .await
+                    .expect("list query command");
                 let search = search_session_inventory(SearchSessionInventoryRequest {
                     query: "Claude".to_string(),
                     assistant: None,
@@ -673,8 +664,8 @@ mod tests {
                     sort_by: None,
                     descending: None,
                 })
-                    .await
-                    .expect("search query command");
+                .await
+                .expect("search query command");
                 let get = get_session_detail("claude-ses-1".to_string())
                     .await
                     .expect("get query command");
@@ -686,9 +677,7 @@ mod tests {
                     .expect("expand query command");
 
                 assert_eq!(
-                    list.get("sessions")
-                        .and_then(Value::as_array)
-                        .map(Vec::len),
+                    list.get("sessions").and_then(Value::as_array).map(Vec::len),
                     Some(2)
                 );
                 assert_eq!(
@@ -770,9 +759,7 @@ mod tests {
                 .expect("search query command");
 
                 assert_eq!(
-                    list.get("sessions")
-                        .and_then(Value::as_array)
-                        .map(Vec::len),
+                    list.get("sessions").and_then(Value::as_array).map(Vec::len),
                     Some(1)
                 );
                 assert_eq!(
@@ -807,7 +794,12 @@ mod tests {
         init_git_repo(&repo_root);
         git(
             &repo_root,
-            &["remote", "add", "origin", remote_root.to_str().expect("remote path")],
+            &[
+                "remote",
+                "add",
+                "origin",
+                remote_root.to_str().expect("remote path"),
+            ],
         );
         git(&repo_root, &["push", "-u", "origin", "main"]);
         seed_git_project_session(&home_dir, &repo_root);
@@ -824,15 +816,10 @@ mod tests {
                 .await
                 .expect("commit git project");
 
-                assert!(
-                    after_commit
-                        .audit_events
-                        .iter()
-                        .any(|event| {
-                            event.r#type == "git_commit"
-                                && event.detail.contains("Committed feat: desktop git commit")
-                        })
-                );
+                assert!(after_commit.audit_events.iter().any(|event| {
+                    event.r#type == "git_commit"
+                        && event.detail.contains("Committed feat: desktop git commit")
+                }));
                 assert_eq!(
                     git(&repo_root, &["log", "-1", "--pretty=%s"]),
                     "feat: desktop git commit"
@@ -841,15 +828,9 @@ mod tests {
                 let after_push = push_git_project(repo_root.display().to_string(), None)
                     .await
                     .expect("push git project");
-                assert!(
-                    after_push
-                        .audit_events
-                        .iter()
-                        .any(|event| {
-                            event.r#type == "git_push"
-                                && event.detail.contains("Pushed main to origin")
-                        })
-                );
+                assert!(after_push.audit_events.iter().any(|event| {
+                    event.r#type == "git_push" && event.detail.contains("Pushed main to origin")
+                }));
 
                 let after_switch = switch_git_project_branch(
                     repo_root.display().to_string(),
@@ -858,15 +839,10 @@ mod tests {
                 .await
                 .expect("switch git branch");
 
-                assert!(
-                    after_switch
-                        .audit_events
-                        .iter()
-                        .any(|event| {
-                            event.r#type == "git_branch_switch"
-                                && event.detail.contains("Switched to feature/git-dashboard")
-                        })
-                );
+                assert!(after_switch.audit_events.iter().any(|event| {
+                    event.r#type == "git_branch_switch"
+                        && event.detail.contains("Switched to feature/git-dashboard")
+                }));
                 assert_eq!(
                     git(&repo_root, &["branch", "--show-current"]),
                     "feature/git-dashboard"
@@ -903,7 +879,11 @@ mod tests {
     }
 
     fn seed_git_project_session(home_dir: &Path, repo_root: &Path) {
-        let codex_root = home_dir.join(".codex").join("sessions").join("2026").join("03");
+        let codex_root = home_dir
+            .join(".codex")
+            .join("sessions")
+            .join("2026")
+            .join("03");
         let escaped_repo_path = repo_root.display().to_string().replace('\\', "\\\\");
 
         fs::create_dir_all(&codex_root).expect("create codex session root");
@@ -929,10 +909,7 @@ mod tests {
     }
 
     fn with_home_dir<T>(home_dir: &Path, action: impl FnOnce() -> T) -> T {
-        let _guard = ENV_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock env guard");
+        let _guard = lock_env();
 
         let original_home = env::var_os("HOME");
         let original_userprofile = env::var_os("USERPROFILE");

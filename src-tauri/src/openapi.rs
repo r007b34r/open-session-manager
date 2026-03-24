@@ -67,6 +67,62 @@ pub fn openapi_document(app: &AppState) -> Value {
                     }
                 }
             },
+            "/api/v1/automation/tasks": {
+                "post": {
+                    "summary": "Trigger an automation task",
+                    "security": [{ "bearerAuth": [] }],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/AutomationTaskRequest" },
+                                "example": {
+                                    "kind": "sessions.search",
+                                    "query": "Claude",
+                                    "assistant": "claude-code"
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Automation task receipt",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/AutomationTaskReceipt" }
+                                }
+                            }
+                        },
+                        "401": { "$ref": "#/components/responses/Unauthorized" }
+                    }
+                }
+            },
+            "/api/v1/automation/tasks/{taskId}": {
+                "get": {
+                    "summary": "Get automation task receipt",
+                    "security": [{ "bearerAuth": [] }],
+                    "parameters": [
+                        {
+                            "name": "taskId",
+                            "in": "path",
+                            "required": true,
+                            "schema": { "type": "string" }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Automation task receipt",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/AutomationTaskReceipt" }
+                                }
+                            }
+                        },
+                        "401": { "$ref": "#/components/responses/Unauthorized" },
+                        "404": { "$ref": "#/components/responses/NotFound" }
+                    }
+                }
+            },
             "/api/v1/sessions": {
                 "get": {
                     "summary": "List session inventory",
@@ -451,6 +507,34 @@ pub fn openapi_document(app: &AppState) -> Value {
                     "required": ["prompt"],
                     "properties": {
                         "prompt": { "type": "string" }
+                    }
+                },
+                "AutomationTaskRequest": {
+                    "type": "object",
+                    "required": ["kind"],
+                    "properties": {
+                        "kind": { "type": "string" },
+                        "sessionId": { "type": "string" },
+                        "prompt": { "type": "string" },
+                        "query": { "type": "string" },
+                        "assistant": { "type": "string" },
+                        "limit": { "type": "integer", "minimum": 0 },
+                        "offset": { "type": "integer", "minimum": 0 },
+                        "sortBy": { "type": "string" },
+                        "descending": { "type": "boolean" }
+                    }
+                },
+                "AutomationTaskReceipt": {
+                    "type": "object",
+                    "required": ["taskId", "kind", "status", "submittedAt", "completedAt"],
+                    "properties": {
+                        "taskId": { "type": "string" },
+                        "kind": { "type": "string" },
+                        "status": { "type": "string", "enum": ["completed", "failed"] },
+                        "submittedAt": { "type": "string" },
+                        "completedAt": { "type": "string" },
+                        "result": {},
+                        "error": { "type": "string" }
                     }
                 },
                 "SessionInventoryResponse": {

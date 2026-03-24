@@ -220,8 +220,8 @@ pub fn upsert_session_index_cache_row(
 }
 
 pub fn list_session_index_cache_paths(connection: &Connection) -> Result<Vec<String>> {
-    let mut statement =
-        connection.prepare("SELECT source_path FROM session_index_cache ORDER BY source_path ASC")?;
+    let mut statement = connection
+        .prepare("SELECT source_path FROM session_index_cache ORDER BY source_path ASC")?;
     let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
 
     rows.collect()
@@ -451,8 +451,10 @@ fn ensure_session_control_state_columns(connection: &Connection) -> Result<()> {
 }
 
 fn table_column_names(connection: &Connection, table_name: &str) -> Result<Vec<String>> {
-    let mut statement =
-        connection.prepare(&format!("PRAGMA table_info({})", quote_identifier(table_name)))?;
+    let mut statement = connection.prepare(&format!(
+        "PRAGMA table_info({})",
+        quote_identifier(table_name)
+    ))?;
     let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
     rows.collect()
 }

@@ -53,14 +53,18 @@ pub fn run(args: &[String]) -> Result<(), String> {
             continue;
         }
 
-        let request: Value = serde_json::from_str(&line)
-            .map_err(|error| format!("invalid mcp request: {error}"))?;
+        let request: Value =
+            serde_json::from_str(&line).map_err(|error| format!("invalid mcp request: {error}"))?;
         let Some(response) = handle_request(&state, request) else {
             continue;
         };
 
-        writeln!(stdout, "{}", serde_json::to_string(&response).map_err(|error| error.to_string())?)
-            .map_err(|error| error.to_string())?;
+        writeln!(
+            stdout,
+            "{}",
+            serde_json::to_string(&response).map_err(|error| error.to_string())?
+        )
+        .map_err(|error| error.to_string())?;
         stdout.flush().map_err(|error| error.to_string())?;
     }
 
@@ -69,7 +73,10 @@ pub fn run(args: &[String]) -> Result<(), String> {
 
 fn handle_request(state: &McpState, request: Value) -> Option<Value> {
     let id = request.get("id").cloned().unwrap_or(Value::Null);
-    let method = request.get("method").and_then(Value::as_str).unwrap_or_default();
+    let method = request
+        .get("method")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
 
     match method {
         "initialize" => Some(json!({
@@ -139,7 +146,11 @@ fn handle_request(state: &McpState, request: Value) -> Option<Value> {
                 ]
             }
         })),
-        "tools/call" => Some(handle_tool_call(state, id, request.get("params").unwrap_or(&Value::Null))),
+        "tools/call" => Some(handle_tool_call(
+            state,
+            id,
+            request.get("params").unwrap_or(&Value::Null),
+        )),
         _ => Some(json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -152,8 +163,14 @@ fn handle_request(state: &McpState, request: Value) -> Option<Value> {
 }
 
 fn handle_tool_call(state: &McpState, id: Value, params: &Value) -> Value {
-    let tool_name = params.get("name").and_then(Value::as_str).unwrap_or_default();
-    let arguments = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+    let tool_name = params
+        .get("name")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let arguments = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
 
     let result = match tool_name {
         "list_sessions" => {

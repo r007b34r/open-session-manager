@@ -24,6 +24,7 @@
 - Sessions 列表现在会显示会话 ID，多个相近标题不再像同一条
 - `Codex / Claude Code / GitHub Copilot CLI / OpenCode` 现在支持真实 resume / continue，结果会写回会话控制状态和审计历史
 - `serve` 现在额外暴露 `/metrics` Prometheus 指标端点，可直接采集 sessions/configs/git projects/doctor findings/audit events
+- `serve` 现在还支持本地 automation server：可通过 `POST /api/v1/automation/tasks` 触发 `snapshot.refresh / sessions.search / sessions.resume / sessions.continue`，再通过 `GET /api/v1/automation/tasks/{taskId}` 读取稳定回执
 - Web 详情页补上了一键恢复、继续提示、最近控制结果和导出落盘路径提示
 - 总览页新增 `active session cockpit`，可直接查看当前可控会话、最近控制响应，并手动刷新运行时状态
 - 支持 usage / cost analytics：
@@ -161,7 +162,7 @@
 - 建立在 worktree CLI 之上的多项目调度、并行 agent 编排和容器隔离执行
 - provider 健康探测和自动切换
 - 更深 analytics（model/platform breakdown / contribution graph / shareable stats）和更多助手连接器
-- MCP / HTTP 控制 / headless 自动化接口
+- 更完整的异步任务队列、SSE 推送和远程壳层鉴权
 - Linux 桌面实机回归
 - 发布安装包与签名流程
 

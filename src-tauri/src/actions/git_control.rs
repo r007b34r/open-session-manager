@@ -129,7 +129,11 @@ pub fn push_project(request: &GitPushRequest<'_>) -> ActionResult<GitActionResul
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or("origin");
-    let output = if request.remote.map(str::trim).is_some_and(|value| !value.is_empty()) {
+    let output = if request
+        .remote
+        .map(str::trim)
+        .is_some_and(|value| !value.is_empty())
+    {
         run_git(&repo_root, &["push", remote, &branch])?
     } else {
         ensure_upstream_branch(&repo_root)?;
@@ -189,7 +193,12 @@ fn local_branch_exists(repo_root: &Path, branch: &str) -> ActionResult<bool> {
     let status = Command::new("git")
         .arg("-C")
         .arg(repo_root)
-        .args(["show-ref", "--verify", "--quiet", &format!("refs/heads/{branch}")])
+        .args([
+            "show-ref",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ])
         .status()
         .map_err(ActionError::Io)?;
 
@@ -200,7 +209,12 @@ fn ensure_upstream_branch(repo_root: &Path) -> ActionResult<()> {
     let output = Command::new("git")
         .arg("-C")
         .arg(repo_root)
-        .args(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+        .args([
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        ])
         .output()
         .map_err(ActionError::Io)?;
 

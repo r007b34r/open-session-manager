@@ -60,10 +60,7 @@ fn serve_command_exposes_health_and_session_routes() {
     wait_for_server(&mut server, port);
 
     let health = get_json(port, "/health");
-    assert_eq!(
-        health.get("status").and_then(Value::as_str),
-        Some("ok")
-    );
+    assert_eq!(health.get("status").and_then(Value::as_str), Some("ok"));
 
     let list = get_json(
         port,
@@ -118,7 +115,10 @@ fn serve_command_exposes_health_and_session_routes() {
     );
 
     let openapi = get_json(port, "/openapi.json");
-    assert_eq!(openapi.get("openapi").and_then(Value::as_str), Some("3.1.0"));
+    assert_eq!(
+        openapi.get("openapi").and_then(Value::as_str),
+        Some("3.1.0")
+    );
     assert!(
         openapi
             .get("paths")
@@ -273,6 +273,271 @@ fn serve_command_requires_bearer_token_for_metrics_when_configured() {
 }
 
 #[test]
+fn serve_command_triggers_automation_search_task_and_returns_receipt() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let created = post_json_with_token(
+        port,
+        "/api/v1/automation/tasks",
+        "osm-local-token",
+        Some(r#"{"kind":"sessions.search","query":"Claude","assistant":"claude-code"}"#),
+    );
+
+    assert_eq!(
+        created.get("kind").and_then(Value::as_str),
+        Some("sessions.search")
+    );
+    assert_eq!(
+        created.get("status").and_then(Value::as_str),
+        Some("completed")
+    );
+    assert!(
+        created
+            .get("result")
+            .and_then(|result| result.get("hits"))
+            .and_then(Value::as_array)
+            .is_some_and(|hits| !hits.is_empty())
+    );
+
+    let task_id = created
+        .get("taskId")
+        .and_then(Value::as_str)
+        .expect("task id should be present");
+    let receipt = get_json_with_token(
+        port,
+        &format!("/api/v1/automation/tasks/{task_id}"),
+        "osm-local-token",
+    );
+
+    assert_eq!(receipt.get("taskId").and_then(Value::as_str), Some(task_id));
+    assert_eq!(
+        receipt.get("status").and_then(Value::as_str),
+        Some("completed")
+    );
+}
+
+#[test]
+fn serve_command_triggers_automation_resume_task_and_returns_receipt() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".codex")
+            .join("sessions")
+            .join("2026")
+            .join("03")
+            .join("15")
+            .join("rollout-2026-03-15.jsonl"),
+        "codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let codex_command = fake_command_path(&bin_dir, "codex");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+            codex_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let created = post_json_with_token(
+        port,
+        "/api/v1/automation/tasks",
+        "osm-local-token",
+        Some(r#"{"kind":"sessions.resume","sessionId":"codex-ses-1"}"#),
+    );
+
+    assert_eq!(
+        created.get("kind").and_then(Value::as_str),
+        Some("sessions.resume")
+    );
+    assert_eq!(
+        created.get("status").and_then(Value::as_str),
+        Some("completed")
+    );
+    assert_eq!(
+        created
+            .get("result")
+            .and_then(|result| result.get("sessionId"))
+            .and_then(Value::as_str),
+        Some("codex-ses-1")
+    );
+    assert_eq!(
+        created
+            .get("result")
+            .and_then(|result| result.get("sessionControl"))
+            .and_then(|control| control.get("attached"))
+            .and_then(Value::as_bool),
+        Some(true)
+    );
+
+    let task_id = created
+        .get("taskId")
+        .and_then(Value::as_str)
+        .expect("task id should be present");
+    let receipt = get_json_with_token(
+        port,
+        &format!("/api/v1/automation/tasks/{task_id}"),
+        "osm-local-token",
+    );
+
+    assert_eq!(receipt.get("taskId").and_then(Value::as_str), Some(task_id));
+    assert_eq!(
+        receipt.get("status").and_then(Value::as_str),
+        Some("completed")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read codex log")
+            .contains("exec resume")
+    );
+}
+
+#[test]
+fn serve_command_triggers_automation_continue_task_and_returns_receipt() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("codex.log");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".codex")
+            .join("sessions")
+            .join("2026")
+            .join("03")
+            .join("15")
+            .join("rollout-2026-03-15.jsonl"),
+        "codex/2026/03/15/rollout-2026-03-15T12-00-00-codex-ses-1.jsonl",
+    );
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_codex_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let codex_command = fake_command_path(&bin_dir, "codex");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+            codex_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let _resume = post_json_with_token(
+        port,
+        "/api/v1/automation/tasks",
+        "osm-local-token",
+        Some(r#"{"kind":"sessions.resume","sessionId":"codex-ses-1"}"#),
+    );
+
+    let created = post_json_with_token(
+        port,
+        "/api/v1/automation/tasks",
+        "osm-local-token",
+        Some(
+            r#"{"kind":"sessions.continue","sessionId":"codex-ses-1","prompt":"Continue with automation verification"}"#,
+        ),
+    );
+
+    assert_eq!(
+        created.get("kind").and_then(Value::as_str),
+        Some("sessions.continue")
+    );
+    assert_eq!(
+        created.get("status").and_then(Value::as_str),
+        Some("completed")
+    );
+    assert_eq!(
+        created
+            .get("result")
+            .and_then(|result| result.get("sessionControl"))
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with automation verification")
+    );
+}
+
+#[test]
+fn serve_command_sandboxes_runtime_paths_per_test_home() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let receipt = post_json_with_token(
+        port,
+        "/api/v1/automation/tasks",
+        "osm-local-token",
+        Some(r#"{"kind":"snapshot.refresh"}"#),
+    );
+
+    let runtime = receipt
+        .get("result")
+        .and_then(|result| result.get("runtime"))
+        .expect("snapshot refresh should return runtime paths");
+    let audit_db_path = runtime
+        .get("auditDbPath")
+        .and_then(Value::as_str)
+        .expect("runtime should include audit db path");
+    let preferences_path = runtime
+        .get("preferencesPath")
+        .and_then(Value::as_str)
+        .expect("runtime should include preferences path");
+
+    assert!(
+        Path::new(audit_db_path).starts_with(&sandbox),
+        "audit db path should stay inside sandbox, got {audit_db_path}"
+    );
+    assert!(
+        Path::new(preferences_path).starts_with(&sandbox),
+        "preferences path should stay inside sandbox, got {preferences_path}"
+    );
+}
+
+#[test]
 fn serve_command_exposes_session_control_routes() {
     let sandbox = temp_root();
     let home_dir = sandbox.join("home");
@@ -299,7 +564,10 @@ fn serve_command_exposes_session_control_routes() {
         &home_dir,
         port,
         Some("osm-local-token"),
-        Some(("OPEN_SESSION_MANAGER_CODEX_COMMAND", codex_command.as_path())),
+        Some((
+            "OPEN_SESSION_MANAGER_CODEX_COMMAND",
+            codex_command.as_path(),
+        )),
     );
 
     wait_for_server(&mut server, port);
@@ -562,9 +830,8 @@ fn serve_command_controls_opencode_session_via_http() {
     let home_dir = sandbox.join("home");
     let bin_dir = sandbox.join("bin");
     let log_path = sandbox.join("opencode.log");
-    let info_path = home_dir
-        .join(".local")
-        .join("share")
+    let info_path = sandbox
+        .join("xdg-data")
         .join("opencode")
         .join("storage")
         .join("session")
@@ -606,7 +873,10 @@ fn serve_command_controls_opencode_session_via_http() {
         "osm-local-token",
         None,
     );
-    assert_eq!(resume.get("assistant").and_then(Value::as_str), Some("opencode"));
+    assert_eq!(
+        resume.get("assistant").and_then(Value::as_str),
+        Some("opencode")
+    );
     assert_eq!(
         resume
             .get("sessionControl")
@@ -680,10 +950,19 @@ fn spawn_server_with_options(
     api_token: Option<&str>,
     extra_env: Option<(&str, &Path)>,
 ) -> ServerGuard {
+    let sandbox_root = home_dir.parent().unwrap_or(home_dir);
+    let local_app_data = sandbox_root.join("local-app-data");
+    let app_data = sandbox_root.join("app-data");
+    let xdg_data_home = sandbox_root.join("xdg-data");
+    let xdg_config_home = sandbox_root.join("xdg-config");
     let mut command = Command::new(env!("CARGO_BIN_EXE_open-session-manager-core"));
     command
         .env("HOME", home_dir)
         .env("USERPROFILE", home_dir)
+        .env("LOCALAPPDATA", &local_app_data)
+        .env("APPDATA", &app_data)
+        .env("XDG_DATA_HOME", &xdg_data_home)
+        .env("XDG_CONFIG_HOME", &xdg_config_home)
         .args(["serve", "--host", "127.0.0.1", "--port", &port.to_string()])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -751,9 +1030,7 @@ fn http_get(port: u16, path: &str, token: Option<&str>) -> HttpResponse {
     let request = format!(
         "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n{authorization}Connection: close\r\n\r\n"
     );
-    stream
-        .write_all(request.as_bytes())
-        .expect("write request");
+    stream.write_all(request.as_bytes()).expect("write request");
 
     let mut response = Vec::new();
     stream.read_to_end(&mut response).expect("read response");
@@ -796,9 +1073,7 @@ Connection: close\r\n\r\n\
         authorization = authorization,
         content_length = payload.len()
     );
-    stream
-        .write_all(request.as_bytes())
-        .expect("write request");
+    stream.write_all(request.as_bytes()).expect("write request");
 
     let mut response = Vec::new();
     stream.read_to_end(&mut response).expect("read response");
