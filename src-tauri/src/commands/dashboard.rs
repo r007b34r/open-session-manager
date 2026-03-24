@@ -1200,6 +1200,12 @@ fn build_session_control_record(
             env::var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND")
                 .unwrap_or_else(|_| "claude".to_string()),
         ),
+        "opencode" => (
+            true,
+            "opencode".to_string(),
+            env::var("OPEN_SESSION_MANAGER_OPENCODE_COMMAND")
+                .unwrap_or_else(|_| "opencode".to_string()),
+        ),
         "github-copilot-cli" => (
             true,
             "github-copilot-cli".to_string(),
@@ -2759,21 +2765,56 @@ mod tests {
 
     #[test]
     fn fixture_snapshot_marks_copilot_session_control_supported() {
-        let snapshot =
-            build_fixture_dashboard_snapshot(&fixtures_root()).expect("fixture snapshot builds");
-        let copilot_session = snapshot
-            .sessions
-            .iter()
-            .find(|session| session.session_id == "copilot-ses-1")
-            .expect("copilot fixture session exists");
-        let control = copilot_session
-            .session_control
-            .as_ref()
-            .expect("copilot fixture session control exists");
+        with_cleared_env_vars(
+            &[
+                "OPEN_SESSION_MANAGER_COPILOT_COMMAND",
+                "OPEN_SESSION_MANAGER_OPENCODE_COMMAND",
+            ],
+            || {
+                let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
+                    .expect("fixture snapshot builds");
+                let copilot_session = snapshot
+                    .sessions
+                    .iter()
+                    .find(|session| session.session_id == "copilot-ses-1")
+                    .expect("copilot fixture session exists");
+                let control = copilot_session
+                    .session_control
+                    .as_ref()
+                    .expect("copilot fixture session control exists");
 
-        assert!(control.supported);
-        assert_eq!(control.controller, "github-copilot-cli");
-        assert_eq!(control.command, "copilot");
+                assert!(control.supported);
+                assert_eq!(control.controller, "github-copilot-cli");
+                assert_eq!(control.command, "copilot");
+            },
+        );
+    }
+
+    #[test]
+    fn fixture_snapshot_marks_opencode_session_control_supported() {
+        with_cleared_env_vars(
+            &[
+                "OPEN_SESSION_MANAGER_COPILOT_COMMAND",
+                "OPEN_SESSION_MANAGER_OPENCODE_COMMAND",
+            ],
+            || {
+                let snapshot = build_fixture_dashboard_snapshot(&fixtures_root())
+                    .expect("fixture snapshot builds");
+                let opencode_session = snapshot
+                    .sessions
+                    .iter()
+                    .find(|session| session.assistant == "opencode")
+                    .expect("opencode fixture session exists");
+                let control = opencode_session
+                    .session_control
+                    .as_ref()
+                    .expect("opencode fixture session control exists");
+
+                assert!(control.supported);
+                assert_eq!(control.controller, "opencode");
+                assert_eq!(control.command, "opencode");
+            },
+        );
     }
 
     #[test]
@@ -3584,5 +3625,37 @@ mod tests {
         }
 
         String::from_utf8_lossy(&output.stdout).trim().to_string()
+    }
+
+    fn with_cleared_env_vars<T>(keys: &[&str], action: impl FnOnce() -> T) -> T {
+        let _guard = ENV_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock env guard");
+        let original = keys
+            .iter()
+            .map(|key| ((*key).to_string(), env::var_os(key)))
+            .collect::<Vec<_>>();
+
+        for key in keys {
+            unsafe {
+                env::remove_var(key);
+            }
+        }
+
+        let result = action();
+
+        for (key, value) in original {
+            match value {
+                Some(value) => unsafe {
+                    env::set_var(&key, value);
+                },
+                None => unsafe {
+                    env::remove_var(&key);
+                },
+            }
+        }
+
+        result
     }
 }

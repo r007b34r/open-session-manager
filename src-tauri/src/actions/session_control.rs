@@ -122,6 +122,7 @@ fn execute_session_control(
     let prepared = match controller.controller {
         "codex" => build_codex_command(&controller, request.session, prompt),
         "claude-code" => build_claude_command(&controller, request.session, prompt),
+        "opencode" => build_opencode_command(&controller, request.session, prompt),
         "github-copilot-cli" => build_copilot_command(&controller, request.session, prompt),
         other => {
             return Err(ActionError::Precondition(format!(
@@ -395,6 +396,12 @@ fn resolve_controller(session: &SessionRecord) -> ActionResult<ResolvedControlle
             controller: "claude-code",
             command: env::var("OPEN_SESSION_MANAGER_CLAUDE_CODE_COMMAND")
                 .unwrap_or_else(|_| "claude".to_string()),
+            working_dir,
+        }),
+        "opencode" => Ok(ResolvedController {
+            controller: "opencode",
+            command: env::var("OPEN_SESSION_MANAGER_OPENCODE_COMMAND")
+                .unwrap_or_else(|_| "opencode".to_string()),
             working_dir,
         }),
         "github-copilot-cli" => Ok(ResolvedController {
@@ -717,6 +724,24 @@ fn build_copilot_command(
             "-s".to_string(),
             "--output-format".to_string(),
             "text".to_string(),
+        ],
+        working_dir: controller.working_dir.clone(),
+        output_file: None,
+    })
+}
+
+fn build_opencode_command(
+    controller: &ResolvedController,
+    session: &SessionRecord,
+    prompt: &str,
+) -> ActionResult<PreparedCommand> {
+    Ok(PreparedCommand {
+        command: controller.command.clone(),
+        args: vec![
+            "run".to_string(),
+            "--session".to_string(),
+            session.session_id.clone(),
+            prompt.to_string(),
         ],
         working_dir: controller.working_dir.clone(),
         output_file: None,

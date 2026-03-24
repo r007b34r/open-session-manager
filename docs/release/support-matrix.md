@@ -38,8 +38,8 @@
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
 | MCP session query server | 已实现 | `cargo run -- mcp` 会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 tools，并复用同一套 Rust 查询层 |
-| Real session resume / continue | 部分实现 | 当前已接 `Codex` 与 `Claude Code`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
-| One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；纯浏览器模式不会伪装成本机可控 |
+| Real session resume / continue | 部分实现 | 当前已接 `Codex`、`Claude Code`、`GitHub Copilot CLI`、`OpenCode`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |
+| One-click resume in Web detail | 部分实现 | 详情页已接恢复按钮、继续提示和最近控制结果；当前真实执行覆盖 `Codex`、`Claude Code`、`GitHub Copilot CLI`、`OpenCode`，纯浏览器模式不会伪装成本机可控 |
 | Active session cockpit | 已实现 | 总览页新增活跃会话 cockpit，可集中查看可控会话、最近控制响应，并支持手动刷新运行时状态 |
 | Git worktree lifecycle CLI | 已实现 | `node scripts/git-worktree-manager.mjs` 支持在仓库内 `.worktrees/` 下执行 `create / merge / delete / recycle` |
 | Diff viewer | 已实现 | 配置审查流使用独立前端 diff 组件展示字段标签、前后值、风险 badge，并在无差异时显示明确空状态 |
@@ -93,7 +93,7 @@
 | 项目 | 当前状态 | 说明 |
 | --- | --- | --- |
 | 语义搜索 / hybrid ranking | 未纳入本版承诺 | 当前已实现本地加权搜索、search-as-you-type 防抖与取消，以及统一查询 API 的分页/过滤/排序，但还没有语义索引和混合排序 |
-| 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制只覆盖 `Codex / Claude Code`，还没有统一的 attach/detach、pause/resume 与进程观测层 |
+| 更广助手的会话控制 / attach / process control | 未纳入本版承诺 | 当前真实控制已覆盖 `Codex / Claude Code / GitHub Copilot CLI / OpenCode`，但其余助手还没有统一的 attach/detach、pause/resume 与进程观测层 |
 | worktree 编排 / 多项目调度 | 未纳入本版承诺 | 已有基础 worktree lifecycle CLI，但还没有调度器、任务队列和容器隔离层 |
 | provider 健康探测 / 自动切换 | 未纳入本版承诺 | 当前已支持 `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、统一 provider presets 和共享 snippet library，但还没有健康探测、自动切换和熔断 |
 | 高级 analytics / 更宽连接器 | 未纳入本版承诺 | 当前已完成本地价格目录估算、成本来源标注与日级 usage timeline，但还没有 model/platform breakdown、contribution graph、shareable stats 与更宽连接器覆盖 |

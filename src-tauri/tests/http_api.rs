@@ -476,6 +476,92 @@ fn serve_command_controls_copilot_session_via_http() {
     );
 }
 
+#[test]
+fn serve_command_controls_opencode_session_via_http() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("opencode.log");
+    let info_path = home_dir
+        .join(".local")
+        .join("share")
+        .join("opencode")
+        .join("storage")
+        .join("session")
+        .join("info")
+        .join("opencode-ses-1.json");
+
+    fs::create_dir_all(info_path.parent().expect("info dir")).expect("create info dir");
+    fs::write(
+        &info_path,
+        concat!(
+            "{\"id\":\"opencode-ses-1\",",
+            "\"title\":\"Audit OpenCode session\",",
+            "\"directory\":\"/workspace/opencode-demo\",",
+            "\"time\":{\"created\":1742025600,\"updated\":1742025900}}\n"
+        ),
+    )
+    .expect("write opencode session info");
+
+    fs::create_dir_all(&bin_dir).expect("create fake bin dir");
+    write_fake_opencode_executable(&bin_dir, &log_path);
+
+    let port = reserve_port();
+    let opencode_command = fake_command_path(&bin_dir, "opencode");
+    let mut server = spawn_server_with_options(
+        &home_dir,
+        port,
+        Some("osm-local-token"),
+        Some((
+            "OPEN_SESSION_MANAGER_OPENCODE_COMMAND",
+            opencode_command.as_path(),
+        )),
+    );
+
+    wait_for_server(&mut server, port);
+
+    let resume = post_json_with_token(
+        port,
+        "/api/v1/sessions/opencode-ses-1/resume",
+        "osm-local-token",
+        None,
+    );
+    assert_eq!(resume.get("assistant").and_then(Value::as_str), Some("opencode"));
+    assert_eq!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("controller"))
+            .and_then(Value::as_str),
+        Some("opencode")
+    );
+    assert!(
+        resume
+            .get("sessionControl")
+            .and_then(|control| control.get("lastResponse"))
+            .and_then(Value::as_str)
+            .is_some_and(|response| response.contains("READY"))
+    );
+
+    let continued = post_json_with_token(
+        port,
+        "/api/v1/sessions/opencode-ses-1/continue",
+        "osm-local-token",
+        Some(r#"{"prompt":"Continue with OpenCode verification"}"#),
+    );
+    assert_eq!(
+        continued
+            .get("sessionControl")
+            .and_then(|control| control.get("lastPrompt"))
+            .and_then(Value::as_str),
+        Some("Continue with OpenCode verification")
+    );
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read opencode log")
+            .contains("run --session opencode-ses-1")
+    );
+}
+
 fn temp_root() -> PathBuf {
     let suffix = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
     let root = env::temp_dir().join(format!(
@@ -760,6 +846,47 @@ fn write_fake_copilot_executable(bin_dir: &Path, log_path: &Path) {
 
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
             .expect("chmod fake copilot");
+    }
+}
+
+fn write_fake_opencode_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("opencode.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake opencode\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake opencode");
+        return;
+    }
+
+    let script_path = bin_dir.join("opencode");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake opencode\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake opencode");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake opencode");
     }
 }
 

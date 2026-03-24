@@ -1697,6 +1697,222 @@ fn continues_attached_session_and_persists_audit_event_for_copilot() {
 }
 
 #[test]
+fn resumes_supported_opencode_session_and_records_control_state() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("opencode.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox
+        .join("storage")
+        .join("session")
+        .join("info")
+        .join("opencode-ses-1.json");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(
+        &source_path,
+        format!(
+            concat!(
+                "{{",
+                "\"id\":\"opencode-ses-1\",",
+                "\"directory\":\"{}\",",
+                "\"time\":{{\"created\":1742025600,\"updated\":1742025900}}",
+                "}}\n"
+            ),
+            project_root.display()
+        ),
+    )
+    .expect("write source session");
+    write_fake_opencode_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "opencode-ses-1".to_string(),
+        installation_id: None,
+        assistant: "opencode".to_string(),
+        environment: "linux".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T08:00:00.000Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T08:05:00.000Z".to_string()),
+        message_count: 0,
+        tool_count: 0,
+        status: "running".to_string(),
+        raw_format: "opencode-storage".to_string(),
+        content_hash: "opencode-resume".to_string(),
+    };
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_OPENCODE_COMMAND",
+                fake_command_path(&bin_dir, "opencode"),
+            );
+        }
+
+        resume_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: None,
+        })
+        .expect("resume opencode session");
+
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_OPENCODE_COMMAND");
+        }
+    });
+
+    let (attached, last_command, last_response): (i64, String, String) = connection
+        .query_row(
+            "SELECT attached, last_command, last_response
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .expect("control state should be persisted");
+
+    assert_eq!(attached, 1);
+    assert!(last_command.contains("run --session opencode-ses-1"));
+    assert!(last_response.contains("READY"));
+    assert!(query_event_types(&connection).contains(&"session_resume".to_string()));
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read opencode log")
+            .contains("run --session opencode-ses-1"),
+        "fake opencode command should receive session args"
+    );
+}
+
+#[test]
+fn continues_attached_session_and_persists_audit_event_for_opencode() {
+    let sandbox = temp_root();
+    let bin_dir = sandbox.join("bin");
+    let log_path = sandbox.join("opencode.log");
+    let project_root = sandbox.join("project");
+    let source_path = sandbox
+        .join("storage")
+        .join("session")
+        .join("info")
+        .join("opencode-ses-1.json");
+
+    fs::create_dir_all(&bin_dir).expect("create bin dir");
+    fs::create_dir_all(&project_root).expect("create project dir");
+    fs::create_dir_all(source_path.parent().expect("session dir")).expect("create session dir");
+    fs::write(
+        &source_path,
+        format!(
+            concat!(
+                "{{",
+                "\"id\":\"opencode-ses-1\",",
+                "\"directory\":\"{}\",",
+                "\"time\":{{\"created\":1742025600,\"updated\":1742025900}}",
+                "}}\n"
+            ),
+            project_root.display()
+        ),
+    )
+    .expect("write source session");
+    write_fake_opencode_executable(&bin_dir, &log_path);
+
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    let session = SessionRecord {
+        session_id: "opencode-ses-1".to_string(),
+        installation_id: None,
+        assistant: "opencode".to_string(),
+        environment: "linux".to_string(),
+        project_path: Some(project_root.display().to_string()),
+        source_path: source_path.display().to_string(),
+        started_at: Some("2026-03-15T08:00:00.000Z".to_string()),
+        ended_at: None,
+        last_activity_at: Some("2026-03-15T08:05:00.000Z".to_string()),
+        message_count: 0,
+        tool_count: 0,
+        status: "running".to_string(),
+        raw_format: "opencode-storage".to_string(),
+        content_hash: "opencode-continue".to_string(),
+    };
+
+    upsert_session_control_state(
+        &connection,
+        &SessionControlStateRow {
+            session_id: session.session_id.clone(),
+            assistant: "opencode".to_string(),
+            controller: "opencode".to_string(),
+            available: true,
+            attached: true,
+            paused: false,
+            last_command: Some("opencode run --session opencode-ses-1 Resume and report READY".to_string()),
+            last_prompt: Some("Resume and report READY".to_string()),
+            last_response: Some("READY from fake opencode".to_string()),
+            last_error: None,
+            last_resumed_at: Some("2026-03-15T08:05:00.000Z".to_string()),
+            last_continued_at: None,
+            paused_at: None,
+            process_state: Some("waiting".to_string()),
+            process_id: Some(4301),
+            exit_code: Some(0),
+            started_at: Some("2026-03-15T08:00:00.000Z".to_string()),
+            runtime_seconds: Some(300),
+            event_count: 1,
+            input_tokens: 10,
+            output_tokens: 6,
+            total_tokens: 16,
+            last_activity_at: Some("2026-03-15T08:05:00.000Z".to_string()),
+        },
+    )
+    .expect("seed attached control state");
+
+    with_path_prefix(&bin_dir, || {
+        unsafe {
+            env::set_var(
+                "OPEN_SESSION_MANAGER_OPENCODE_COMMAND",
+                fake_command_path(&bin_dir, "opencode"),
+            );
+        }
+        continue_session(&SessionControlRequest {
+            session: &session,
+            actor: "r007b34r",
+            connection: &connection,
+            prompt: Some("Continue with the next OpenCode verification step."),
+        })
+        .expect("continue opencode session");
+        unsafe {
+            env::remove_var("OPEN_SESSION_MANAGER_OPENCODE_COMMAND");
+        }
+    });
+
+    let (attached, last_prompt, last_response): (i64, String, String) = connection
+        .query_row(
+            "SELECT attached, last_prompt, last_response
+             FROM session_control_state
+             WHERE session_id = ?1",
+            [session.session_id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .expect("control state should be persisted");
+
+    assert_eq!(attached, 1);
+    assert_eq!(last_prompt, "Continue with the next OpenCode verification step.");
+    assert!(last_response.contains("READY"));
+    assert!(query_event_types(&connection).contains(&"session_continue".to_string()));
+    assert!(
+        fs::read_to_string(&log_path)
+            .expect("read opencode log")
+            .contains("run --session opencode-ses-1"),
+        "fake opencode command should receive session args"
+    );
+}
+
+#[test]
 fn attaches_and_detaches_supported_session() {
     let sandbox = temp_root();
     let bin_dir = sandbox.join("bin");
@@ -2685,6 +2901,47 @@ fn write_fake_copilot_executable(bin_dir: &Path, log_path: &Path) {
 
         fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
             .expect("chmod fake copilot");
+    }
+}
+
+fn write_fake_opencode_executable(bin_dir: &Path, log_path: &Path) {
+    if cfg!(windows) {
+        let script_path = bin_dir.join("opencode.cmd");
+        fs::write(
+            &script_path,
+            format!(
+                concat!(
+                    "@echo off\r\n",
+                    "echo %*>>\"{}\"\r\n",
+                    "echo READY from fake opencode\r\n"
+                ),
+                log_path.display()
+            ),
+        )
+        .expect("write fake opencode");
+        return;
+    }
+
+    let script_path = bin_dir.join("opencode");
+    fs::write(
+        &script_path,
+        format!(
+            concat!(
+                "#!/bin/sh\n",
+                "printf '%s\\n' \"$*\" >> '{}'\n",
+                "printf 'READY from fake opencode\\n'\n"
+            ),
+            log_path.display()
+        ),
+    )
+    .expect("write fake opencode");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .expect("chmod fake opencode");
     }
 }
 
