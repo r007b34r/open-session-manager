@@ -90,6 +90,7 @@ pub fn audit_config(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAu
         "opencode" => audit_opencode(target),
         "gemini-cli" => audit_gemini_cli(target),
         "qwen-cli" => audit_qwen_cli(target),
+        "roo-code" => audit_roo_code(target),
         "github-copilot-cli" => audit_github_copilot_cli(target),
         "factory-droid" => audit_factory_droid(target),
         "openclaw" => audit_openclaw(target),
@@ -517,6 +518,89 @@ fn audit_qwen_cli(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudi
     })
 }
 
+fn audit_roo_code(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
+    let (parsed, mcp, effective_path) = load_roo_effective_config(&target.path)?;
+    let active_profile_name = parsed
+        .get("providerProfiles")
+        .and_then(|value| value.get("currentApiConfigName"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let active_profile = active_profile_name
+        .as_deref()
+        .and_then(|profile_name| {
+            parsed
+                .get("providerProfiles")
+                .and_then(|value| value.get("apiConfigs"))
+                .and_then(Value::as_object)
+                .and_then(|configs| configs.get(profile_name))
+        })
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+    let provider = active_profile
+        .get("apiProvider")
+        .or_else(|| active_profile.get("provider"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let model = active_profile
+        .get("openAiModelId")
+        .or_else(|| active_profile.get("model"))
+        .or_else(|| active_profile.get("modelId"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let base_url = active_profile
+        .get("openAiBaseUrl")
+        .or_else(|| active_profile.get("baseUrl"))
+        .or_else(|| active_profile.get("baseURL"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let secret = active_profile
+        .get("openAiApiKey")
+        .or_else(|| active_profile.get("apiKey"))
+        .or_else(|| active_profile.get("api_key"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let auto_approval = parsed
+        .get("autoApprovalSettings")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(Map::new()));
+
+    let mut artifact_target = target.clone();
+    artifact_target.path = effective_path.clone();
+
+    let official_or_proxy = classify_endpoint(provider.as_deref(), base_url.as_deref());
+    let risk_flags = roo_risk_flags(provider.as_deref(), base_url.as_deref(), &auto_approval);
+    let secret_location = active_profile_name
+        .as_deref()
+        .map(|profile_name| {
+            format!("providerProfiles.apiConfigs.{profile_name}.openAiApiKey")
+        })
+        .unwrap_or_else(|| "providerProfiles.apiConfigs.openAiApiKey".to_string());
+
+    Ok(AssistantConfigAudit {
+        config: build_config_artifact(
+            &artifact_target,
+            provider.clone(),
+            model,
+            base_url.clone(),
+            json!({ "autoApprovalSettings": auto_approval }).to_string(),
+            mcp.to_string(),
+        ),
+        secrets: secret
+            .into_iter()
+            .map(|value| SecretMaterial {
+                provider: provider.clone().unwrap_or_else(|| "roo-code".to_string()),
+                kind: "api_key".to_string(),
+                location: secret_location.clone(),
+                source_type: "json".to_string(),
+                value,
+                official_or_proxy: official_or_proxy.clone(),
+                last_modified_at: file_modified_at(&effective_path),
+            })
+            .collect(),
+        risk_flags,
+    })
+}
+
 fn audit_openclaw(target: &ConfigAuditTarget) -> AuditResult<AssistantConfigAudit> {
     let text = fs::read_to_string(&target.path)?;
     let parsed: Value =
@@ -912,6 +996,39 @@ fn qwen_risk_flags(
     flags
 }
 
+fn roo_risk_flags(
+    provider: Option<&str>,
+    base_url: Option<&str>,
+    auto_approval: &Value,
+) -> Vec<RiskFlag> {
+    let mut flags = endpoint_risk_flags(provider, base_url);
+
+    let actions_are_dangerous = auto_approval
+        .get("actions")
+        .and_then(Value::as_object)
+        .map(|actions| {
+            actions.iter().any(|(key, value)| {
+                value.as_bool().unwrap_or(false) && is_dangerous_tool_name(key)
+            })
+        })
+        .unwrap_or(true);
+    let has_dangerous_permissions = auto_approval
+        .get("enabled")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        && actions_are_dangerous;
+
+    if has_dangerous_permissions {
+        flags.push(RiskFlag::new(
+            "dangerous_permissions",
+            "high",
+            "Roo Code auto-approval enables shell or write actions without review.",
+        ));
+    }
+
+    flags
+}
+
 fn copilot_risk_flags(
     provider: Option<&str>,
     base_url: Option<&str>,
@@ -1250,6 +1367,50 @@ fn load_factory_effective_config(path: &Path) -> AuditResult<(Value, PathBuf)> {
     };
 
     Ok((parsed, effective_path))
+}
+
+fn load_roo_effective_config(path: &Path) -> AuditResult<(Value, Value, PathBuf)> {
+    match path.file_name().and_then(|value| value.to_str()) {
+        Some("roo-code-settings.json") => {
+            let parsed = load_json_value(path)?;
+            let mcp = load_roo_mcp_companion(path)?;
+            Ok((parsed, mcp, path.to_path_buf()))
+        }
+        Some("mcp_settings.json" | "cline_mcp_settings.json") => {
+            let main_path = path.with_file_name("roo-code-settings.json");
+            let parsed = if main_path.exists() {
+                load_json_value(&main_path)?
+            } else {
+                Value::Object(Map::new())
+            };
+            Ok((parsed, load_json_value(path)?, main_path))
+        }
+        Some("mcp.json") => Ok((
+            Value::Object(Map::new()),
+            load_json_value(path)?,
+            path.to_path_buf(),
+        )),
+        _ => Ok((
+            load_json_value(path)?,
+            load_roo_mcp_companion(path)?,
+            path.to_path_buf(),
+        )),
+    }
+}
+
+fn load_roo_mcp_companion(path: &Path) -> AuditResult<Value> {
+    let Some(parent) = path.parent() else {
+        return Ok(Value::Object(Map::new()));
+    };
+
+    for candidate in ["mcp_settings.json", "cline_mcp_settings.json"] {
+        let candidate_path = parent.join(candidate);
+        if candidate_path.exists() {
+            return load_json_value(&candidate_path);
+        }
+    }
+
+    Ok(Value::Object(Map::new()))
 }
 
 fn merge_json_value(base: &mut Value, overlay: Value) {

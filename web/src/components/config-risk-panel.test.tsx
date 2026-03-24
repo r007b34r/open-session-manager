@@ -243,6 +243,64 @@ describe("ConfigRiskPanel", () => {
     });
   });
 
+  it("allows editing roo code configs from the risk panel", async () => {
+    const user = userEvent.setup();
+    const onSaveConfig = vi.fn();
+    const { ConfigRiskPanel } = await import("./config-risk-panel");
+
+    render(
+      <ConfigRiskPanel
+        canEditConfigs
+        configs={[
+          {
+            artifactId: "cfg-006",
+            assistant: "Roo Code",
+            scope: "Global",
+            path: "~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/roo-code-settings.json",
+            provider: "openrouter",
+            model: "openrouter/anthropic/claude-sonnet-4",
+            baseUrl: "https://roo-relay.example/v1",
+            maskedSecret: "***7890",
+            officialOrProxy: "Proxy",
+            risks: ["third_party_provider", "third_party_base_url", "dangerous_permissions"]
+          }
+        ]}
+        onSaveConfig={onSaveConfig}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit config/i }));
+    await user.clear(screen.getByLabelText(/^model$/i));
+    await user.type(
+      screen.getByLabelText(/^model$/i),
+      "openrouter/openai/gpt-5-mini"
+    );
+    await user.clear(screen.getByLabelText(/endpoint/i));
+    await user.type(
+      screen.getByLabelText(/endpoint/i),
+      "https://openrouter.ai/api/v1"
+    );
+    await user.type(screen.getByLabelText(/new key/i), "sk-roo-new-123454321");
+    await user.click(screen.getByRole("button", { name: /review changes/i }));
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: /i reviewed the masked diff and want to apply it/i
+      })
+    );
+    await user.click(screen.getByRole("button", { name: /apply reviewed changes/i }));
+
+    expect(onSaveConfig).toHaveBeenCalledWith({
+      artifactId: "cfg-006",
+      assistant: "Roo Code",
+      scope: "Global",
+      path: "~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/roo-code-settings.json",
+      provider: "openrouter",
+      model: "openrouter/openai/gpt-5-mini",
+      baseUrl: "https://openrouter.ai/api/v1",
+      secret: "sk-roo-new-123454321"
+    });
+  });
+
   it("saves a reusable snippet and reapplies it back to the current draft", async () => {
     const user = userEvent.setup();
     const onAuditEvent = vi.fn();

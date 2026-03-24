@@ -153,6 +153,38 @@ fn audits_qwen_config_and_masks_credentials() {
 }
 
 #[test]
+fn audits_roo_code_config_and_masks_credentials() {
+    let roo = audit_config(&ConfigAuditTarget::new(
+        "roo-code",
+        "user",
+        "global",
+        fixtures_root().join("roo").join("roo-code-settings.json"),
+    ))
+    .expect("roo code config parses");
+
+    assert_eq!(roo.config.assistant, "roo-code");
+    assert_eq!(roo.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        roo.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        roo.config.base_url.as_deref(),
+        Some("https://roo-relay.example/v1")
+    );
+    assert!(has_flag(&roo.risk_flags, "third_party_provider"));
+    assert!(has_flag(&roo.risk_flags, "third_party_base_url"));
+    assert!(has_flag(&roo.risk_flags, "dangerous_permissions"));
+    assert!(roo.config.mcp_json.contains("filesystem"));
+
+    let credentials = build_credential_artifacts(&roo.secrets);
+    assert_eq!(credentials.len(), 1);
+    assert_eq!(credentials[0].provider, "openrouter");
+    assert_eq!(credentials[0].official_or_proxy, "proxy");
+    assert_eq!(credentials[0].masked_value, "***7890");
+}
+
+#[test]
 fn audits_openclaw_config_and_detects_proxy_risks() {
     let openclaw = audit_config(&ConfigAuditTarget::new(
         "openclaw",

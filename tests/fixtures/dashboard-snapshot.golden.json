@@ -12,7 +12,7 @@
     },
     {
       "label": "risky_configs",
-      "value": "8",
+      "value": "9",
       "note": "relay_wide_permissions_or_shell_hooks"
     },
     {
@@ -813,6 +813,46 @@
             "mcp-filesystem.js"
           ],
           "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\"\n}"
+        }
+      ]
+    },
+    {
+      "artifactId": "e3bfb5554d2e3ebce79c65246911d044b21d250c0580580efeb0f3a3af0284ff",
+      "assistant": "roo-code",
+      "scope": "global",
+      "path": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\configs\\roo\\roo-code-settings.json",
+      "provider": "openrouter",
+      "model": "openrouter/anthropic/claude-sonnet-4",
+      "baseUrl": "https://roo-relay.example/v1",
+      "maskedSecret": "***7890",
+      "officialOrProxy": "proxy",
+      "risks": [
+        "third_party_provider",
+        "third_party_base_url",
+        "dangerous_permissions"
+      ],
+      "mcpServers": [
+        {
+          "serverId": "e3bfb5554d2e3ebce79c65246911d044b21d250c0580580efeb0f3a3af0284ff:filesystem",
+          "name": "filesystem",
+          "enabled": true,
+          "status": "configured",
+          "transport": "stdio",
+          "command": "node",
+          "args": [
+            "mcp-filesystem.js"
+          ],
+          "configJson": "{\n  \"args\": [\n    \"mcp-filesystem.js\"\n  ],\n  \"command\": \"node\",\n  \"enabled\": true\n}"
+        },
+        {
+          "serverId": "e3bfb5554d2e3ebce79c65246911d044b21d250c0580580efeb0f3a3af0284ff:github",
+          "name": "github",
+          "enabled": true,
+          "status": "configured",
+          "transport": "sse",
+          "args": [],
+          "url": "https://mcp.roo-relay.example/sse",
+          "configJson": "{\n  \"enabled\": true,\n  \"url\": \"https://mcp.roo-relay.example/sse\"\n}"
         }
       ]
     },

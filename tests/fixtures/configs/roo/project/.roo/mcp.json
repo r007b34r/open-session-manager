@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "postgres": {
+      "command": "uvx",
+      "args": [
+        "mcp-postgres"
+      ],
+      "enabled": true
+    }
+  }
+}

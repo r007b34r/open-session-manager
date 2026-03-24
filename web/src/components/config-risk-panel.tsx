@@ -655,6 +655,8 @@ function isEditableAssistant(assistant: string) {
     "gemini cli",
     "qwen-cli",
     "qwen cli",
+    "roo-code",
+    "roo code",
     "openclaw",
     "open claw"
   ].includes(assistant.trim().toLowerCase());

@@ -14,10 +14,11 @@
   - `Roo Code`
   - `Factory Droid`
   - `OpenClaw`
-- 配置审计扩到 8 个助手，`Qwen CLI` 已补上用户级与项目级配置治理
-- `GitHub Copilot CLI / Factory Droid / Qwen CLI` 现在会按会话项目路径带出项目级配置覆盖层
+- 配置审计扩到 9 个助手，`Qwen CLI / Roo Code` 已补上用户级与项目级配置治理
+- `GitHub Copilot CLI / Factory Droid / Qwen CLI / Roo Code` 现在会按会话项目路径带出项目级配置覆盖层
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw / Qwen CLI` 的配置编辑面板现在支持统一 provider presets，可一键恢复到官方端点和常用模型组合
 - `Qwen CLI` 的配置写回会优先把 secret 写入同级 `.env`，并把 `.env` 一并纳入备份 manifest 与回滚链路
+- `Roo Code` 的配置写回已支持 active profile 的 `model / baseUrl / secret` 安全编辑、备份与回滚
 - 配置编辑面板新增共享 snippet library，可把 provider/model/base URL 组合保存到本地、导出为稳定 JSON，并重新导入到任意支持写回的草稿里
 - 把一批真实竞品镜像拉到本地并纳入 catalog、研究索引和开源致谢，不再只有零散笔记
 - 修掉会直接影响可用性的会话质量问题：
@@ -120,8 +121,8 @@
 
 - 9 个终端代码助手的本地会话发现与解析
 - 8 个终端代码助手的配置审计读取与风险预览
-- `GitHub Copilot CLI / Factory Droid / Qwen CLI` 的项目级配置发现
-- `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw / Qwen CLI` 的安全写回、备份、回滚和审计事件
+- `GitHub Copilot CLI / Factory Droid / Qwen CLI / Roo Code` 的项目级配置发现
+- `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw / Qwen CLI / Roo Code` 的安全写回、备份、回滚和审计事件
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw / Qwen CLI` 的统一 provider presets、套用和恢复检测值
 - 配置 snippet library、本地持久化、JSON 导入导出和 save/apply/export/import 审计事件
 - SQLite session index cache、增量重建和 index run 统计

@@ -240,6 +240,7 @@ fn backup_source_paths(target: &ConfigAuditTarget) -> ActionResult<Vec<PathBuf>>
     let mut paths = match target.assistant.as_str() {
         "github-copilot-cli" => vec![resolve_copilot_write_path(&target.path)],
         "factory-droid" => vec![resolve_factory_write_path(&target.path)],
+        "roo-code" => resolve_roo_backup_paths(&target.path),
         _ => vec![target.path.clone()],
     };
 
@@ -269,6 +270,7 @@ fn apply_update(target: &ConfigAuditTarget, update: &ConfigWritebackUpdate) -> A
         "factory-droid" => apply_factory_update(target, update),
         "gemini-cli" => apply_gemini_update(target, update),
         "qwen-cli" => apply_qwen_update(target, update),
+        "roo-code" => apply_roo_update(target, update),
         "openclaw" => apply_openclaw_update(target, update),
         assistant => Err(ActionError::Precondition(format!(
             "config writeback is not supported yet for {assistant}"
@@ -480,6 +482,70 @@ fn apply_qwen_update(
     write_json_file(&target.path, &parsed)
 }
 
+fn apply_roo_update(
+    target: &ConfigAuditTarget,
+    update: &ConfigWritebackUpdate,
+) -> ActionResult<()> {
+    if target.path.file_name().and_then(|value| value.to_str()) != Some("roo-code-settings.json") {
+        return Err(ActionError::Precondition(
+            "roo-code writeback only supports roo-code-settings.json".to_string(),
+        ));
+    }
+
+    let mut parsed = load_json_file(&target.path)?;
+    let current_profile_name = parsed
+        .get("providerProfiles")
+        .and_then(|value| value.get("currentApiConfigName"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| {
+            ActionError::Precondition(
+                "roo-code settings are missing providerProfiles.currentApiConfigName".to_string(),
+            )
+        })?;
+
+    let current_audit = audit_config(target)?;
+    let current_provider = current_audit
+        .config
+        .provider
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+
+    if let Some(provider) = &update.provider
+        && provider != &current_provider
+    {
+        return Err(ActionError::Precondition(
+            "roo-code provider renames are not supported safely yet".to_string(),
+        ));
+    }
+
+    let profiles = parsed
+        .get_mut("providerProfiles")
+        .and_then(|value| value.get_mut("apiConfigs"))
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            ActionError::Precondition("roo-code apiConfigs block is missing".to_string())
+        })?;
+    let profile = profiles
+        .get_mut(&current_profile_name)
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| {
+            ActionError::Precondition("roo-code active profile is missing".to_string())
+        })?;
+
+    if let Some(model) = &update.model {
+        profile.insert("openAiModelId".to_string(), Value::String(model.clone()));
+    }
+    if let Some(base_url) = &update.base_url {
+        profile.insert("openAiBaseUrl".to_string(), Value::String(base_url.clone()));
+    }
+    if let Some(secret) = &update.secret {
+        profile.insert("openAiApiKey".to_string(), Value::String(secret.clone()));
+    }
+
+    write_json_file(&target.path, &parsed)
+}
+
 fn load_json_file(path: &Path) -> ActionResult<Value> {
     Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
 }
@@ -553,6 +619,23 @@ fn resolve_factory_write_path(path: &Path) -> PathBuf {
         }
         _ => path.to_path_buf(),
     }
+}
+
+fn resolve_roo_backup_paths(path: &Path) -> Vec<PathBuf> {
+    let mut paths = vec![path.to_path_buf()];
+
+    if path.file_name().and_then(|value| value.to_str()) == Some("roo-code-settings.json")
+        && let Some(parent) = path.parent()
+    {
+        for candidate in ["mcp_settings.json", "cline_mcp_settings.json"] {
+            let candidate_path = parent.join(candidate);
+            if candidate_path.exists() {
+                paths.push(candidate_path);
+            }
+        }
+    }
+
+    paths
 }
 
 fn qwen_provider_env_key(

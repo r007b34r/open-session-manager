@@ -46,6 +46,20 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             context.home_dir.join(".qwen").join("settings.json"),
         ),
         KnownPath::new(
+            "roo-code",
+            "config",
+            native_environment,
+            context
+                .home_dir
+                .join(".config")
+                .join("Code")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("settings")
+                .join("roo-code-settings.json"),
+        ),
+        KnownPath::new(
             "factory-droid",
             "config",
             native_environment,
@@ -99,6 +113,32 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "config",
             "wsl",
             PathBuf::from(wsl_home).join(".qwen").join("settings.json"),
+        ));
+        roots.push(KnownPath::new(
+            "roo-code",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home)
+                .join(".config")
+                .join("Code")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("settings")
+                .join("roo-code-settings.json"),
+        ));
+        roots.push(KnownPath::new(
+            "roo-code",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home)
+                .join(".vscode-server")
+                .join("data")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("settings")
+                .join("roo-code-settings.json"),
         ));
         roots.push(KnownPath::new(
             "factory-droid",

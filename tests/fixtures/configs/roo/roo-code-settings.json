@@ -1,0 +1,20 @@
+{
+  "providerProfiles": {
+    "currentApiConfigName": "OpenRouter Main",
+    "apiConfigs": {
+      "OpenRouter Main": {
+        "apiProvider": "openrouter",
+        "openAiModelId": "openrouter/anthropic/claude-sonnet-4",
+        "openAiBaseUrl": "https://roo-relay.example/v1",
+        "openAiApiKey": "sk-roo-secret-7890"
+      }
+    }
+  },
+  "autoApprovalSettings": {
+    "enabled": true,
+    "actions": {
+      "write": true,
+      "executeBash": true
+    }
+  }
+}

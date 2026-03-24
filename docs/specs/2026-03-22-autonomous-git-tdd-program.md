@@ -56,7 +56,7 @@
 | `ADP-06` | P2 | todo | `ChatGPT` 本地导出导入 | snapshot 能展示导入来源、主题和时间线 |
 | `ADP-07` | P2 | todo | `Pi` 会话与配置适配 | fixture + Rust adapter 测试通过 |
 | `ADP-08` | P1 | done | `Qwen CLI` 会话与配置适配 | 会话发现、摘要、transcript、usage、用户级与项目级配置发现、安全写回、备份回滚与文档收口已落地 |
-| `ADP-09` | P1 | partial | `Roo Code` 会话与配置适配 | 会话发现、摘要、transcript、usage 与 fixture 已落地；配置治理待补 |
+| `ADP-09` | P1 | done | `Roo Code` 会话与配置适配 | 会话发现、摘要、transcript、usage、用户级与项目级配置发现、安全写回、备份回滚与文档收口已落地 |
 | `ADP-10` | P2 | todo | `Kilo` 会话与配置适配 | fixture + Rust adapter 测试通过 |
 | `ADP-11` | P2 | todo | `Mux` 会话与配置适配 | fixture + Rust adapter 测试通过 |
 | `ADP-12` | P2 | todo | `Synthetic` 会话与配置适配 | fixture + Rust adapter 测试通过 |

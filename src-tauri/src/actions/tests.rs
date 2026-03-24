@@ -1313,6 +1313,85 @@ fn writes_back_and_rolls_back_qwen_config_with_backup_and_audit() {
 }
 
 #[test]
+fn writes_back_and_rolls_back_roo_code_config_with_backup_and_audit() {
+    let sandbox = temp_root();
+    let fixtures_root = config_fixtures_root();
+    let config_root = sandbox.join("roo-settings");
+    let backup_root = sandbox.join("config-backups");
+    let target = ConfigAuditTarget::new(
+        "roo-code",
+        "user",
+        "global",
+        config_root.join("roo-code-settings.json"),
+    );
+    let connection = Connection::open_in_memory().expect("open sqlite");
+    bootstrap_database(&connection).expect("bootstrap schema");
+
+    fs::create_dir_all(&config_root).expect("create config root");
+    fs::copy(
+        fixtures_root.join("roo").join("roo-code-settings.json"),
+        config_root.join("roo-code-settings.json"),
+    )
+    .expect("copy roo config");
+    fs::copy(
+        fixtures_root.join("roo").join("mcp_settings.json"),
+        config_root.join("mcp_settings.json"),
+    )
+    .expect("copy roo mcp config");
+
+    let result = write_config(&ConfigWritebackRequest {
+        target: &target,
+        update: &ConfigWritebackUpdate {
+            provider: Some("openrouter".to_string()),
+            model: Some("openrouter/openai/gpt-5-mini".to_string()),
+            base_url: Some("https://openrouter.ai/api/v1".to_string()),
+            secret: Some("sk-roo-new-123454321".to_string()),
+        },
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("write roo config");
+
+    let after = audit_config(&target).expect("re-audit roo config");
+    let credentials = build_credential_artifacts(&after.secrets);
+
+    assert!(result.manifest_path.exists());
+    assert_eq!(
+        after.config.model.as_deref(),
+        Some("openrouter/openai/gpt-5-mini")
+    );
+    assert_eq!(after.config.provider.as_deref(), Some("openrouter"));
+    assert_eq!(
+        after.config.base_url.as_deref(),
+        Some("https://openrouter.ai/api/v1")
+    );
+    assert!(!has_flag(&after.risk_flags, "third_party_base_url"));
+    assert_eq!(credentials[0].masked_value, "***4321");
+
+    rollback_config_writeback(&ConfigRollbackRequest {
+        manifest_path: &result.manifest_path,
+        backup_root: &backup_root,
+        actor: "r007b34r",
+        connection: &connection,
+    })
+    .expect("rollback roo config");
+
+    let restored = audit_config(&target).expect("restore roo config");
+    let restored_credentials = build_credential_artifacts(&restored.secrets);
+
+    assert_eq!(
+        restored.config.model.as_deref(),
+        Some("openrouter/anthropic/claude-sonnet-4")
+    );
+    assert_eq!(
+        restored.config.base_url.as_deref(),
+        Some("https://roo-relay.example/v1")
+    );
+    assert_eq!(restored_credentials[0].masked_value, "***7890");
+}
+
+#[test]
 fn writes_back_and_rolls_back_openclaw_config_with_backup_and_audit() {
     let sandbox = temp_root();
     let fixtures_root = config_fixtures_root();

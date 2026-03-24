@@ -447,6 +447,15 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
                 .join("settings.json"),
         ),
         ConfigAuditTarget::new(
+            "roo-code",
+            "global",
+            "fixtures",
+            fixtures_root
+                .join("configs")
+                .join("roo")
+                .join("roo-code-settings.json"),
+        ),
+        ConfigAuditTarget::new(
             "factory-droid",
             "global",
             "fixtures",
@@ -1831,6 +1840,14 @@ fn derive_project_config_targets(sessions: &[SessionDetailRecord]) -> Vec<Config
                     "project",
                     session.environment.clone(),
                     project_path.join(".qwen").join("settings.json"),
+                ));
+            }
+            "roo-code" => {
+                targets.push(ConfigAuditTarget::new(
+                    "roo-code",
+                    "project",
+                    session.environment.clone(),
+                    project_path.join(".roo").join("mcp.json"),
                 ));
             }
             _ => {}
@@ -3534,6 +3551,108 @@ mod tests {
                 .risks
                 .iter()
                 .any(|risk| risk == "third_party_base_url")
+        );
+    }
+
+    #[test]
+    fn local_snapshot_discovers_roo_code_user_and_project_configs() {
+        let sandbox = temp_root();
+        let home_dir = sandbox.join("home");
+        let roo_storage_root = home_dir
+            .join(".config")
+            .join("Code")
+            .join("User")
+            .join("globalStorage")
+            .join("rooveterinaryinc.roo-cline");
+        let roo_tasks_root = roo_storage_root.join("tasks").join("task-review");
+        let roo_settings_root = roo_storage_root.join("settings");
+        let roo_project = sandbox.join("projects").join("roo-project");
+        let roo_project_config_dir = roo_project.join(".roo");
+
+        fs::create_dir_all(&roo_tasks_root).expect("create roo task root");
+        fs::create_dir_all(&roo_settings_root).expect("create roo settings root");
+        fs::create_dir_all(&roo_project_config_dir).expect("create roo project config dir");
+
+        fs::copy(
+            fixtures_root().join("roocode/tasks/task-review/ui_messages.json"),
+            roo_tasks_root.join("ui_messages.json"),
+        )
+        .expect("copy roo ui messages");
+        fs::write(
+            roo_tasks_root.join("api_conversation_history.json"),
+            format!(
+                concat!(
+                    "before\n",
+                    "<environment_details>\n",
+                    "<model>claude-sonnet-4</model>\n",
+                    "<slug>reviewer</slug>\n",
+                    "<name>Reviewer</name>\n",
+                    "<workspace>{}</workspace>\n",
+                    "</environment_details>\n",
+                    "after\n"
+                ),
+                roo_project.display()
+            ),
+        )
+        .expect("write roo history");
+        fs::copy(
+            fixtures_root().join("configs/roo/roo-code-settings.json"),
+            roo_settings_root.join("roo-code-settings.json"),
+        )
+        .expect("copy roo settings");
+        fs::copy(
+            fixtures_root().join("configs/roo/mcp_settings.json"),
+            roo_settings_root.join("mcp_settings.json"),
+        )
+        .expect("copy roo mcp settings");
+        fs::copy(
+            fixtures_root().join("configs/roo/project/.roo/mcp.json"),
+            roo_project_config_dir.join("mcp.json"),
+        )
+        .expect("copy roo project mcp");
+
+        let snapshot = build_local_dashboard_snapshot(&DiscoveryContext {
+            home_dir,
+            xdg_config_home: None,
+            xdg_data_home: None,
+            wsl_home_dir: None,
+        })
+        .expect("snapshot should build");
+
+        let roo_user_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "roo-code" && config.scope == "global")
+            .expect("roo user config should be discovered");
+        let roo_project_config = snapshot
+            .configs
+            .iter()
+            .find(|config| config.assistant == "roo-code" && config.scope == "project")
+            .expect("roo project config should be discovered");
+
+        assert_eq!(
+            roo_user_config.model.as_deref(),
+            Some("openrouter/anthropic/claude-sonnet-4")
+        );
+        assert_eq!(roo_user_config.masked_secret, "***7890");
+        assert!(
+            roo_user_config
+                .mcp_servers
+                .iter()
+                .any(|server| server.name == "filesystem")
+        );
+        assert!(
+            roo_project_config
+                .path
+                .replace('\\', "/")
+                .ends_with(".roo/mcp.json")
+        );
+        assert_eq!(roo_project_config.masked_secret, "not_detected");
+        assert!(
+            roo_project_config
+                .mcp_servers
+                .iter()
+                .any(|server| server.name == "postgres")
         );
     }
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-24T05:27:40.267Z",
+  "generatedAt": "2026-03-24T06:03:10.214Z",
   "fixtures": [
     {
       "id": "codex-session",
@@ -173,8 +173,8 @@
         "farion1231/cc-switch",
         "endorhq/rover"
       ],
-      "contentHash": "8d1efff05a6500841e5dd9971aa7d0ead18100a5d4cea3b5e2fe9bac93c5888c",
-      "fileCount": 17,
+      "contentHash": "0ae351c6b6413f0b633dd5c06afe34169c4cb155e85d497f974f12495801609e",
+      "fileCount": 20,
       "files": [
         {
           "relativePath": "configs/claude/settings.json",
@@ -243,6 +243,18 @@
         {
           "relativePath": "configs/qwen/settings.json",
           "contentHash": "fb1f61f4ace2b98611fd0e7a77f09f6decabf3004bc0d6299cb83dfc2ed97e77"
+        },
+        {
+          "relativePath": "configs/roo/mcp_settings.json",
+          "contentHash": "558e203f838dacee0f4b2f9c15e384c8d22abf5e23c23376f4c9b6a3e0d47dc1"
+        },
+        {
+          "relativePath": "configs/roo/project/.roo/mcp.json",
+          "contentHash": "406361e06cf9d4bf6dc2b3934285713595be76359459d5cc824769ee40999333"
+        },
+        {
+          "relativePath": "configs/roo/roo-code-settings.json",
+          "contentHash": "0aa96936139dd87ab9f2bb11b489938bb9e0cd02dcfe974950899b1c1a6338b7"
         }
       ]
     }

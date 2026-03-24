@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": [
+        "mcp-filesystem.js"
+      ],
+      "enabled": true
+    },
+    "github": {
+      "url": "https://mcp.roo-relay.example/sse",
+      "enabled": true
+    }
+  }
+}
