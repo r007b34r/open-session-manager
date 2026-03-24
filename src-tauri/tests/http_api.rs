@@ -193,6 +193,86 @@ fn serve_command_requires_bearer_token_when_configured() {
 }
 
 #[test]
+fn serve_command_exposes_prometheus_metrics() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+    seed_session_fixture(
+        &home_dir.join(".claude").join("settings.json"),
+        "configs/claude/settings.json",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, None);
+
+    wait_for_server(&mut server, port);
+
+    let metrics = http_get(port, "/metrics", None);
+    let body = String::from_utf8(metrics.body).expect("metrics body is utf8");
+
+    assert_eq!(metrics.status, 200);
+    assert!(metrics.headers.contains("content-type: text/plain"));
+    assert!(body.contains("osm_sessions_total 1"));
+    assert!(body.contains("osm_sessions_by_assistant{assistant=\"claude-code\"} 1"));
+    assert!(body.contains("osm_session_control_supported_total 1"));
+    assert!(body.contains("osm_configs_total 1"));
+    assert!(body.contains("osm_configs_by_assistant{assistant=\"claude-code\"} 1"));
+    assert!(body.contains("osm_audit_events_total 0"));
+
+    let openapi = get_json(port, "/openapi.json");
+    assert!(
+        openapi
+            .get("paths")
+            .and_then(|paths| paths.get("/metrics"))
+            .and_then(|path| path.get("get"))
+            .is_some()
+    );
+}
+
+#[test]
+fn serve_command_requires_bearer_token_for_metrics_when_configured() {
+    let sandbox = temp_root();
+    let home_dir = sandbox.join("home");
+
+    seed_session_fixture(
+        &home_dir
+            .join(".claude")
+            .join("projects")
+            .join("C--Projects-Claude-Demo")
+            .join("claude-ses-1.jsonl"),
+        "claude/projects/C--Projects-Claude-Demo/claude-ses-1.jsonl",
+    );
+
+    let port = reserve_port();
+    let mut server = spawn_server(&home_dir, port, Some("osm-local-token"));
+
+    wait_for_server(&mut server, port);
+
+    let unauthorized = http_get(port, "/metrics", None);
+    assert_eq!(unauthorized.status, 401);
+    assert!(
+        serde_json::from_slice::<Value>(&unauthorized.body)
+            .expect("unauthorized body is json")
+            .get("error")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains("bearer token"))
+    );
+
+    let authorized = http_get(port, "/metrics", Some("osm-local-token"));
+    let body = String::from_utf8(authorized.body).expect("metrics body is utf8");
+    assert_eq!(authorized.status, 200);
+    assert!(body.contains("osm_sessions_total 1"));
+}
+
+#[test]
 fn serve_command_exposes_session_control_routes() {
     let sandbox = temp_root();
     let home_dir = sandbox.join("home");
@@ -693,6 +773,7 @@ fn http_get(port: u16, path: &str, token: Option<&str>) -> HttpResponse {
 
     HttpResponse {
         status,
+        headers: header_text.to_ascii_lowercase(),
         body: body.to_vec(),
     }
 }
@@ -737,6 +818,7 @@ Connection: close\r\n\r\n\
 
     HttpResponse {
         status,
+        headers: header_text.to_ascii_lowercase(),
         body: body.to_vec(),
     }
 }
@@ -900,6 +982,7 @@ fn fake_command_path(bin_dir: &Path, name: &str) -> PathBuf {
 
 struct HttpResponse {
     status: u16,
+    headers: String,
     body: Vec<u8>,
 }
 

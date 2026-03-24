@@ -37,6 +37,26 @@ pub fn openapi_document(app: &AppState) -> Value {
                     }
                 }
             },
+            "/metrics": {
+                "get": {
+                    "summary": "Prometheus metrics",
+                    "security": [{ "bearerAuth": [] }],
+                    "responses": {
+                        "200": {
+                            "description": "Prometheus text exposition",
+                            "content": {
+                                "text/plain": {
+                                    "schema": { "type": "string" },
+                                    "example": "# HELP osm_sessions_total Total discovered sessions.\n# TYPE osm_sessions_total gauge\nosm_sessions_total 42\n"
+                                }
+                            }
+                        },
+                        "401": {
+                            "$ref": "#/components/responses/Unauthorized"
+                        }
+                    }
+                }
+            },
             "/openapi.json": {
                 "get": {
                     "summary": "OpenAPI document",

@@ -36,6 +36,7 @@
 | Unified session query CLI | 已实现 | `cargo run -- list/search/get/view/expand` 可直接查询会话清单、命中、详情、Markdown 视图和上下文 bundle，并支持显式 `--json` 机器模式 |
 | Shared session query API | 已实现 | Tauri 已暴露 `list/search/get/view/expand` 查询 command，和 CLI 共用同一套 Rust 查询层，并支持 `assistant` 过滤、`limit/offset` 分页与 `sortBy/descending` 排序 |
 | Local REST API | 已实现 | `cargo run -- serve` 会暴露本地只读 `health/list/search/get/view/expand` 路由，支持 `assistant` 过滤、`limit/offset` 分页、`sortBy/descending` 排序和可选 Bearer token |
+| Prometheus metrics endpoint | 已实现 | `/metrics` 会返回本地 Prometheus 文本指标，覆盖 sessions/configs/git projects/doctor findings/audit events，并支持可选 Bearer token |
 | OpenAPI document | 已实现 | `/openapi.json` 会返回本地 REST API 的 OpenAPI 3.1 文档，覆盖 `health`、`list/search/get/view/expand` 路由与 Bearer 鉴权说明 |
 | MCP session query server | 已实现 | `cargo run -- mcp` 会通过 `stdio` 暴露 `list_sessions/search_sessions/get_session` 三个 tools，并复用同一套 Rust 查询层 |
 | Real session resume / continue | 部分实现 | 当前已接 `Codex`、`Claude Code`、`GitHub Copilot CLI`、`OpenCode`，可执行真实 `resume` / `continue` 命令，并写回控制状态与审计事件 |

@@ -1,9 +1,9 @@
-use std::{env, net::SocketAddr, path::PathBuf};
+use std::{collections::BTreeMap, env, net::SocketAddr, path::PathBuf};
 
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
+    http::{HeaderMap, StatusCode, header::{AUTHORIZATION, CONTENT_TYPE}},
     response::IntoResponse,
     routing::{get, post},
 };
@@ -118,6 +118,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
 fn router(state: ApiState) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/metrics", get(metrics))
         .route("/openapi.json", get(openapi))
         .route("/api/v1/sessions", get(list_sessions))
         .route("/api/v1/sessions/search", get(search_sessions))
@@ -153,6 +154,18 @@ async fn health(State(state): State<ApiState>) -> Json<HealthResponse> {
         app_name: state.app.app_name,
         version: state.app.version,
     })
+}
+
+async fn metrics(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, ApiError> {
+    authorize(&state, &headers)?;
+    let snapshot = load_snapshot_data(&state)?;
+    Ok((
+        [(CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")],
+        render_prometheus_metrics(&snapshot),
+    ))
 }
 
 async fn openapi(State(state): State<ApiState>) -> Json<Value> {
@@ -492,4 +505,144 @@ fn map_action_error(error: ActionError) -> ApiError {
         ActionError::Execution(message) => ApiError::conflict(message),
         other => ApiError::internal(other),
     }
+}
+
+fn render_prometheus_metrics(snapshot: &DashboardSnapshot) -> String {
+    let mut body = String::new();
+
+    let session_count = snapshot.sessions.len() as u64;
+    let config_count = snapshot.configs.len() as u64;
+    let git_project_count = snapshot.git_projects.len() as u64;
+    let doctor_finding_count = snapshot.doctor_findings.len() as u64;
+    let audit_event_count = snapshot.audit_events.len() as u64;
+    let session_control_supported_count = snapshot
+        .sessions
+        .iter()
+        .filter(|session| {
+            session
+                .session_control
+                .as_ref()
+                .is_some_and(|control| control.supported)
+        })
+        .count() as u64;
+    let session_control_available_count = snapshot
+        .sessions
+        .iter()
+        .filter(|session| {
+            session
+                .session_control
+                .as_ref()
+                .is_some_and(|control| control.available)
+        })
+        .count() as u64;
+
+    append_metric_help(&mut body, "osm_sessions_total", "Total discovered sessions.");
+    append_metric(&mut body, "osm_sessions_total", session_count);
+
+    append_metric_help(
+        &mut body,
+        "osm_session_control_supported_total",
+        "Total sessions with a supported control adapter.",
+    );
+    append_metric(
+        &mut body,
+        "osm_session_control_supported_total",
+        session_control_supported_count,
+    );
+
+    append_metric_help(
+        &mut body,
+        "osm_session_control_available_total",
+        "Total sessions with a control command available on this host.",
+    );
+    append_metric(
+        &mut body,
+        "osm_session_control_available_total",
+        session_control_available_count,
+    );
+
+    append_metric_help(&mut body, "osm_configs_total", "Total discovered config artifacts.");
+    append_metric(&mut body, "osm_configs_total", config_count);
+
+    append_metric_help(&mut body, "osm_git_projects_total", "Total git projects in snapshot.");
+    append_metric(&mut body, "osm_git_projects_total", git_project_count);
+
+    append_metric_help(
+        &mut body,
+        "osm_doctor_findings_total",
+        "Total doctor findings in snapshot.",
+    );
+    append_metric(&mut body, "osm_doctor_findings_total", doctor_finding_count);
+
+    append_metric_help(
+        &mut body,
+        "osm_audit_events_total",
+        "Total audit events included in snapshot.",
+    );
+    append_metric(&mut body, "osm_audit_events_total", audit_event_count);
+
+    append_labeled_counts(
+        &mut body,
+        "osm_sessions_by_assistant",
+        "Discovered sessions grouped by assistant.",
+        snapshot
+            .sessions
+            .iter()
+            .map(|session| session.assistant.as_str()),
+    );
+    append_labeled_counts(
+        &mut body,
+        "osm_configs_by_assistant",
+        "Discovered configs grouped by assistant.",
+        snapshot.configs.iter().map(|config| config.assistant.as_str()),
+    );
+
+    body
+}
+
+fn append_metric_help(body: &mut String, name: &str, description: &str) {
+    body.push_str("# HELP ");
+    body.push_str(name);
+    body.push(' ');
+    body.push_str(description);
+    body.push('\n');
+    body.push_str("# TYPE ");
+    body.push_str(name);
+    body.push_str(" gauge\n");
+}
+
+fn append_metric(body: &mut String, name: &str, value: u64) {
+    body.push_str(name);
+    body.push(' ');
+    body.push_str(&value.to_string());
+    body.push('\n');
+}
+
+fn append_labeled_counts<'a>(
+    body: &mut String,
+    name: &str,
+    description: &str,
+    values: impl Iterator<Item = &'a str>,
+) {
+    let mut counts = BTreeMap::<String, u64>::new();
+    for value in values {
+        *counts.entry(value.to_string()).or_default() += 1;
+    }
+
+    append_metric_help(body, name, description);
+    for (label, value) in counts {
+        body.push_str(name);
+        body.push_str("{assistant=\"");
+        body.push_str(&escape_prometheus_label(&label));
+        body.push_str("\"} ");
+        body.push_str(&value.to_string());
+        body.push('\n');
+    }
+}
+
+fn escape_prometheus_label(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('"', "\\\"")
 }
