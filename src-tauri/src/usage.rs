@@ -13,6 +13,8 @@ use crate::{
     adapters::{
         gemini_cli::gemini_messages,
         openclaw::{openclaw_kind, openclaw_role},
+        qwen_cli::{qwen_role, qwen_usage_metadata, read_qwen_lines},
+        roo_code::{roo_api_req_payload, roo_task_metadata, read_roo_entries},
         traits::collect_files,
     },
     domain::session::SessionRecord,
@@ -292,6 +294,8 @@ pub fn extract_session_usage(session: &SessionRecord) -> Option<SessionUsageReco
         "opencode" => extract_opencode_usage(Path::new(&session.source_path)),
         "gemini-cli" => extract_gemini_usage(Path::new(&session.source_path)),
         "openclaw" => extract_openclaw_usage(Path::new(&session.source_path)),
+        "qwen-cli" => extract_qwen_usage(Path::new(&session.source_path)),
+        "roo-code" => extract_roo_usage(Path::new(&session.source_path)),
         _ => None,
     }
 }
@@ -606,6 +610,69 @@ fn extract_openclaw_usage(source: &Path) -> Option<SessionUsageRecord> {
     usage.into_session_usage()
 }
 
+fn extract_qwen_usage(source: &Path) -> Option<SessionUsageRecord> {
+    let lines = read_qwen_lines(source).ok()?;
+    let mut usage = UsageAccumulator::default();
+
+    for line in lines {
+        if qwen_role(&line) != Some("assistant") {
+            continue;
+        }
+
+        let Some(metadata) = qwen_usage_metadata(&line) else {
+            continue;
+        };
+        usage.model = line
+            .get("model")
+            .or_else(|| line.get("modelVersion"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned)
+            .or(usage.model);
+        usage.add(
+            read_u64(metadata, &["promptTokenCount", "prompt_token_count"]),
+            read_u64(metadata, &["candidatesTokenCount", "candidates_token_count"]),
+            read_u64(
+                metadata,
+                &["cachedContentTokenCount", "cached_content_token_count"],
+            ),
+            0,
+            read_u64(metadata, &["thoughtsTokenCount", "thoughts_token_count"]),
+            None,
+        );
+    }
+
+    usage.into_session_usage()
+}
+
+fn extract_roo_usage(source: &Path) -> Option<SessionUsageRecord> {
+    let entries = read_roo_entries(source).ok()?;
+    let metadata = roo_task_metadata(source);
+    let mut usage = UsageAccumulator {
+        model: metadata.model,
+        ..Default::default()
+    };
+
+    for entry in entries {
+        let Some(payload) = roo_api_req_payload(&entry) else {
+            continue;
+        };
+
+        usage.add(
+            read_u64(&payload, &["tokensIn", "tokens_in"]),
+            read_u64(&payload, &["tokensOut", "tokens_out"]),
+            read_u64(&payload, &["cacheReads", "cache_reads"]),
+            read_u64(&payload, &["cacheWrites", "cache_writes"]),
+            0,
+            payload
+                .get("cost")
+                .and_then(Value::as_f64)
+                .map(round_cost),
+        );
+    }
+
+    usage.into_session_usage()
+}
+
 fn read_u64(value: &Value, keys: &[&str]) -> u64 {
     keys.iter()
         .find_map(|key| {
@@ -715,7 +782,8 @@ mod tests {
     use crate::{
         adapters::{
             claude_code::ClaudeCodeAdapter, codex::CodexAdapter, gemini_cli::GeminiCliAdapter,
-            openclaw::OpenClawAdapter, opencode::OpenCodeAdapter, traits::SessionAdapter,
+            openclaw::OpenClawAdapter, opencode::OpenCodeAdapter, qwen_cli::QwenCliAdapter,
+            roo_code::RooCodeAdapter, traits::SessionAdapter,
         },
         domain::session::SessionRecord,
     };
@@ -729,12 +797,16 @@ mod tests {
         let codex = parse_fixture(CodexAdapter, fixtures_root().join("codex"));
         let gemini = parse_fixture(GeminiCliAdapter, fixtures_root().join("gemini").join("tmp"));
         let openclaw = parse_fixture(OpenClawAdapter, fixtures_root().join("openclaw"));
+        let qwen = parse_fixture(QwenCliAdapter, fixtures_root().join("qwen"));
+        let roo = parse_fixture(RooCodeAdapter, fixtures_root().join("roocode"));
 
         let opencode_usage = extract_session_usage(&opencode).expect("opencode usage exists");
         let claude_usage = extract_session_usage(&claude).expect("claude usage exists");
         let codex_usage = extract_session_usage(&codex).expect("codex usage exists");
         let gemini_usage = extract_session_usage(&gemini).expect("gemini usage exists");
         let openclaw_usage = extract_session_usage(&openclaw).expect("openclaw usage exists");
+        let qwen_usage = extract_session_usage(&qwen).expect("qwen usage exists");
+        let roo_usage = extract_session_usage(&roo).expect("roo usage exists");
 
         assert_eq!(opencode_usage.model.as_deref(), Some("gpt-5"));
         assert_eq!(opencode_usage.total_tokens, 210);
@@ -742,6 +814,10 @@ mod tests {
         assert_eq!(codex_usage.cache_read_tokens, 256);
         assert_eq!(gemini_usage.reasoning_tokens, 45);
         assert_eq!(openclaw_usage.cost_usd, Some(0.02));
+        assert_eq!(qwen_usage.reasoning_tokens, 120);
+        assert_eq!(qwen_usage.cache_read_tokens, 512);
+        assert_eq!(roo_usage.total_tokens, 3470);
+        assert_eq!(roo_usage.cost_usd, Some(0.08));
     }
 
     #[test]

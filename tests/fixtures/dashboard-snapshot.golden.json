@@ -2,7 +2,7 @@
   "metrics": [
     {
       "label": "indexed_sessions",
-      "value": "8",
+      "value": "10",
       "note": "across_windows_linux_and_wsl_surfaces"
     },
     {
@@ -336,6 +336,129 @@
         "available": false,
         "controller": "github-copilot-cli",
         "command": "copilot",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    },
+    {
+      "sessionId": "qwen-ses-1",
+      "title": "Review the local Qwen cleanup candidates and keep only the reusable han...",
+      "assistant": "qwen-cli",
+      "progressState": "new",
+      "progressPercent": 10,
+      "lastActivityAt": "2026-03-17T08:31:12.000Z",
+      "environment": "windows",
+      "valueScore": 40,
+      "summary": "I mapped the stale Qwen sessions, summarized the reusable context, and prepared the cleanup notes.",
+      "projectPath": "C:/Projects/qwen-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\qwen\\projects\\C--Projects-Qwen-Demo\\chats\\session-alpha.jsonl",
+      "tags": [
+        "local",
+        "qwen-cli",
+        "qwen-demo",
+        "review",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Review the local Qwen cleanup candidates and keep only the reusable handoff.",
+        "Latest assistant note: I mapped the stale Qwen sessions, summarized the reusable context, and prepared the cleanup notes.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\qwen\\projects\\C--Projects-Qwen-Demo\\chats\\session-alpha.jsonl",
+        "Messages indexed: 2"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Review the local Qwen cleanup candidates and keep only the reusable handoff."
+        },
+        {
+          "role": "Assistant",
+          "content": "I mapped the stale Qwen sessions, summarized the reusable context, and prepared the cleanup notes."
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "model": "qwen3-coder-plus",
+        "inputTokens": 4200,
+        "outputTokens": 380,
+        "cacheReadTokens": 512,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 120,
+        "totalTokens": 5212,
+        "costSource": "unknown"
+      },
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "qwen-cli",
+        "command": "",
+        "attached": false,
+        "paused": false,
+        "runtimeState": "unavailable",
+        "eventCount": 0,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    },
+    {
+      "sessionId": "task-review",
+      "title": "Audit Roo Code review sessions and export the ones worth keeping.",
+      "assistant": "roo-code",
+      "progressState": "new",
+      "progressPercent": 10,
+      "lastActivityAt": "2026-03-18T09:01:05Z",
+      "environment": "windows",
+      "valueScore": 40,
+      "summary": "I isolated the stale review sessions and listed the best export candidates.",
+      "projectPath": "C:/Projects/roo-demo",
+      "sourcePath": "C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\roocode\\tasks\\task-review\\ui_messages.json",
+      "tags": [
+        "audit",
+        "code",
+        "roo-code",
+        "roo-demo",
+        "windows"
+      ],
+      "riskFlags": [],
+      "keyArtifacts": [
+        "First goal: Audit Roo Code review sessions and export the ones worth keeping.",
+        "Latest assistant note: I isolated the stale review sessions and listed the best export candidates.",
+        "Transcript path: C:\\Users\\Max\\Desktop\\2026年3月15日\\.worktrees\\feat-usability-clarity\\tests\\fixtures\\roocode\\tasks\\task-review\\ui_messages.json",
+        "Messages indexed: 2"
+      ],
+      "transcriptHighlights": [
+        {
+          "role": "User",
+          "content": "Audit Roo Code review sessions and export the ones worth keeping."
+        },
+        {
+          "role": "Assistant",
+          "content": "I isolated the stale review sessions and listed the best export candidates."
+        }
+      ],
+      "todoItems": [],
+      "usage": {
+        "model": "claude-sonnet-4",
+        "inputTokens": 2500,
+        "outputTokens": 680,
+        "cacheReadTokens": 290,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 3470,
+        "costUsd": 0.08,
+        "costSource": "reported"
+      },
+      "sessionControl": {
+        "supported": false,
+        "available": false,
+        "controller": "roo-code",
+        "command": "",
         "attached": false,
         "paused": false,
         "runtimeState": "unavailable",
@@ -729,13 +852,13 @@
   "auditEvents": [],
   "usageOverview": {
     "totals": {
-      "sessionsWithUsage": 5,
-      "inputTokens": 3999,
-      "outputTokens": 953,
-      "cacheReadTokens": 110151,
+      "sessionsWithUsage": 7,
+      "inputTokens": 10699,
+      "outputTokens": 2013,
+      "cacheReadTokens": 110953,
       "cacheWriteTokens": 144,
-      "reasoningTokens": 55,
-      "totalTokens": 115302,
+      "reasoningTokens": 175,
+      "totalTokens": 123984,
       "costSource": "unknown"
     },
     "assistants": [
@@ -749,6 +872,29 @@
         "reasoningTokens": 0,
         "totalTokens": 110643,
         "costUsd": 0.02,
+        "costSource": "reported"
+      },
+      {
+        "assistant": "qwen-cli",
+        "sessionCount": 1,
+        "inputTokens": 4200,
+        "outputTokens": 380,
+        "cacheReadTokens": 512,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 120,
+        "totalTokens": 5212,
+        "costSource": "unknown"
+      },
+      {
+        "assistant": "roo-code",
+        "sessionCount": 1,
+        "inputTokens": 2500,
+        "outputTokens": 680,
+        "cacheReadTokens": 290,
+        "cacheWriteTokens": 0,
+        "reasoningTokens": 0,
+        "totalTokens": 3470,
+        "costUsd": 0.08,
         "costSource": "reported"
       },
       {
@@ -823,6 +969,29 @@
       "reasoningTokens": 45,
       "totalTokens": 115092,
       "costSource": "unknown"
+    },
+    {
+      "date": "2026-03-17",
+      "sessionsWithUsage": 1,
+      "inputTokens": 4200,
+      "outputTokens": 380,
+      "cacheReadTokens": 512,
+      "cacheWriteTokens": 0,
+      "reasoningTokens": 120,
+      "totalTokens": 5212,
+      "costSource": "unknown"
+    },
+    {
+      "date": "2026-03-18",
+      "sessionsWithUsage": 1,
+      "inputTokens": 2500,
+      "outputTokens": 680,
+      "cacheReadTokens": 290,
+      "cacheWriteTokens": 0,
+      "reasoningTokens": 0,
+      "totalTokens": 3470,
+      "costUsd": 0.08,
+      "costSource": "reported"
     }
   ],
   "runtime": {

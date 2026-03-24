@@ -25,6 +25,8 @@ use crate::{
         },
         openclaw::{OpenClawAdapter, openclaw_kind, openclaw_role, openclaw_text},
         opencode::OpenCodeAdapter,
+        qwen_cli::{QwenCliAdapter, qwen_role, qwen_text, read_qwen_lines},
+        roo_code::{RooCodeAdapter, roo_task_metadata, roo_visible_message, read_roo_entries},
         traits::{AdapterError, SessionAdapter, collect_files},
     },
     audit::{
@@ -362,6 +364,18 @@ pub fn build_fixture_dashboard_snapshot_with_audit(
             "session",
             "windows",
             fixtures_root.join("copilot"),
+        ),
+        KnownPath::new(
+            "qwen-cli",
+            "session",
+            "windows",
+            fixtures_root.join("qwen"),
+        ),
+        KnownPath::new(
+            "roo-code",
+            "session",
+            "windows",
+            fixtures_root.join("roocode"),
         ),
         KnownPath::new(
             "factory-droid",
@@ -1990,6 +2004,8 @@ fn extract_session_narrative(session: &SessionRecord) -> SnapshotResult<SessionN
         "opencode" => extract_opencode_narrative(Path::new(&session.source_path)),
         "gemini-cli" => extract_gemini_narrative(Path::new(&session.source_path)),
         "github-copilot-cli" => extract_copilot_narrative(Path::new(&session.source_path)),
+        "qwen-cli" => extract_qwen_narrative(Path::new(&session.source_path)),
+        "roo-code" => extract_roo_narrative(Path::new(&session.source_path)),
         "factory-droid" => extract_factory_droid_narrative(Path::new(&session.source_path)),
         "openclaw" => extract_openclaw_narrative(Path::new(&session.source_path)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
@@ -2221,6 +2237,60 @@ fn extract_copilot_narrative(source: &Path) -> SnapshotResult<SessionNarrative> 
                 }
             }
             _ => {}
+        }
+    }
+
+    Ok(narrative)
+}
+
+fn extract_qwen_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let lines = read_qwen_lines(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for line in lines {
+        let text = qwen_text(&line);
+        match qwen_role(&line) {
+            Some("user") if narrative.first_user_goal.is_none() => {
+                narrative.first_user_goal = text;
+            }
+            Some("assistant") => {
+                if let Some(text) = text {
+                    if looks_like_error_message(&text) {
+                        narrative.error_count += 1;
+                    }
+                    narrative.last_assistant_message = Some(text);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(narrative)
+}
+
+fn extract_roo_narrative(source: &Path) -> SnapshotResult<SessionNarrative> {
+    let entries = read_roo_entries(source)?;
+    let mut narrative = SessionNarrative::default();
+
+    for entry in entries {
+        match roo_visible_message(&entry) {
+            Some(("user", text)) if narrative.first_user_goal.is_none() => {
+                narrative.first_user_goal = Some(text);
+            }
+            Some(("assistant", text)) => {
+                if looks_like_error_message(&text) {
+                    narrative.error_count += 1;
+                }
+                narrative.last_assistant_message = Some(text);
+            }
+            _ => {}
+        }
+    }
+
+    if narrative.last_assistant_message.is_none() {
+        let metadata = roo_task_metadata(source);
+        if let Some(agent) = metadata.agent {
+            narrative.last_assistant_message = Some(format!("Active Roo agent: {agent}"));
         }
     }
 
@@ -2492,6 +2562,8 @@ fn session_adapter(assistant: &str) -> SnapshotResult<Box<dyn SessionAdapter>> {
         "opencode" => Ok(Box::new(OpenCodeAdapter)),
         "gemini-cli" => Ok(Box::new(GeminiCliAdapter)),
         "github-copilot-cli" => Ok(Box::new(CopilotCliAdapter)),
+        "qwen-cli" => Ok(Box::new(QwenCliAdapter)),
+        "roo-code" => Ok(Box::new(RooCodeAdapter)),
         "factory-droid" => Ok(Box::new(FactoryDroidAdapter)),
         "openclaw" => Ok(Box::new(OpenClawAdapter)),
         assistant => Err(SnapshotError::UnsupportedAssistant(assistant.to_string())),
@@ -2711,6 +2783,16 @@ mod tests {
             .iter()
             .find(|session| session.session_id == "openclaw-ses-1")
             .expect("openclaw fixture session exists");
+        let qwen_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "qwen-ses-1")
+            .expect("qwen fixture session exists");
+        let roo_session = snapshot
+            .sessions
+            .iter()
+            .find(|session| session.session_id == "task-review")
+            .expect("roo fixture session exists");
         let gemini_config = snapshot
             .configs
             .iter()
@@ -2765,6 +2847,18 @@ mod tests {
                         .contains("Review OpenClaw transcripts and flag cleanup candidates")
                 })
         );
+        assert!(
+            qwen_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("Qwen cleanup candidates") })
+        );
+        assert!(
+            roo_session
+                .transcript_highlights
+                .iter()
+                .any(|highlight| { highlight.content.contains("export candidates") })
+        );
         assert_eq!(gemini_config.provider, "google");
         assert_eq!(openclaw_config.provider, "openrouter");
     }
@@ -2804,13 +2898,33 @@ mod tests {
             })
             .and_then(|session| session.get("usage"))
             .expect("opencode session usage should be present");
+        let qwen_session_usage = serialized
+            .get("sessions")
+            .and_then(serde_json::Value::as_array)
+            .expect("sessions array exists")
+            .iter()
+            .find(|session| {
+                session.get("sessionId").and_then(serde_json::Value::as_str) == Some("qwen-ses-1")
+            })
+            .and_then(|session| session.get("usage"))
+            .expect("qwen session usage should be present");
+        let roo_session_usage = serialized
+            .get("sessions")
+            .and_then(serde_json::Value::as_array)
+            .expect("sessions array exists")
+            .iter()
+            .find(|session| {
+                session.get("sessionId").and_then(serde_json::Value::as_str) == Some("task-review")
+            })
+            .and_then(|session| session.get("usage"))
+            .expect("roo session usage should be present");
 
         assert_eq!(
             usage_overview
                 .get("totals")
                 .and_then(|totals| totals.get("sessionsWithUsage"))
                 .and_then(serde_json::Value::as_u64),
-            Some(5)
+            Some(7)
         );
         assert_eq!(
             opencode_usage
@@ -2848,6 +2962,18 @@ mod tests {
                 .and_then(serde_json::Value::as_u64),
             Some(210)
         );
+        assert_eq!(
+            qwen_session_usage
+                .get("reasoningTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(120)
+        );
+        assert_eq!(
+            roo_session_usage
+                .get("costUsd")
+                .and_then(serde_json::Value::as_f64),
+            Some(0.08)
+        );
         let timeline_2025 = usage_timeline
             .iter()
             .find(|entry| {
@@ -2860,6 +2986,18 @@ mod tests {
                 entry.get("date").and_then(serde_json::Value::as_str) == Some("2026-03-15")
             })
             .expect("2026 timeline bucket exists");
+        let timeline_qwen = usage_timeline
+            .iter()
+            .find(|entry| {
+                entry.get("date").and_then(serde_json::Value::as_str) == Some("2026-03-17")
+            })
+            .expect("qwen timeline bucket exists");
+        let timeline_roo = usage_timeline
+            .iter()
+            .find(|entry| {
+                entry.get("date").and_then(serde_json::Value::as_str) == Some("2026-03-18")
+            })
+            .expect("roo timeline bucket exists");
         assert_eq!(
             timeline_2025
                 .get("sessionsWithUsage")
@@ -2902,6 +3040,36 @@ mod tests {
                 .get("costSource")
                 .and_then(serde_json::Value::as_str),
             Some("unknown")
+        );
+        assert_eq!(
+            timeline_qwen
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(5212)
+        );
+        assert_eq!(
+            timeline_qwen
+                .get("costSource")
+                .and_then(serde_json::Value::as_str),
+            Some("unknown")
+        );
+        assert_eq!(
+            timeline_roo
+                .get("totalTokens")
+                .and_then(serde_json::Value::as_u64),
+            Some(3470)
+        );
+        assert_eq!(
+            timeline_roo
+                .get("costUsd")
+                .and_then(serde_json::Value::as_f64),
+            Some(0.08)
+        );
+        assert_eq!(
+            timeline_roo
+                .get("costSource")
+                .and_then(serde_json::Value::as_str),
+            Some("reported")
         );
     }
 

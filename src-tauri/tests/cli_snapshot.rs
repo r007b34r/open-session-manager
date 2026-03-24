@@ -55,7 +55,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .get("usageOverview")
         .expect("usage overview exists");
 
-    assert_eq!(sessions.len(), 8);
+    assert_eq!(sessions.len(), 10);
     assert_eq!(configs.len(), 7);
     assert_eq!(
         sessions[0]
@@ -125,6 +125,8 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .collect::<Vec<_>>();
     assert!(assistants.contains(&"gemini-cli"));
     assert!(assistants.contains(&"github-copilot-cli"));
+    assert!(assistants.contains(&"qwen-cli"));
+    assert!(assistants.contains(&"roo-code"));
     assert!(assistants.contains(&"factory-droid"));
     assert!(assistants.contains(&"openclaw"));
     assert_eq!(
@@ -132,7 +134,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
             .get("totals")
             .and_then(|totals| totals.get("sessionsWithUsage"))
             .and_then(Value::as_u64),
-        Some(5)
+        Some(7)
     );
     assert_eq!(
         usage_overview
@@ -162,7 +164,7 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .get("usageTimeline")
         .and_then(Value::as_array)
         .expect("usage timeline exists");
-    assert_eq!(usage_timeline.len(), 2);
+    assert_eq!(usage_timeline.len(), 4);
     let timeline_2025 = usage_timeline
         .iter()
         .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2025-03-15"))
@@ -171,6 +173,14 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         .iter()
         .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2026-03-15"))
         .expect("2026 timeline exists");
+    let timeline_qwen = usage_timeline
+        .iter()
+        .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2026-03-17"))
+        .expect("qwen timeline exists");
+    let timeline_roo = usage_timeline
+        .iter()
+        .find(|entry| entry.get("date").and_then(Value::as_str) == Some("2026-03-18"))
+        .expect("roo timeline exists");
     assert_eq!(
         timeline_2025
             .get("sessionsWithUsage")
@@ -196,6 +206,14 @@ fn snapshot_command_emits_real_dashboard_json_from_fixtures() {
         timeline_2026.get("costSource").and_then(Value::as_str),
         Some("unknown")
     );
+    assert_eq!(
+        timeline_qwen.get("totalTokens").and_then(Value::as_u64),
+        Some(5212)
+    );
+    assert_eq!(
+        timeline_roo.get("costUsd").and_then(Value::as_f64),
+        Some(0.08)
+    );
 }
 
 #[test]
@@ -214,7 +232,7 @@ fn list_command_emits_session_inventory() {
         .and_then(Value::as_array)
         .expect("sessions array exists");
 
-    assert_eq!(sessions.len(), 8);
+    assert_eq!(sessions.len(), 10);
     assert_eq!(
         sessions[0]
             .get("sessionId")
@@ -222,6 +240,12 @@ fn list_command_emits_session_inventory() {
             .expect("session id exists"),
         "codex-ses-1"
     );
+    assert!(sessions.iter().any(|session| {
+        session.get("sessionId").and_then(Value::as_str) == Some("qwen-ses-1")
+    }));
+    assert!(sessions.iter().any(|session| {
+        session.get("sessionId").and_then(Value::as_str) == Some("task-review")
+    }));
     assert_eq!(
         sessions[1]
             .get("title")
@@ -416,7 +440,7 @@ fn robot_json_mode_emits_compact_cli_payloads() {
             .get("sessions")
             .and_then(Value::as_array)
             .map(Vec::len),
-        Some(8)
+        Some(10)
     );
 
     let view = run_fixture_command(["view", "--session", "claude-ses-1", "--json"]);

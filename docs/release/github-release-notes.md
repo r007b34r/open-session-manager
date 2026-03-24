@@ -4,12 +4,14 @@
 
 ## 本版重点
 
-- 会话支持面从 3 个扩到 7 个：
+- 会话支持面从 3 个扩到 9 个：
   - `Codex`
   - `Claude Code`
   - `OpenCode`
   - `Gemini CLI`
   - `GitHub Copilot CLI`
+  - `Qwen CLI`
+  - `Roo Code`
   - `Factory Droid`
   - `OpenClaw`
 - 配置审计扩到 7 个助手，`GitHub Copilot CLI / Factory Droid` 已补上用户级配置治理
@@ -33,6 +35,8 @@
   - `Claude Code`
   - `OpenCode`
   - `Gemini CLI`
+  - `Qwen CLI`
+  - `Roo Code`
   - `OpenClaw`
 - `Claude Code / Gemini CLI` 在上游日志未直接给出成本时，现在会按本地价格目录估算成本
 - usage 面板现在会明确标注 `reported / estimated / unknown` 成本来源，并展示日级 usage timeline
@@ -74,7 +78,7 @@
 - `endorhq/rover`
   - 吸收 `GitHub Copilot CLI` companion `mcp-config.json` 路径线索，补到 OSM 的 clean-room 配置审计里
 - `junhoyeo/tokscale`
-  - clean-room 吸收 usage / token / cost 字段模型、本地价格目录估算、成本来源标注和日级 timeline
+  - clean-room 吸收 usage / token / cost 字段模型、本地价格目录估算、成本来源标注和日级 timeline，并补进 `Qwen CLI / Roo Code` 的本地日志解析
 - `jazzyalex/agent-sessions`
   - 吸收本地搜索结果呈现、命中来源可视化，以及本地优先索引这条工作台方向
 - `yoavf/ai-sessions-mcp`
@@ -113,7 +117,7 @@
 
 ## 当前已实现的能力
 
-- 7 个终端代码助手的本地会话发现与解析
+- 9 个终端代码助手的本地会话发现与解析
 - 7 个终端代码助手的配置审计读取与风险预览
 - `GitHub Copilot CLI / Factory Droid` 的项目级配置发现
 - `GitHub Copilot CLI / Factory Droid / Gemini CLI / OpenClaw` 的安全写回、备份、回滚和审计事件

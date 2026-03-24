@@ -1,0 +1,8 @@
+before
+<environment_details>
+<model>claude-sonnet-4</model>
+<slug>reviewer</slug>
+<name>Reviewer</name>
+<workspace>C:/Projects/roo-demo</workspace>
+</environment_details>
+after

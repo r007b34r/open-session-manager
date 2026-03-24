@@ -40,6 +40,12 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             context.home_dir.join(".copilot").join("config.json"),
         ),
         KnownPath::new(
+            "qwen-cli",
+            "config",
+            native_environment,
+            context.home_dir.join(".qwen").join("settings.json"),
+        ),
+        KnownPath::new(
             "factory-droid",
             "config",
             native_environment,
@@ -87,6 +93,12 @@ pub fn discover_known_roots(context: &DiscoveryContext) -> Vec<KnownPath> {
             "config",
             "wsl",
             PathBuf::from(wsl_home).join(".copilot").join("config.json"),
+        ));
+        roots.push(KnownPath::new(
+            "qwen-cli",
+            "config",
+            "wsl",
+            PathBuf::from(wsl_home).join(".qwen").join("settings.json"),
         ));
         roots.push(KnownPath::new(
             "factory-droid",
@@ -141,6 +153,25 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             "session",
             native_environment,
             context.home_dir.join(".copilot").join("session-state"),
+        ),
+        KnownPath::new(
+            "qwen-cli",
+            "session",
+            native_environment,
+            context.home_dir.join(".qwen").join("projects"),
+        ),
+        KnownPath::new(
+            "roo-code",
+            "session",
+            native_environment,
+            context
+                .home_dir
+                .join(".config")
+                .join("Code")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("tasks"),
         ),
         KnownPath::new(
             "factory-droid",
@@ -206,6 +237,36 @@ pub fn discover_known_session_roots(context: &DiscoveryContext) -> Vec<KnownPath
             PathBuf::from(wsl_home)
                 .join(".copilot")
                 .join("session-state"),
+        ));
+        roots.push(KnownPath::new(
+            "qwen-cli",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home).join(".qwen").join("projects"),
+        ));
+        roots.push(KnownPath::new(
+            "roo-code",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home)
+                .join(".config")
+                .join("Code")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("tasks"),
+        ));
+        roots.push(KnownPath::new(
+            "roo-code",
+            "session",
+            "wsl",
+            PathBuf::from(wsl_home)
+                .join(".vscode-server")
+                .join("data")
+                .join("User")
+                .join("globalStorage")
+                .join("rooveterinaryinc.roo-cline")
+                .join("tasks"),
         ));
         roots.push(KnownPath::new(
             "factory-droid",

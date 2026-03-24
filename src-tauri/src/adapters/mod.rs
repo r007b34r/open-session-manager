@@ -5,6 +5,8 @@ pub mod factory_droid;
 pub mod gemini_cli;
 pub mod openclaw;
 pub mod opencode;
+pub mod qwen_cli;
+pub mod roo_code;
 pub mod traits;
 
 #[cfg(test)]

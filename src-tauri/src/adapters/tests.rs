@@ -7,7 +7,8 @@ use std::{
 use super::{
     claude_code::ClaudeCodeAdapter, codex::CodexAdapter, copilot_cli::CopilotCliAdapter,
     factory_droid::FactoryDroidAdapter, gemini_cli::GeminiCliAdapter, openclaw::OpenClawAdapter,
-    opencode::OpenCodeAdapter, traits::SessionAdapter,
+    opencode::OpenCodeAdapter, qwen_cli::QwenCliAdapter, roo_code::RooCodeAdapter,
+    traits::SessionAdapter,
 };
 
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
@@ -307,5 +308,53 @@ fn openclaw_adapter_discovers_and_parses_fixture() {
     assert_eq!(session.message_count, 2);
     assert_eq!(session.tool_count, 1);
     assert_eq!(session.raw_format, "openclaw-jsonl");
+    assert!(!session.content_hash.is_empty());
+}
+
+#[test]
+fn qwen_adapter_discovers_and_parses_fixture() {
+    let adapter = QwenCliAdapter;
+    let root = fixtures_root().join("qwen");
+
+    let discovered = adapter
+        .discover_session_files(&root)
+        .expect("qwen fixtures discover");
+
+    assert_eq!(discovered.len(), 1);
+
+    let session = adapter
+        .parse_session(&discovered[0])
+        .expect("qwen fixture parses");
+
+    assert_eq!(session.assistant, "qwen-cli");
+    assert_eq!(session.session_id, "qwen-ses-1");
+    assert_eq!(session.project_path.as_deref(), Some("C:/Projects/qwen-demo"));
+    assert_eq!(session.message_count, 2);
+    assert_eq!(session.tool_count, 0);
+    assert_eq!(session.raw_format, "qwen-cli-jsonl");
+    assert!(!session.content_hash.is_empty());
+}
+
+#[test]
+fn roo_code_adapter_discovers_and_parses_fixture() {
+    let adapter = RooCodeAdapter;
+    let root = fixtures_root().join("roocode");
+
+    let discovered = adapter
+        .discover_session_files(&root)
+        .expect("roo fixtures discover");
+
+    assert_eq!(discovered.len(), 1);
+
+    let session = adapter
+        .parse_session(&discovered[0])
+        .expect("roo fixture parses");
+
+    assert_eq!(session.assistant, "roo-code");
+    assert_eq!(session.session_id, "task-review");
+    assert_eq!(session.project_path.as_deref(), Some("C:/Projects/roo-demo"));
+    assert_eq!(session.message_count, 2);
+    assert_eq!(session.tool_count, 0);
+    assert_eq!(session.raw_format, "roo-code-ui-messages");
     assert!(!session.content_hash.is_empty());
 }

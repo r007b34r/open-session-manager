@@ -1,0 +1,26 @@
+[
+  {
+    "type": "say",
+    "say": "user_message",
+    "ts": "2026-03-18T09:00:00Z",
+    "text": "Audit Roo Code review sessions and export the ones worth keeping."
+  },
+  {
+    "type": "say",
+    "say": "api_req_started",
+    "ts": "2026-03-18T09:00:10Z",
+    "text": "{\"cost\":0.05,\"tokensIn\":1600,\"tokensOut\":420,\"cacheReads\":210,\"cacheWrites\":0,\"apiProtocol\":\"anthropic\"}"
+  },
+  {
+    "type": "say",
+    "say": "assistant_message",
+    "ts": "2026-03-18T09:00:22Z",
+    "text": "I isolated the stale review sessions and listed the best export candidates."
+  },
+  {
+    "type": "say",
+    "say": "api_req_started",
+    "ts": "2026-03-18T09:01:05Z",
+    "text": "{\"cost\":0.03,\"tokensIn\":900,\"tokensOut\":260,\"cacheReads\":80,\"cacheWrites\":0,\"apiProtocol\":\"anthropic\"}"
+  }
+]

@@ -12,6 +12,8 @@
 | `OpenCode` 会话解析 | 已实现 | 支持本地 storage 结构 |
 | `Gemini CLI` 会话解析 | 已实现 | 支持 `~/.gemini/tmp/**/session-*.json` |
 | `GitHub Copilot CLI` 会话解析 | 已实现 | 支持 `~/.copilot/session-state/*.jsonl` |
+| `Qwen CLI` 会话解析 | 已实现 | 支持 `~/.qwen/projects/*/chats/*.jsonl`，会展示 transcript、usage 和 session topic |
+| `Roo Code` 会话解析 | 已实现 | 支持 `~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/tasks/*/ui_messages.json`，并可从同目录 `api_conversation_history.json` 补模型和工作区元数据 |
 | `Factory Droid` 会话解析 | 已实现 | 支持 session store 与 stream-json 两类格式 |
 | `OpenClaw` 会话解析 | 已实现 | 支持 `~/.openclaw` 与兼容旧目录 |
 | `Codex` 配置审计 | 已实现 | 支持用户级配置发现与风险审计 |
@@ -58,7 +60,7 @@
 | 高级会话筛选 | 已实现 | Sessions 页面支持按 assistant / project / risk / export / control 组合筛选，快速定位可清理、已导出或可控制的会话 |
 | 真实 snapshot CLI | 已实现 | `cargo run -- snapshot` |
 | 前端真实 snapshot 优先加载 | 已实现 | 失败时回退到 fixture |
-| Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |
+| Usage / cost analytics | 已实现 | `Codex / Claude Code / OpenCode / Gemini CLI / OpenClaw / Qwen CLI / Roo Code` 已展示会话级和总览级 token/cost 汇总、本地价格目录估算、`reported / estimated / unknown` 成本来源和日级 usage timeline |
 | 模型 / 平台拆分 | 已实现 | 总览 Usage 面板新增 model breakdown 和 provider/platform breakdown，可快速看出 token/cost 集中在哪些模型，以及配置主要分布在哪些 provider |
 | 会话搜索结果排序与片段 | 已实现 | Sessions 页支持本地 BM25 风格 lexical 搜索、search-as-you-type 防抖与取消、命中片段和来源标签，并可把 transcript 命中直接定位到右侧详情高亮 |
 | 配置与清理审查流 | 已实现 | 配置写回前会展示 masked diff 与风险提示，并要求显式确认；移入隔离区前也会要求 cleanup 审查确认 |
@@ -83,7 +85,7 @@
 | `kbwo/ccmanager` | 已吸收 | repo-local worktree 生命周期管理方向，当前已落成 OSM 的 clean-room `git-worktree-manager` CLI |
 | `farion1231/cc-switch` | 已吸收 | 统一 provider/config 治理面板方向，以及 `Gemini CLI / OpenClaw` 配置路径、auth mode、provider/base URL 风险审计与 preset catalog 思路已落进 OSM clean-room 实现 |
 | `endorhq/rover` | 已吸收 | 为 `GitHub Copilot CLI` companion `mcp-config.json` 路径与治理边界提供了 clean-room 参考 |
-| `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板、成本来源标注、本地价格目录估算与 usage timeline 已落进 OSM clean-room 实现 |
+| `junhoyeo/tokscale` | 已吸收 | 本地 usage / token / cost 聚合面板、成本来源标注、本地价格目录估算与 usage timeline 已落进 OSM clean-room 实现，且已补上 `Qwen CLI / Roo Code` 会话日志结构的 clean-room 解析 |
 | `yoavf/ai-sessions-mcp` | 已吸收 | 已落地本地搜索排序、片段、命中来源、transcript 命中高亮，以及 `mcp` 子命令里的 `list/search/get` tool 面 |
 | `coder/agentapi` | 已研究 | HTTP / SSE 控制层方向 |
 | `sugyan/claude-code-webui` | 已研究 | 轻量远程壳层、plan mode / permission mode、history loader 方向 |

@@ -9,6 +9,8 @@ use crate::{
         factory_droid::{DroidDialect, detect_droid_dialect, normalize_droid_kind},
         gemini_cli::{gemini_messages, gemini_role, gemini_text, gemini_tool_calls},
         openclaw::{openclaw_kind, openclaw_role, openclaw_text, openclaw_tool_calls},
+        qwen_cli::{qwen_role, qwen_text, read_qwen_lines},
+        roo_code::{roo_visible_message, read_roo_entries},
         traits::collect_files,
     },
     domain::session::SessionRecord,
@@ -43,6 +45,8 @@ pub fn build_transcript_digest(session: &SessionRecord) -> TranscriptDigest {
         "opencode" => build_opencode_transcript_digest(Path::new(&session.source_path)),
         "gemini-cli" => build_gemini_transcript_digest(Path::new(&session.source_path)),
         "github-copilot-cli" => build_copilot_transcript_digest(Path::new(&session.source_path)),
+        "qwen-cli" => build_qwen_transcript_digest(Path::new(&session.source_path)),
+        "roo-code" => build_roo_transcript_digest(Path::new(&session.source_path)),
         "factory-droid" => build_factory_droid_transcript_digest(Path::new(&session.source_path)),
         "openclaw" => build_openclaw_transcript_digest(Path::new(&session.source_path)),
         _ => TranscriptDigest::default(),
@@ -316,6 +320,60 @@ fn build_copilot_transcript_digest(source: &Path) -> TranscriptDigest {
             }
             _ => {}
         }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_qwen_transcript_digest(source: &Path) -> TranscriptDigest {
+    let Ok(lines) = read_qwen_lines(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for line in lines {
+        let Some(content) = qwen_text(&line) else {
+            continue;
+        };
+        let role = match qwen_role(&line) {
+            Some("user") => Some("User"),
+            Some("assistant") => Some("Assistant"),
+            _ => None,
+        };
+
+        if let Some(role) = role {
+            digest.highlights.push(TranscriptHighlight {
+                role: role.to_string(),
+                content,
+            });
+        }
+    }
+
+    digest.highlights.truncate(6);
+    digest
+}
+
+fn build_roo_transcript_digest(source: &Path) -> TranscriptDigest {
+    let Ok(entries) = read_roo_entries(source) else {
+        return TranscriptDigest::default();
+    };
+
+    let mut digest = TranscriptDigest::default();
+    for entry in entries {
+        let Some((role, content)) = roo_visible_message(&entry) else {
+            continue;
+        };
+        let role = match role {
+            "user" => "User",
+            "assistant" => "Assistant",
+            _ => continue,
+        };
+
+        digest.highlights.push(TranscriptHighlight {
+            role: role.to_string(),
+            content,
+        });
     }
 
     digest.highlights.truncate(6);
